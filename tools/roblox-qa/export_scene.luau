@@ -29,7 +29,7 @@ for index, item in all do
   local x,y,z,r00,r01,r02,r10,r11,r12,r20,r21,r22 = cf:GetComponents()
   table.insert(snapshot.parts, {
    n = item.Name,
-   shape = item.Shape.Name,
+   shape = if item:IsA("Part") then item.Shape.Name else "MeshPart",
    p = {math.round(x*100)/100,math.round(y*100)/100,math.round(z*100)/100},
    s = {math.round(item.Size.X*100)/100,math.round(item.Size.Y*100)/100,math.round(item.Size.Z*100)/100},
    c = {math.round(item.Color.R*1000)/1000,math.round(item.Color.G*1000)/1000,math.round(item.Color.B*1000)/1000},
