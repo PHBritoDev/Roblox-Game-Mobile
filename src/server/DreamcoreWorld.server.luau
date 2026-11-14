@@ -440,20 +440,33 @@ if okForest and forestPack then
  end
  -- Arbustos e samambaias com recortes de folhas reais nos primeiros planos.
  -- Mantemos a maioria fora da trilha e evitamos emissor externo dos templates.
- local undergrowthNames={"FernTallVar01","Fern_Var01","MountainLaurelBush_Var01","DyingFern01"}
  local undergrowthTemplates={}
+ -- O pack muda nomes entre variantes; descobrir pela geometria, não por 4 strings rígidas.
+ -- Evitar clones vazios e excluir árvores grandes, troncos e rochas.
  for _,item in forestPack:GetDescendants() do
-  if item:IsA("Model") then
-   for _,name in undergrowthNames do
-    if item.Name==name and not undergrowthTemplates[name] then
-     undergrowthTemplates[name]=item
+  if item:IsA("Model") and not item:IsDescendantOf(naturalForest) then
+   local lower=string.lower(item.Name)
+   local isShrub=string.find(lower,"fern",1,true)
+    or string.find(lower,"bush",1,true)
+    or string.find(lower,"shrub",1,true)
+    or string.find(lower,"laurel",1,true)
+   if isShrub then
+    local hasMesh=false
+    for _,desc in item:GetDescendants() do
+     if desc:IsA("MeshPart") then hasMesh=true break end
+    end
+    if hasMesh then
+     local okSize,size=pcall(function() return item:GetExtentsSize() end)
+     if okSize and size.Y>0.1 and size.Y<55 and #undergrowthTemplates<16 then
+      table.insert(undergrowthTemplates,item)
+     end
     end
    end
   end
  end
  local undergrowthPlaced=0
  for i=1,58 do
-  local template=undergrowthTemplates[undergrowthNames[(i-1)%#undergrowthNames+1]]
+  local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
   if template then
    local z=22-i*4.8
    local side=if i%2==0 then 1 else -1
@@ -482,6 +495,7 @@ if okForest and forestPack then
   end
  end
  world:SetAttribute("ForestUndergrowthModels",undergrowthPlaced)
+ world:SetAttribute("ForestUndergrowthVariants",#undergrowthTemplates)
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
   local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-265,s=3.65},9001)
@@ -820,9 +834,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",13)
+world:SetAttribute("WorldVersion",14)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v13:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v14:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
