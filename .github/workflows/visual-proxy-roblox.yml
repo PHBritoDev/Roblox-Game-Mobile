@@ -8,6 +8,7 @@ on:
       - 'tools/roblox-qa/snapshot_scene.py'
       - 'tools/roblox-qa/export_scene.luau'
       - 'tools/roblox-qa/render_scene.py'
+      - 'tools/roblox-qa/scene_quality.py'
       - '.github/workflows/visual-proxy-roblox.yml'
 permissions:
   contents: read
@@ -30,6 +31,8 @@ jobs:
           test -n "$ROBLOX_API_KEY" || { echo "Chave Open Cloud nao configurada"; exit 1; }
       - name: Exportar snapshot da geometria usando a engine Roblox headless
         run: python3 tools/roblox-qa/snapshot_scene.py
+      - name: Medir geometria e obstaculos no caminho
+        run: python3 tools/roblox-qa/scene_quality.py
       - name: Instalar Blender para renderizar offline (sem Studio)
         run: |
           sudo apt-get update -qq
