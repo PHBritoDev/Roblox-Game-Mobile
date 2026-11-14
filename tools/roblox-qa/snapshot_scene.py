@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate JSON geometry via Roblox Luau Execution (NOT a native screenshot)."""
+import hashlib
 import json
 import os
 import time
@@ -21,7 +22,17 @@ endpoint = "https://apis.roblox.com/cloud/v2/"
 source = (ROOT / "src/server/DreamcoreWorld.server.luau").read_text(encoding="utf-8")
 probe = (ROOT / "tools/roblox-qa/export_scene.luau").read_text(encoding="utf-8")
 # Source+probe in ONE execution chunk: the probe reads local 'world' from generator.
-code = source + "\n" + probe
+# Read stored-place provenance before executing branch source in memory.
+preamble = """
+local storedGenerator=game:GetService("ServerScriptService"):FindFirstChild("DreamcoreWorld",true)
+local storedWorldVersion=nil
+if storedGenerator then
+ local readable,storedSource=pcall(function() return storedGenerator.Source end)
+ if readable then storedWorldVersion=string.match(storedSource, 'WorldVersion",(%d+)') end
+end
+local storedPlaceVersion=game.PlaceVersion
+"""
+code = preamble + source + "\n" + probe
 
 def request(path, payload=None):
     data = None if payload is None else json.dumps(payload).encode()
@@ -56,6 +67,9 @@ if not scene:
     raise SystemExit("Tarefa executou mas nao retornou geometria; verificar output Luau.")
 if len(scene.get("parts", [])) < 30:
     raise SystemExit("Amostra inesperadamente pequena, previsualizacao recusada.")
+scene["meta"]["sourceCommit"] = os.environ.get("GITHUB_SHA", "local")
+scene["meta"]["sourceSha256"] = hashlib.sha256(source.encode()).hexdigest()
+scene["meta"]["taskPath"] = path
 scene["meta"]["source"] = "Luau Execution Roblox; geometria da engine, sem viewport renderizado"
 scene["meta"]["renderWarning"] = "Blender aproxima geometria/material/sol; nao reproduz shaders nem terrain Roblox"
 (OUT / "scene.json").write_text(json.dumps(scene, ensure_ascii=False) + "\n", encoding="utf-8")

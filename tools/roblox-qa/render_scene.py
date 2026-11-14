@@ -93,10 +93,45 @@ for part in scene_data["parts"]:
     if len(obj.data.materials)==0:
         obj.data.materials.append(material(color))
 
-# Landscape approximation: Roblox Terrain is not included in the geometry export.
-ground=box("Terrain PROXY — not official Roblox", rbpos((0,-1,-95)),rbscale((650,2,780)),material((0.25,0.37,0.25)))
-# A secondary ribbon hints at the watercourse; not original terrain geometry.
-water=box("Rio PROXY", rbpos((129,0,-91)),rbscale((32,0.35,385)),material((0.20,0.38,0.46),0.15))
+# Terrain surface sampled from the engine at eight-stud spacing. This captures
+# height/material layout, not Roblox voxels, textures, water shading or blending.
+surface = scene_data.get("terrain")
+if not surface:
+    raise RuntimeError("Snapshot sem grade Terrain real; regenerar com export_scene.luau")
+nx, nz = surface["nx"], surface["nz"]
+samples = surface["samples"]
+if len(samples) != nx*nz:
+    raise RuntimeError("Grade Terrain incompleta; proxy recusado")
+vertices = []
+for index, (height, _) in enumerate(samples):
+    ix, iz = index % nx, index // nx
+    vertices.append(rbpos((surface["xMin"]+ix*surface["step"],
+                           height if height is not False else 0,
+                           surface["zMin"]+iz*surface["step"])))
+faces, face_materials = [], []
+for iz in range(nz-1):
+    for ix in range(nx-1):
+        # Clockwise in Roblox X/Z becomes upward-facing in Blender X/-Z.
+        indices = (iz*nx+ix, (iz+1)*nx+ix, (iz+1)*nx+ix+1, iz*nx+ix+1)
+        if any(samples[index][0] is False for index in indices):
+            continue
+        names = [samples[index][1] for index in indices]
+        # Dominant material preserves the actual warm path and river locations.
+        dominant = max(dict.fromkeys(names), key=names.count)
+        faces.append(indices)
+        face_materials.append(dominant)
+mesh = bpy.data.meshes.new("Terrain sampled surface")
+mesh.from_pydata(vertices, [], faces)
+mesh.update()
+ground = bpy.data.objects.new("Terrain RAYCAST PROXY — not Roblox rendering", mesh)
+bpy.context.collection.objects.link(ground)
+material_indices = {}
+for name, rgb in surface["palette"].items():
+    material_indices[name] = len(mesh.materials)
+    mesh.materials.append(material(rgb, 0.18 if name == "Water" else 0.83))
+for polygon, name in zip(mesh.polygons, face_materials):
+    polygon.material_index = material_indices[name]
+
 sun_data=bpy.data.lights.new(name="Sun proxy",type="SUN")
 sun_data.energy=2.35
 sun_data.angle=math.radians(9)
@@ -163,4 +198,4 @@ for name, original, target in views:
     bpy.data.objects.remove(scn.camera,do_unlink=True)
 print("3 views: synthetic proxy previews; NEVER call these screenshots of Roblox.")
 
-(OUT / "viewpoints.json").write_text(json.dumps(camera_report,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+(OUT / "viewpoints.json").write_text(json.dumps(camera_report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")

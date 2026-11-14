@@ -3,14 +3,19 @@
 -- Construido no servidor; performance mobile: folhagem ancorada, poucos emissores/luzes.
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+ReplicatedStorage:SetAttribute("ForestState","Generating")
+ReplicatedStorage:SetAttribute("ForestVersion",29)
 local terrain = Workspace.Terrain
 local rng = Random.new(67001)
 local PI = math.pi
 
+local world
+local pathX
+local function generateWorld()
 local old = Workspace:FindFirstChild("DreamcoreGenerated")
 if old then old:Destroy() end
-local world = Instance.new("Folder")
+world = Instance.new("Folder")
 world.Name = "DreamcoreGenerated"
 world.Parent = Workspace
 terrain:Clear()
@@ -48,6 +53,7 @@ local P = {
 local function part(name, size, cf, color, material, parent)
  local p = Instance.new("Part")
  p.Name = name
+ p.CanTouch = false
  p.Anchored = true
  p.Size = size
  p.CFrame = cf
@@ -84,6 +90,21 @@ local function optimizeDecorativeMesh(item,shadow)
  end
 end
 
+local function solidMesh(item)
+ item.CanCollide=true
+ item.CanQuery=true
+ item.CanTouch=false
+ item:SetAttribute("CollisionRole","Trunk")
+end
+local function trunkProxy(x,z,height,diameter,parent)
+ local proxy=part("Colisao de tronco",Vector3.new(diameter,height,diameter),
+  CFrame.new(x,height*0.5,z),P.bark,Enum.Material.Wood,parent)
+ proxy.Transparency=1
+ proxy.CastShadow=false
+ proxy:SetAttribute("CollisionRole","Trunk")
+ return proxy
+end
+
 local function group(name)
  local folder = Instance.new("Folder")
  folder.Name = name
@@ -95,50 +116,60 @@ local details=group("Vegetacao baixa e rochas")
 local landmarks=group("Pontos de interesse")
 local effects=group("Luzes e atmosfera diegetica")
 
--- V27: planicie continua de fantasia. Sem aneis de esferas ou cristas montanhosas.
--- O piso principal termina em Y=0; as camadas baixas nunca cobrem o personagem.
-terrain:FillBlock(CFrame.new(0,-20,-90),Vector3.new(680,40,790),Enum.Material.Grass)
-local meadowRng=Random.new(271127)
--- Manchas de musgo / terra em camadas rasas e ovaladas (sem colinas artificiais).
--- Centros abaixo do piso: topo limitado a 0.35 stud.
-for i=1,86 do
- local x=meadowRng:NextNumber(-315,315)
- local z=meadowRng:NextNumber(-450,265)
- local r=meadowRng:NextNumber(9,25)
- local material=if i%5==0 then Enum.Material.Ground else Enum.Material.LeafyGrass
- terrain:FillBall(Vector3.new(x,-r+0.32,z),r,material)
-end
--- Ilhas discretas de solo quente junto as margens, sem invadir o centro da trilha.
-for i=1,34 do
- local z=25-i*8.3
- local x=math.sin((z+5)*0.027)*10+math.sin(z*0.059)*2.5
- local side=if i%2==0 then 1 else -1
- local radius=meadowRng:NextNumber(6,13)
- terrain:FillBall(Vector3.new(x+side*meadowRng:NextNumber(15,29),-radius+0.28,z),radius,Enum.Material.Ground)
-end
-
--- Rio sinuoso: margens orgânicas e água de Terrain em volumes sobrepostos.
--- Esferas contínuas evitam as quinas e emendas retangulares visíveis do V18.
--- Superfície da água em ~Y=1, sem transbordar sobre a trilha central.
-for i=0,19 do
- local z=115-i*23
- local x=125+math.sin(i*0.32)*24
- terrain:FillBall(Vector3.new(x,-6,z),22,Enum.Material.Air)
- terrain:FillBall(Vector3.new(x,-15,z),16,Enum.Material.Water)
-end
--- Caminho deliberado, nao dispersao aleatoria.
-local function pathX(z)
+-- Um unico campo de voxels: a troca de material nao altera a altura do piso.
+-- Resolucao nativa 4 studs; sem FillBall sobrepondo trilha ou formando colinas.
+pathX = function(z)
  return math.sin((z+5)*0.027)*10 + math.sin(z*0.059)*2.5
 end
-for i=0,48 do
- local z=24-i*5.8
- local x=pathX(z)
- terrain:FillBlock(CFrame.new(x,0.04,z),Vector3.new(18,0.45,8.0),Enum.Material.Ground)
- if i%3 == 0 then
-  local side=if i%2==0 then 1 else -1
-  local stone=part("Pedra de trilha",Vector3.new(rng:NextNumber(2,4),0.5,rng:NextNumber(2,4)),
-   CFrame.new(x+side*rng:NextNumber(7.3,9.5),0.34,z),P.stone,Enum.Material.Slate,details)
-  stone.CFrame=stone.CFrame*CFrame.Angles(0,rng:NextNumber(0,PI),0)
+local function riverX(z)
+ return 125+math.sin((115-z)/23*0.32)*24
+end
+local function inWalkway(x,z,margin)
+ return (z>=-254 and z<=32 and math.abs(x-pathX(z))<10+margin)
+  or (x>=pathX(-89) and x<=176 and math.abs(z+89)<8+margin)
+  or (x>=-64 and x<=pathX(-151) and math.abs(z+151)<6+margin)
+end
+local function reservedSite(x,z,margin)
+ return inWalkway(x,z,margin) or math.abs(x-riverX(z))<25+margin
+  or ((x+84)^2+(z+151)^2)<(22+margin)^2
+end
+terrain:FillBlock(CFrame.new(0,-28,-92),Vector3.new(680,24,792),Enum.Material.Ground)
+local materials,occupancies={},{}
+for ix=1,170 do
+ materials[ix]={}; occupancies[ix]={}
+ for iy=1,4 do materials[ix][iy]={}; occupancies[ix][iy]={} end
+ for iz=1,198 do
+  local x,z=-340+(ix-0.5)*4,-488+(iz-0.5)*4
+  local waterDistance=math.min(math.abs(x-riverX(z))-14,math.sqrt((x+84)^2+(z+151)^2)-11)
+  local bed=-9*(1-math.clamp(waterDistance/9,0,1))
+  local noise=math.noise(x/39,z/39,6.7)+0.32*math.noise(x/13,z/13,2)
+  local trail=inWalkway(x,z,0.8*math.noise(x/11,z/11,4))
+  local surface=if trail then Enum.Material.Ground else
+   if noise>0.12 then Enum.Material.LeafyGrass else
+   if noise < -0.26 then Enum.Material.Ground else Enum.Material.Grass
+  for iy=1,4 do
+   local bottom=-16+(iy-1)*4
+   local solid=math.clamp((bed-bottom)/4,0,1)
+   local water=math.clamp((-2-bottom)/4,0,1)
+   -- A camada mais alta de agua ocupa apenas meio voxel; margens continuam solidas.
+   materials[ix][iy][iz]=if solid>0 then surface else if water>0 then Enum.Material.Water else Enum.Material.Air
+   occupancies[ix][iy][iz]=if solid>0 then solid else water
+  end
+ end
+end
+terrain:WriteVoxels(Region3.new(Vector3.new(-340,-16,-488),Vector3.new(340,0,304)),4,materials,occupancies)
+materials=nil; occupancies=nil
+
+-- Folhas originais achatadas nas bordas; sem colisao, sombras ou alpha cards extras.
+for i=1,90 do
+ local z=24-i*3.05
+ local side=if i%2==0 then 1 else -1
+ local x=pathX(z)+side*rng:NextNumber(8.5,16)
+ if not inWalkway(x,z,-2) then
+  local leaf=part("Folha caida original",Vector3.new(rng:NextNumber(0.4,0.9),0.07,rng:NextNumber(0.8,1.5)),
+   CFrame.new(x,0.12,z)*CFrame.Angles(0,rng:NextNumber(0,2*PI),0),
+   if i%3==0 then P.canopyGold else P.moss,Enum.Material.Grass,details)
+  optimizeDecorativeMesh(leaf,false)
  end
 end
 
@@ -146,12 +177,14 @@ end
 local spawn=Instance.new("SpawnLocation")
 spawn.Name="Nascimento Dreamcore"
 spawn.Size=Vector3.new(13,1,13)
-spawn.CFrame=CFrame.new(pathX(8),1.0,8)
+spawn.CFrame=CFrame.new(pathX(8),-0.45,8)
 spawn.Anchored=true
 spawn.Neutral=true
 spawn.Material=Enum.Material.Grass
 spawn.Color=P.moss
-spawn.Transparency=0.92
+spawn.Transparency=1
+spawn.CanTouch=false
+spawn.Duration=0
 spawn.CanCollide=true
 spawn.Parent=world
 
@@ -185,20 +218,21 @@ end
 local meshTreeSites={}
 local forestTreeSites={}
 local function plantOrReserve(x,z,s,useMesh)
+ if reservedSite(x,z,5) then return end
  if useMesh then
   -- Mesmo afastamento das arvores Forest Pack: a copa nao deve fechar o corredor.
   -- Usa a coordenada real da trilha no Z do exemplar, inclusive nas curvas.
   local offset=x-pathX(z)
-  if z>-238 and z<32 and math.abs(offset)<52 then
-   x=pathX(z)+(if offset>=0 then 1 else -1)*52
+  if z>-238 and z<32 and math.abs(offset)<32 then
+   x=pathX(z)+(if offset>=0 then 1 else -1)*32
   end
   table.insert(meshTreeSites,{x=x,z=z,s=s})
  elseif math.abs(x-pathX(z))<73 or rng:NextNumber()<0.56 then
   -- Arvores detalhadas enquadram o corredor, mas troncos nao invadem a trilha.
   local path=pathX(z)
   local offset=x-path
-  if z>-238 and z<32 and math.abs(offset)<52 then
-   x=path+(if offset>=0 then 1 else -1)*(52+rng:NextNumber(0,9))
+  if z>-238 and z<32 and math.abs(offset)<32 then
+   x=path+(if offset>=0 then 1 else -1)*(32+rng:NextNumber(0,14))
   end
   table.insert(forestTreeSites,{x=x,z=z,s=s})
  else
@@ -325,6 +359,13 @@ if okPack and sourcePack then
     end
     asset.Parent=curated
    end
+   if string.find(entry[1],"Tree",1,true) then
+    trunkProxy(entry[2],entry[3],desiredHeight*0.55,desiredHeight*0.065,curated)
+   elseif string.find(entry[1],"Rock",1,true) then
+    if asset:IsA("BasePart") then
+     solidMesh(asset); asset:SetAttribute("CollisionRole","Rock")
+    end
+   end
    placed+=1
   end
  end
@@ -379,6 +420,7 @@ if okPack and sourcePack then
    tree.CFrame=CFrame.new(site.x,groundY+tree.Size.Y*0.5-0.12,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
    optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
    tree.Parent=curated
+   trunkProxy(site.x,site.z,height*0.58,math.clamp(height*0.065,1.2,3.5),curated)
    meshPlaced+=1
   else
    branchTree(site.x,site.z,site.s,props)
@@ -449,6 +491,7 @@ if okForest and forestPack then
     local nearHero=(site.x-pathX(-245))^2+(site.z+265)^2<110*110
     local keepShadow=(nearTrail and site.z>-315 and site.z<55) or nearHero
     optimizeDecorativeMesh(item,keepShadow)
+    if index~=9001 and string.find(string.lower(item.Name),"trunk",1,true) then solidMesh(item) end
    end
   end
   local desiredHeight=site.s*(if template.Name=="RedwoodTree-Var01" then 29 else 23)
@@ -460,6 +503,7 @@ if okForest and forestPack then
   local delta=target*boundingCF:Inverse()
   tree:PivotTo(delta*tree:GetPivot())
   tree.Parent=naturalForest
+  if index==9001 then trunkProxy(site.x,site.z,26,7,tree) end
  end
  for i,site in forestTreeSites do
   local preferred=names[(i-1)%#names+1]
@@ -600,6 +644,7 @@ for i=1,12 do
  local a=(i/12)*2*PI
  local r=38
  local pos=center+Vector3.new(math.cos(a)*r,3.5,math.sin(a)*r)
+ if inWalkway(pos.X,pos.Z,4) then continue end
  local stone=part("Pedra do circulo antigo",Vector3.new(4,7,5),
   CFrame.new(pos)*CFrame.Angles(0,a,rng:NextNumber(-0.08,0.08)),
   P.stone,Enum.Material.Slate,landmarks)
@@ -612,19 +657,23 @@ end
 
 -- Pequenos pontos de interesse: clareira de descanso, margem e ponte.
 for i=1,8 do
- local x=pathX(-105)+rng:NextNumber(-14,14)
+ local x=pathX(-105)+(if i%2==0 then 1 else -1)*rng:NextNumber(16,24)
  local z=-100+rng:NextNumber(-18,18)
  local rock=orb("Pedra coberta de musgo",Vector3.new(x,0.8,z),
   rng:NextNumber(3,7),P.stone,Enum.Material.Slate,details)
  rock.Size=Vector3.new(rock.Size.X,2.2,rock.Size.Z)
 end
--- Ponte decorativa sobre canal secundario.
-local bridge=part("Ponte de madeira antiga",Vector3.new(19,1.2,34),
- CFrame.new(111,3,-89)*CFrame.Angles(0,-0.19,0),P.barkLight,Enum.Material.WoodPlanks,landmarks)
-for i=1,6 do
- part("Viga da ponte",Vector3.new(1.2,2,19),
-  CFrame.new(111+(i-3.5)*4,2.2,-89)*CFrame.Angles(0,-0.19,0),
-  P.bark,Enum.Material.Wood,landmarks)
+-- Travessia perpendicular ao rio: tabuleiro firme ate as duas margens planas.
+local bridge=part("Ponte de madeira antiga",Vector3.new(12,1.2,64),
+ CFrame.new(132,-0.2,-89)*CFrame.Angles(0,PI/2,0),P.barkLight,Enum.Material.WoodPlanks,landmarks)
+bridge:SetAttribute("CollisionRole","Bridge")
+for _,side in ipairs({-1,1}) do
+ part("Corrimao da ponte",Vector3.new(64,0.65,0.65),
+  CFrame.new(132,3,-89+side*5.8),P.bark,Enum.Material.Wood,landmarks)
+ for i=0,8 do
+  part("Pilar da ponte",Vector3.new(0.8,6,0.8),CFrame.new(100+i*8,0,-89+side*5.8),
+   P.bark,Enum.Material.Wood,landmarks)
+ end
 end
 -- Somente alguns detalhes de brilho autorais: o sub-bosque principal é MeshPart.
 for i=1,36 do
@@ -678,19 +727,6 @@ local fallen=between("Travessa tombada",
  2.8,P.stone,Enum.Material.Slate,relics)
 fallen.CanCollide=false
 
--- Faixas de neblina rente ao chao: planos dispersos e sem luzes dinamicas.
-local function mistBank(x,z,w,d)
- local bank=part("Bruma baixa entre as raizes",Vector3.new(w,0.22,d),
-  CFrame.new(x,1.05,z),Color3.fromRGB(181,210,197),
-  Enum.Material.SmoothPlastic,effects)
- bank.CanCollide=false
- bank.CastShadow=false
- bank.Transparency=0.86
-end
-mistBank(-50,-123,48,22)
-mistBank(46,-194,60,19)
-mistBank(center.X-39,center.Z+4,40,17)
-
 -- Raizes mortas junto das trilhas, revelando a idade e o ciclo da floresta.
 for i=1,12 do
  local z=-18-i*21
@@ -706,21 +742,12 @@ end
 -- Um local intencional para explorar; nao espalhar decorações sem propósito.
 local reflection=group("Lago do Reflexo — recanto nostalgico")
 local poolCenter=Vector3.new(-84,0,-151)
-terrain:FillBall(Vector3.new(poolCenter.X,-5.1,poolCenter.Z),18,Enum.Material.Air)
-terrain:FillBlock(CFrame.new(poolCenter.X,-3.6,poolCenter.Z),Vector3.new(31,8,30),Enum.Material.Water)
--- Pedras de aproximação ligam a trilha ao pequeno lago, sem interromper o caminho.
-for index=1,6 do
- local p=Vector3.new(-18-index*8,0.8,-140-index*2)
- local slab=part("Degrau de pedra na beira do lago",
-  Vector3.new(5.2,1.1,4.7),CFrame.new(p)*CFrame.Angles(0,index*0.11,0),
-  P.stone,Enum.Material.Slate,reflection)
- slab.CanCollide=true
-end
 for i=1,13 do
  local angle=i*2*PI/13
  local r=20+rng:NextNumber(-2.8,2.8)
  local x=poolCenter.X+math.cos(angle)*r
  local z=poolCenter.Z+math.sin(angle)*r
+ if inWalkway(x,z,3) then continue end
  local boulder=orb("Pedra de margem antiga",Vector3.new(x,0.8,z),
   rng:NextNumber(3,6),P.stone,Enum.Material.Rock,reflection)
  boulder.Size=Vector3.new(boulder.Size.X,2.4,boulder.Size.Z)
@@ -740,7 +767,7 @@ sigil.CastShadow=false
 for i=1,7 do
  local ang=(i/7)*PI*2
  local radius=6+(i%3)*3
- local leaf=orb("Nenufar de memoria",Vector3.new(poolCenter.X+math.cos(ang)*radius,0.58,poolCenter.Z+math.sin(ang)*radius),
+ local leaf=orb("Nenufar de memoria",Vector3.new(poolCenter.X+math.cos(ang)*radius,-1.8,poolCenter.Z+math.sin(ang)*radius),
   3.7,P.mossLight,Enum.Material.Grass,reflection)
  leaf.Size=Vector3.new(leaf.Size.X,0.2,leaf.Size.Z)
  leaf.CanCollide=false
@@ -791,14 +818,21 @@ local ancientGlow=glow("Luar sob a arvore",center+Vector3.new(0,6,11),
 local lakeGlow=glow("Luz da runa no lago",Vector3.new(-101,7,-164),
  Color3.fromRGB(127,180,235),25)
 
+for _,item in world:GetDescendants() do
+ if item:IsA("BasePart") and not item.CanCollide then
+  item.CanTouch=false
+  item.CanQuery=false
+ end
+end
+
 -- Perfis calibrados para a direção de arte: quente, crepúsculo frio e noite azul.
 local moods={
  {
   name="Golden Nostalgia", clock=16.75, brightness=2.35,
   ambient=Color3.fromRGB(72,95,118), outdoor=Color3.fromRGB(148,147,133),
   atm=Color3.fromRGB(235,212,178), decay=Color3.fromRGB(139,158,159),
-  tint=Color3.fromRGB(255,240,219), exposure=-0.08,
-   sunTint=Color3.fromRGB(255,207,151), shadeTint=Color3.fromRGB(67,103,120),
+  tint=Color3.fromRGB(255,248,235), exposure=-0.05,
+   sunTint=Color3.fromRGB(59,39,17), shadeTint=Color3.fromRGB(9,23,28),
   cloud=Color3.fromRGB(245,214,192), stars=0, rays=0.065, glow=0.72,
  },
  {
@@ -806,7 +840,7 @@ local moods={
   ambient=Color3.fromRGB(62,75,121), outdoor=Color3.fromRGB(98,104,153),
   atm=Color3.fromRGB(155,154,207), decay=Color3.fromRGB(92,112,167),
   tint=Color3.fromRGB(208,211,255), exposure=-0.09,
-   sunTint=Color3.fromRGB(178,150,178), shadeTint=Color3.fromRGB(59,80,121),
+   sunTint=Color3.fromRGB(24,14,31), shadeTint=Color3.fromRGB(8,16,30),
   cloud=Color3.fromRGB(175,166,219), stars=1400, rays=0.05, glow=1.15,
  },
  {
@@ -814,16 +848,16 @@ local moods={
   ambient=Color3.fromRGB(38,49,98), outdoor=Color3.fromRGB(66,84,121),
   atm=Color3.fromRGB(88,117,175), decay=Color3.fromRGB(43,54,107),
   tint=Color3.fromRGB(185,201,255), exposure=-0.15,
-   sunTint=Color3.fromRGB(111,139,187), shadeTint=Color3.fromRGB(43,65,110),
+   sunTint=Color3.fromRGB(12,20,36), shadeTint=Color3.fromRGB(5,10,23),
   cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0, glow=1.75,
  }
 }
 
 local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
 atmosphere.Name="DreamcoreAtmosphere"
-atmosphere.Density=0.18
+atmosphere.Density=0.13
 atmosphere.Offset=0.12
-atmosphere.Haze=0.75
+atmosphere.Haze=0.45
 atmosphere.Glare=0.12
 atmosphere.Parent=Lighting
 local bloom=Lighting:FindFirstChild("DreamcoreBloom") or Instance.new("BloomEffect")
@@ -889,13 +923,16 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",28)
+world:SetAttribute("WorldVersion",29)
+world:SetAttribute("GenerationComplete",true)
+world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
+ReplicatedStorage:SetAttribute("ForestState","Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v28:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v29:",#world:GetDescendants(),"instancias")
 
--- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
+-- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
  local hold=145
  local transition=48
@@ -937,3 +974,22 @@ task.spawn(function()
   end
  end
 end)
+
+end
+local generated, generationError=xpcall(generateWorld,debug.traceback)
+if not generated then
+ ReplicatedStorage:SetAttribute("ForestState","Failed")
+ -- Apoio emergencial mesmo quando o gerador falha antes de criar o spawn.
+ local safeSpawn=Workspace:FindFirstChild("Nascimento Dreamcore",true)
+ if not safeSpawn then
+  safeSpawn=Instance.new("SpawnLocation")
+  safeSpawn.Name="Nascimento Dreamcore"
+  safeSpawn.Anchored=true
+  safeSpawn.Size=Vector3.new(18,1,18)
+  safeSpawn.CFrame=CFrame.new(0,0,8)
+  safeSpawn.Neutral=true
+  safeSpawn.Parent=Workspace
+ end
+ warn("[Dreamcore] Falha de geracao; apoio de emergencia ativo")
+ error(generationError)
+end

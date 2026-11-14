@@ -1,74 +1,115 @@
 #!/usr/bin/env python3
-"""Measured geometric QA for the Blender proxy, not a Roblox gameplay/visual test."""
+"""Engine navigation measurements plus proxy completeness; never visual approval."""
 import json
 import math
 from collections import Counter
 from pathlib import Path
 
-root = Path(__file__).resolve().parents[2]
-folder = root / "artifacts/visual-preview"
-scene = json.loads((folder / "scene.json").read_text(encoding="utf-8"))
-parts = scene["parts"]
-counts = Counter(p["n"] for p in parts)
-origins = Counter(p.get("origin", "Authored") for p in parts)
-forest_models = scene["meta"].get("forestModels", 0)
-undergrowth_models = scene["meta"].get("forestUndergrowthModels", 0)
-undergrowth_variants = scene["meta"].get("forestUndergrowthVariants", 0)
 
-def path_x(z):
-    return math.sin((z+5)*0.027)*10 + math.sin(z*0.059)*2.5
+def navigation_failures(navigation):
+    errors = []
+    if not navigation:
+        return ["Missing engine navigation measurements"]
+    expected = {f"{name}:{offset}" for name, offsets in (
+        ("main", (-4, 0, 4)), ("bridge", (-3, 0, 3)),
+        ("lake", (-3, 0, 3)), ("river", (-3, 0, 3))) for offset in offsets}
+    routes = navigation.get("routes", [])
+    if {route["name"] for route in routes} != expected:
+        errors.append("Missing or unexpected navigation routes")
+    for route in routes:
+        samples = route.get("samples", [])
+        if len(samples) < (140 if route["name"].startswith("main:") else 10):
+            errors.append(f"{route['name']}: incomplete samples")
+        previous = None
+        for index, sample in enumerate(samples):
+            prefix = f"{route['name']}[{index}]"
+            if not sample.get("supported"):
+                errors.append(f"{prefix}: no solid support")
+                previous = None
+                continue
+            if not all(isinstance(sample.get(key), (int, float)) and math.isfinite(sample[key])
+                       for key in ("x", "y", "z", "normalY")):
+                errors.append(f"{prefix}: invalid measurement")
+                previous = None
+                continue
+            if not -1 <= sample["y"] <= 2:
+                errors.append(f"{prefix}: support outside walkable ground height ({sample['y']:.2f})")
+            if sample["normalY"] < math.cos(math.radians(20)):
+                errors.append(f"{prefix}: support slope exceeds 20 degrees")
+            if sample.get("blockers"):
+                errors.append(f"{prefix}: solid obstacle {sample['blockers']}")
+            if previous:
+                distance = math.hypot(sample["x"]-previous["x"], sample["z"]-previous["z"])
+                rise = abs(sample["y"]-previous["y"])
+                if distance > 2.5:
+                    errors.append(f"{prefix}: unsampled route gap ({distance:.2f})")
+                if rise > 1.25 or (distance > 0 and rise/distance > math.tan(math.radians(20))):
+                    errors.append(f"{prefix}: discontinuity/steep grade ({rise:.2f} in {distance:.2f})")
+            previous = sample
+    spawn = navigation.get("spawn", {})
+    footing = spawn.get("footing", {})
+    if not (spawn.get("present") and spawn.get("anchored") and spawn.get("collidable")
+            and footing.get("supported") and not footing.get("blockers")
+            and -1 <= footing.get("y", -99) <= 2):
+        errors.append("Spawn missing, unsupported, obstructed, or not solid")
+    if navigation.get("proxyCount", 0) < 1:
+        errors.append("No physical tree/rock proxies measured")
+    if navigation.get("invalidProxies"):
+        errors.append(f"Invalid collision proxies: {navigation['invalidProxies']}")
+    if navigation.get("activeScripts"):
+        errors.append(f"Third-party scripts in generated world: {navigation['activeScripts']}")
+    return errors
 
-# The central trail runs from z ~= 24 to -254. Only rigid trunks directly in this
-# corridor are a potential physical obstruction; leaves are intentionally ignored.
-trunks = [p for p in parts if p["n"] == "Tronco musgoso"]
-trunk_obstructions = [
-    {"position": p["p"], "size": p["s"]}
-    for p in trunks
-    if -250 <= p["p"][2] <= 24
-    and abs(p["p"][0] - path_x(p["p"][2])) < (7.5 + p["s"][0]/2)
-]
-# Forest Pack parts use textured meshes; their bounding boxes are only a rough
-# obstruction estimate (not equivalent to a collision test).
-forest_trunk_obstructions = [
-    {"name": p["n"], "position": p["p"], "size": p["s"]}
-    for p in parts
-    if p.get("origin") == "ForestPack"
-    and "Trunk" in p["n"]
-    and -232 <= p["p"][2] <= 24
-    and abs(p["p"][0] - path_x(p["p"][2])) < (10 + min(p["s"][0] / 2, 24))
-]
-report = {
-    "kind": "geometric_proxy_qa",
-    "robloxScreenshot": False,
-    "runtimePlaytest": False,
-    "sampledParts": len(parts),
-    "totalGeneratedParts": scene["meta"]["partsTotal"],
-    "treeTrunks": counts["Tronco musgoso"],
-    "forestPackModels": forest_models,
-    "forestUndergrowthModels": undergrowth_models,
-    "forestUndergrowthVariants": undergrowth_variants,
-    "forestPackParts": origins["ForestPack"],
-    "syntyParts": origins["Synty"],
-    "treeCanopySections": counts["Copa em camadas"]+counts["Coroa alta"],
-    "relicColumns": counts["Sentinela esquecida"]+counts["Sentinela quebrada"]+counts["Pilar do santuario"],
-    "trunksIntersectingMainPath": trunk_obstructions[:20],
-    "forestMeshTrunksCloseToPath": forest_trunk_obstructions[:20],
-    "pass": len(parts) == scene["meta"]["partsTotal"]
-       and forest_models >= 25
-       and undergrowth_models >= 12
-       and undergrowth_variants >= 1
-       and origins["ForestPack"] >= 35
-       and counts["Tronco musgoso"] <= 45
-       and len(trunk_obstructions) == 0
-       and len(forest_trunk_obstructions) == 0,
-    "limitations": [
-        "Does not test walkability, collision or FPS in an actual Roblox client",
-        "Roblox terrain and actual lighting are not reconstructed faithfully",
-        "The scenery quality and soundtrack require separate artistic review",
-        "The Blender proxy does not reproduce texture/alpha cards of Forest Pack MeshParts"
-    ],
-}
-(folder / "scene_qa.json").write_text(json.dumps(report, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-print(json.dumps({k:v for k,v in report.items() if k != "trunksIntersectingMainPath"},ensure_ascii=False))
-if not report["pass"]:
-    raise SystemExit("Falha QA geometrico: verificar scene_qa.json")
+
+def evaluate(scene):
+    parts = scene["parts"]
+    counts = Counter(p["n"] for p in parts)
+    origins = Counter(p.get("origin", "Authored") for p in parts)
+    meta = scene["meta"]
+    navigation = scene.get("navigation", {})
+    errors = navigation_failures(navigation)
+    if len(parts) != meta["partsTotal"]:
+        errors.append("Incomplete exported geometry")
+    asset_warnings = []
+    if meta.get("forestModels", 0) < 25:
+        asset_warnings.append("Forest Pack degraded/unavailable; fallback needs visual review")
+    if meta.get("forestUndergrowthModels", 0) < 12:
+        asset_warnings.append("Textured undergrowth degraded/unavailable")
+    return {
+        "kind": "engine_geometry_and_navigation_qa",
+        "robloxScreenshot": False,
+        "runtimePlaytest": False,
+        "engineSpatialQueries": True,
+        "sampledParts": len(parts),
+        "totalGeneratedParts": meta["partsTotal"],
+        "treeTrunks": counts["Tronco musgoso"],
+        "forestPackModels": meta.get("forestModels", 0),
+        "forestUndergrowthModels": meta.get("forestUndergrowthModels", 0),
+        "forestUndergrowthVariants": meta.get("forestUndergrowthVariants", 0),
+        "forestPackParts": origins["ForestPack"],
+        "syntyParts": origins["Synty"],
+        "navigationSampleCount": sum(len(route.get("samples", [])) for route in navigation.get("routes", [])),
+        "collisionProxyCount": navigation.get("proxyCount", 0),
+        "navigationFailures": errors,
+        "assetWarnings": asset_warnings,
+        "pass": not errors,
+        "limitations": [
+            "Engine support raycasts and conservative solid-part overlap boxes are not a Humanoid playtest",
+            "Does not measure client streaming, Android FPS or appearance",
+            "Roblox Terrain, water, alpha cards, PBR and lighting are not reconstructed faithfully by Blender",
+            "Passing navigation and asset counts do not approve artistic quality",
+        ],
+    }
+
+
+def main():
+    folder = Path(__file__).resolve().parents[2] / "artifacts/visual-preview"
+    report = evaluate(json.loads((folder / "scene.json").read_text(encoding="utf-8")))
+    (folder / "scene_qa.json").write_text(json.dumps(report, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+    print(json.dumps(report, ensure_ascii=False))
+    if not report["pass"]:
+        raise SystemExit("Falha QA de navegacao: verificar scene_qa.json")
+
+
+if __name__ == "__main__":
+    main()
