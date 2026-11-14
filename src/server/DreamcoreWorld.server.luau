@@ -175,10 +175,15 @@ end
 -- Mistura de copas autorais com futuras arvores MeshPart oficiais.
 -- Reserva sitios antes de carregar os modelos: se falhar, usa a arvore original.
 local meshTreeSites={}
+local forestTreeSites={}
 local function plantOrReserve(x,z,s,useMesh)
  if useMesh then
   table.insert(meshTreeSites,{x=x,z=z,s=s})
+ elseif math.abs(x-pathX(z))<73 or rng:NextNumber()<0.56 then
+  -- Arvores com folhas texturizadas proximo da camera e das clareiras.
+  table.insert(forestTreeSites,{x=x,z=z,s=s})
  else
+  -- Poucas arvores de silhueta simples apenas no fundo.
   branchTree(x,z,s,props)
  end
 end
@@ -363,6 +368,78 @@ else
  end
  warn("[Dreamcore] Pacote Synty indisponivel; mantendo vegetacao autoral.")
 end
+
+-- Forest Pack @Roblox (6432306802): folhas reais em planos com SurfaceAppearance.
+-- Baixa uma unica vez, remove todos os scripts, apenas clones curados de Models.
+-- Se o pacote falhar, os sites recebem vegetacao original sem quebrar o jogo.
+local naturalForest=group("Bosque premium — Forest Pack licenciado")
+local okForest,forestPack=pcall(function()
+ return InsertService:LoadAsset(6432306802)
+end)
+local forestCount=0
+if okForest and forestPack then
+ for _,descendant in forestPack:GetDescendants() do
+  if descendant:IsA("LuaSourceContainer") then descendant:Destroy() end
+ end
+ local candidates={}
+ local names={
+  "BeechwoodTree_Var01",
+  "BeechwoodTree_Var02",
+  "BeechwoodTree_Var03",
+  "BroadLeafTree_Var01",
+  "DogwoodTree_Var01",
+  "MapleLeafTreeVar01",
+  "RedwoodTree-Var01",
+ }
+ for _,obj in forestPack:GetDescendants() do
+  if obj:IsA("Model") then
+   for _,name in names do
+    if obj.Name==name and not candidates[name] then
+     candidates[name]=obj
+    end
+   end
+  end
+ end
+ local function plantForest(template,site,index)
+  local tree=template:Clone()
+  tree.Name="Bosque de folhas texturizadas — "..index
+  for _,item in tree:GetDescendants() do
+   if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then item:Destroy()
+   elseif item:IsA("BasePart") then
+    item.Anchored=true
+    item.CanCollide=false
+    item.CastShadow=true
+   end
+  end
+  local desiredHeight=site.s*(if template.Name=="RedwoodTree-Var01" then 29 else 23)
+  local initialBounds=tree:GetExtentsSize()
+  tree:ScaleTo(tree:GetScale()*desiredHeight/math.max(initialBounds.Y,0.1))
+  local boundingCF,boundingSize=tree:GetBoundingBox()
+  local target=CFrame.new(site.x,boundingSize.Y*0.48,site.z)*CFrame.Angles(0,index*1.78,0)
+  local delta=target*boundingCF:Inverse()
+  tree:PivotTo(delta*tree:GetPivot())
+  tree.Parent=naturalForest
+ end
+ for i,site in forestTreeSites do
+  local preferred=names[(i-1)%#names+1]
+  local template=candidates[preferred] or candidates["BeechwoodTree_Var03"]
+  if template then
+   local ok=pcall(plantForest,template,site,i)
+   if ok then forestCount+=1
+   else branchTree(site.x,site.z,site.s,props) end
+  else
+   branchTree(site.x,site.z,site.s,props)
+  end
+ end
+ forestPack:Destroy()
+else
+ for _,site in forestTreeSites do
+  branchTree(site.x,site.z,site.s,props)
+ end
+ warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
+end
+world:SetAttribute("ForestMeshTrees",forestCount)
+print("[Dreamcore] Floresta com SurfaceAppearance:",forestCount,"modelos")
 
 -- Landmark: a Arvore da Primeira Memoria, dominante na silhueta.
 local sacred=Instance.new("Model")
@@ -656,9 +733,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",9)
+world:SetAttribute("WorldVersion",10)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v9:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v10:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
