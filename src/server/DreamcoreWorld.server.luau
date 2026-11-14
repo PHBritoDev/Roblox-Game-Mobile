@@ -196,6 +196,72 @@ riverWillow(83,-144,1.42)
 riverWillow(103,-203,1.23)
 riverWillow(148,-268,1.36)
 
+-- Asset curado: Synty Nature Pack, publicado por @Roblox (ID 6933438443).
+-- Licenca oficial para qualquer jogo Roblox (DevForum Roblox 10/06/2021).
+-- Inspecao isolada Open Cloud: 200 MeshParts, 11 Models, zero scripts.
+-- Nunca parentear o pacote original nem ativar scripts de terceiros.
+local curated=group("Vegetacao licenciada Roblox — Synty Nature")
+local InsertService=game:GetService("InsertService")
+local okPack,sourcePack=pcall(function()
+ return InsertService:LoadAsset(6933438443)
+end)
+if okPack and sourcePack then
+ for _,asset in sourcePack:GetDescendants() do
+  if asset:IsA("LuaSourceContainer") then asset:Destroy() end
+ end
+ -- Modelos escolhidos, posicionados para manter enquadramento da trilha.
+ local selection={
+  {"Meshes/Pine_Tree_Pine_Large_01",-70,36,31,0.2},
+  {"Meshes/Pine_Tree_Pine_Large_02",65,-24,30,-0.1},
+  {"Meshes/PolygonNature_Tree_Round_04",-75,-87,21,0.5},
+  {"Meshes/Pine_Tree_Pine_02",68,-137,24,0.1},
+  {"Meshes/PolygonNature_Tree_PolyPine_03",-82,-181,31,0.3},
+  {"Meshes/Pine_Tree_Pine_01",78,-221,26,-0.4},
+  {"Meshes/PolygonNature_Rock_Cluster_Large_05",44,-104,8,0.2},
+  {"Meshes/PolygonNature_Rock_Pile_01",-53,-221,6,0.7},
+  {"Meshes/PolygonNature_Plant_Grass_05",-18,-58,3,0.1},
+  {"Meshes/Undergrowth",26,-139,4,0.3},
+  {"Meshes/PolygonNature_Prop_Pillar_Arch_Moss_01",47,-290,17,0.2},
+ }
+ local lookup={}
+ for _,obj in sourcePack:GetDescendants() do
+  if obj:IsA("MeshPart") or obj:IsA("Model") then
+   if not lookup[obj.Name] then lookup[obj.Name]=obj end
+  end
+ end
+ local placed=0
+ for _,entry in selection do
+  local template=lookup[entry[1]]
+  if template then
+   local asset=template:Clone()
+   asset.Name="Synty — "..entry[1]
+   local desiredHeight=entry[4]
+   if asset:IsA("MeshPart") then
+    local scale=desiredHeight/math.max(asset.Size.Y,0.1)
+    asset.Size=asset.Size*scale
+    asset.CFrame=CFrame.new(entry[2],asset.Size.Y/2,entry[3])*CFrame.Angles(0,entry[5],0)
+    asset.Anchored=true
+    asset.CanCollide=false
+    asset.Parent=curated
+   elseif asset:IsA("Model") then
+    local extents=asset:GetExtentsSize()
+    asset:ScaleTo(asset:GetScale()*desiredHeight/math.max(extents.Y,0.1))
+    asset:PivotTo(CFrame.new(entry[2],desiredHeight/2,entry[3])*CFrame.Angles(0,entry[5],0))
+    for _,p in asset:GetDescendants() do
+     if p:IsA("BasePart") then p.Anchored=true;p.CanCollide=false end
+    end
+    asset.Parent=curated
+   end
+   placed+=1
+  end
+ end
+ print("[Dreamcore] Synty licenciado carregado:",placed,"instancias curadas")
+ sourcePack:Destroy()
+else
+ -- Falha na rede/permissao nao bloqueia a floresta original.
+ warn("[Dreamcore] Pacote Synty indisponivel; mantendo vegetacao autoral.")
+end
+
 -- Landmark: a Arvore da Primeira Memoria, dominante na silhueta.
 local sacred=Instance.new("Model")
 sacred.Name="Arvore da Primeira Memoria"
@@ -443,9 +509,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",4)
+world:SetAttribute("WorldVersion",5)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v4:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v5:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
