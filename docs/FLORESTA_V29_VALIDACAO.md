@@ -24,4 +24,23 @@ Não há Studio MCP conectado, playtest Android, medição de FPS, polígonos po
 
 **V29 não foi publicada no Roblox.** Merge e build não alteram a experiência Android. Não existe destino espelho separado confirmado neste repositório. O workflow de publicação permanece manual; nenhuma solicitação antiga V7/V25 foi reutilizada para publicar esta mudança. A próxima publicação precisa de destino e autorização compatíveis, seguida de entrada e captura real. Saved também não é Published.
 
-As evidências finais e a pendência de visual real serão vinculadas no PR e na issue de acompanhamento.
+Pendências de visual real, Android e publicação: [issue #3](https://github.com/PHBritoDev/Roblox-Game-Mobile/issues/3), mantida aberta. Integração: [PR #2](https://github.com/PHBritoDev/Roblox-Game-Mobile/pull/2).
+
+## Resultados técnicos da execução
+
+- 17 testes de regressão Python: rejeição de buracos, degraus, obstáculos, proxies inválidos, evidência ausente, injeção de falha de assets e retries HTTP somente em GET.
+- 825 amostras de apoio/colisão aprovadas com os pacotes disponíveis e outras 825 no fallback. Trilha central medida: 286,13 studs; piso em Y=0, com spawn em Y=0,05 e tabuleiro em Y=0,25.
+- Falhas encontradas e corrigidas pelo QA: terreno originalmente em Y=2 por ocupação do voxel; cabeceiras enterradas; árvores/galhos no acesso ao lago; raízes ancestrais no fim da trilha; preparação assíncrona da colisão do Terrain exposta quando os pacotes falham sem yield.
+- Prontidão física agora exige quatro sondagens de terreno seco, com timeout explícito. Após um tick de integração das estruturas, o servidor marca Ready. Texto de carregamento fica visível durante a espera e Failed interrompe o timeout.
+- [Headless, fallback e preview](https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43632894637): artefato `PREVIEW-PROXY-nao-e-screenshot-roblox`, incluindo scene.json, scene_qa.json, fallback/scene_qa.json, imagens e visual_review.json. O PR registra a revisão das imagens e os checks finais de main.
+
+## Assets mantidos
+
+Forest Pack `6432306802`, autor/publicador @Roblox: [Creator Store](https://create.roblox.com/store/asset/6432306802/Forest-Pack). Synty Nature Pack `6933438443`, @Roblox/Synty: [Creator Store](https://create.roblox.com/store/asset/6933438443), [permissão oficial para criações Roblox](https://devforum.roblox.com/t/free-synty-asset-packs-released-in-the-marketplace/1283755/). Uso restrito a este projeto Roblox conforme a curadoria existente; nenhuma licença externa é presumida.
+
+Scripts são removidos antes de parentear clones. O snapshot registra dimensões e flags físicas por parte; o QA confirma ausência de LuaSourceContainer no mundo gerado. Forest Pack mantém SurfaceAppearance/folhas alfa originais; Synty mantém suas malhas/texturas. Contagem de triângulos por clone e custo de alpha overdraw ainda não medidos: estes limites continuam na issue #3. Não foram introduzidos novos assets externos.
+
+
+## Inspeção dos três previews
+
+Renders e reviewer técnico concluídos sem erros; as três câmeras permaneceram nas coordenadas predefinidas. No spawn, a trilha e a variação do solo agora aparecem no preview amostrado. O ângulo de aproximação permanece muito ocluído pelos volumes brancos usados para representar folhas/malhas; não é possível concluir como as folhas alfa realmente se comportam no Roblox. O ângulo alto identifica o landmark, mas também exagera massas de copa. **A arte não está aprovada por estas imagens.** O próximo ajuste visual deve partir de captura real, conforme issue #3.
