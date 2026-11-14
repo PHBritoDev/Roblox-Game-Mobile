@@ -1,3 +1,15 @@
+## Evolução: Floresta das Memórias V12 — modelos de alto detalhamento
+
+- **Forest Pack** por **@Roblox**, ID `6432306802` — <https://create.roblox.com/store/asset/6432306802/Forest-Pack>.
+- Pacote inclui folhas com transparência, troncos com `SurfaceAppearance`, vegetação e pedras. O inventário na engine encontrou **83 MeshParts, 73 SurfaceAppearances, 61 Models e 13 Scripts**.
+- **Nenhum script do pacote é usado:** o gerador apaga instâncias `LuaSourceContainer` antes de copiar modelos; partículas externas também são excluídas dos clones.
+- Escolhas deliberadas: beechwood, dogwood, maple, broadleaf e redwood para vegetação de primeiro/médio plano. A árvore ancestral recebe um beechwood detalhado em vez da copa enorme de esferas; fallback procedural caso o modelo não carregue.
+- Auditoria V12: **73 modelos** Forest Pack carregados, **178 partes** de origem Forest Pack, **79 partes** Synty e apenas **10 troncos** procedurais; trilha sem troncos detectados no seu corredor. Essa verificação é geométrica, **não substitui playtest do Roblox**.
+- Terreno: `Decoration`, `GrassLength`, `GlobalWind`, água e cores de solo configurados. Projeto Rojo inclui `LightingStyle: Realistic`, sombras e prioridade de iluminação. A build .rbxlx foi inspecionada e contém `<token name="LightingStyle">0</token>`.
+- O preview Blender **não reconstrói texturas PBR nem folhas alfa do Forest Pack** e, portanto, não é avaliação fiel do visual Roblox. O fotógrafo corrigiu a posição de câmera que ficava dentro de uma árvore; validações técnicas continuam.
+- Sem validação real de FPS Android ou da atmosfera renderizada. **Não presumir qualidade Genshin** só pelo número de meshes.
+- **Não existe trilha sonora nesta etapa:** só aceitar música/sons depois de escutar, conferir licença e permissão do asset, evitando loops genéricos.
+
 # Biblioteca curada — Floresta das Memórias
 
 ## Pacote integrado no código (Mundo 1 v5)
