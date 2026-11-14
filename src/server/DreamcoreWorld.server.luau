@@ -69,6 +69,20 @@ local function between(name, a, b, width, color, material, parent)
   CFrame.lookAt(midpoint,b)*CFrame.Angles(PI/2,0,0), color, material, parent)
  return segment
 end
+-- Folhagem decorativa: sem física, eventos de toque ou raycasts.
+-- RenderFidelity.Automatic permite LOD do motor sem destruir os detalhes próximos.
+local function optimizeDecorativeMesh(item,shadow)
+ if not item:IsA("BasePart") then return end
+ item.Anchored=true
+ item.CanCollide=false
+ item.CanTouch=false
+ item.CanQuery=false
+ item.CastShadow=shadow
+ if item:IsA("MeshPart") then
+  item.RenderFidelity=Enum.RenderFidelity.Automatic
+ end
+end
+
 local function group(name)
  local folder = Instance.new("Folder")
  folder.Name = name
@@ -413,9 +427,7 @@ if okForest and forestPack then
   for _,item in tree:GetDescendants() do
    if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then item:Destroy()
    elseif item:IsA("BasePart") then
-    item.Anchored=true
-    item.CanCollide=false
-    item.CastShadow=true
+    optimizeDecorativeMesh(item,true)
    end
   end
   local desiredHeight=site.s*(if template.Name=="RedwoodTree-Var01" then 29 else 23)
@@ -477,9 +489,7 @@ if okForest and forestPack then
     if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then
      item:Destroy()
     elseif item:IsA("BasePart") then
-     item.Anchored=true
-     item.CanCollide=false
-     item.CastShadow=false
+     optimizeDecorativeMesh(item,false)
     end
    end
    local okFoliage=pcall(function()
@@ -837,9 +847,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",15)
+world:SetAttribute("WorldVersion",16)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v15:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v16:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
