@@ -34,8 +34,10 @@ local subtitle=label("WorldSubtitle",0.167,0.06,15,"Mundo I  ·  Onde a luz reco
 local hint=label("WorldHint",0.835,0.05,14,"Siga a trilha até a árvore ancestral")
 -- A chegada acompanha o servidor e pede streaming na area inicial antes da vinheta.
 hint.Text="Carregando a floresta…"
+hint.TextTransparency=0
 local deadline=os.clock()+45
-while ReplicatedStorage:GetAttribute("ForestState")~="Ready" and os.clock()<deadline do
+while ReplicatedStorage:GetAttribute("ForestState")~="Ready"
+ and ReplicatedStorage:GetAttribute("ForestState")~="Failed" and os.clock()<deadline do
  task.wait(0.25)
 end
 if ReplicatedStorage:GetAttribute("ForestState")=="Ready" then

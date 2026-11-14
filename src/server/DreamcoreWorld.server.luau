@@ -162,6 +162,22 @@ for ix=1,170 do
 end
 terrain:WriteVoxels(Region3.new(Vector3.new(-340,-16,-488),Vector3.new(340,0,304)),4,materials,occupancies)
 materials=nil; occupancies=nil
+-- WriteVoxels atualiza colisao assincronamente. Nao depender do tempo de LoadAsset.
+local readiness=RaycastParams.new()
+readiness.FilterType=Enum.RaycastFilterType.Include
+readiness.FilterDescendantsInstances={terrain}
+readiness.IgnoreWater=true
+local readyDeadline=os.clock()+10
+local floorReady=false
+repeat
+ task.wait(0.1)
+ floorReady=true
+ for _,point in {Vector3.new(0,12,24),Vector3.new(0,12,-254),Vector3.new(90,12,-89),Vector3.new(-62,12,-151)} do
+  local hit=Workspace:Raycast(point,Vector3.new(0,-24,0),readiness)
+  if not hit or math.abs(hit.Position.Y)>0.25 then floorReady=false break end
+ end
+until floorReady or os.clock()>=readyDeadline
+assert(floorReady,"Terrain ainda sem apoio fisico apos geracao")
 
 -- Folhas originais achatadas nas bordas; sem colisao, sombras ou alpha cards extras.
 for i=1,90 do
@@ -927,6 +943,7 @@ end
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
 world:SetAttribute("WorldVersion",29)
+task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 world:SetAttribute("GenerationComplete",true)
 world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
 ReplicatedStorage:SetAttribute("ForestState","Ready")
