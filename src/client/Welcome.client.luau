@@ -54,7 +54,8 @@ if state=="Ready" then
   pcall(function() player:RequestStreamAroundAsync(Vector3.new(0,4,8),10) end)
  end)
 elseif state=="Failed" then
- hint.Text="Falha ao gerar o mundo no servidor. Equipe avisada."
+ local code=tostring(ReplicatedStorage:GetAttribute("ForestErrorCode") or "Unknown")
+ hint.Text="Erro ao criar floresta ("..code.."). Servidor em recuperacao."
 else
  hint.Text="O mundo ainda está carregando. Explore quando aparecer."
  -- Nao afirmar que a geracao falhou: pode apenas estar atrasada no servidor.
