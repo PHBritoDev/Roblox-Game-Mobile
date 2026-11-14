@@ -1,0 +1,28 @@
+name: Inspecao segura de asset oficial Roblox
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/roblox-qa/probe_synty_asset.luau"
+      - "tools/roblox-qa/run_asset_probe.py"
+      - ".github/workflows/auditar-synty.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspecionar Synty Nature Pack no Roblox (sem instalar ou executar scripts)
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: python3 tools/roblox-qa/run_asset_probe.py
+      - name: Salvar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-pacote-synty
+          path: artifacts/assets/synty_probe.json
+          if-no-files-found: warn
