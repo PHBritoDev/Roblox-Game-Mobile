@@ -15,8 +15,8 @@ world.Name = "DreamcoreGenerated"
 world.Parent = Workspace
 terrain:Clear()
 -- Materiais e vento fazem parte da qualidade: grama se move mesmo sem VFX extra.
-terrain.Decoration=true
-terrain.GrassLength=0.65
+-- Decoration e GrassLength sao propriedades NotScriptable na engine Roblox.
+-- Nunca ajustar via script: isso abortava o gerador antes do Terrain e Spawn.
 terrain.WaterColor=Color3.fromRGB(71,144,137)
 terrain.WaterTransparency=0.32
 terrain.WaterReflectance=0.2
