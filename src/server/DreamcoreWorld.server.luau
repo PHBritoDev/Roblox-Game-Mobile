@@ -377,6 +377,7 @@ local okForest,forestPack=pcall(function()
  return InsertService:LoadAsset(6432306802)
 end)
 local forestCount=0
+local forestHeroBuilt=false
 if okForest and forestPack then
  for _,descendant in forestPack:GetDescendants() do
   if descendant:IsA("LuaSourceContainer") then descendant:Destroy() end
@@ -431,6 +432,14 @@ if okForest and forestPack then
    branchTree(site.x,site.z,site.s,props)
   end
  end
+ local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
+ if heroTemplate then
+  local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-265,s=3.65},9001)
+  if okHero then
+   forestHeroBuilt=true
+   forestCount+=1
+  end
+ end
  forestPack:Destroy()
 else
  for _,site in forestTreeSites do
@@ -455,19 +464,26 @@ for i=1,8 do
  local high=center+Vector3.new(math.cos(a)*3,23,math.sin(a)*3)
  between("Raiz colossal",low,high,3.7,P.bark,Enum.Material.Wood,sacred)
 end
-for i=1,10 do
- local a=i*PI*2/10
- local start=Vector3.new(center.X,43,center.Z)
- local tip=center+Vector3.new(math.cos(a)*rng:NextNumber(19,34),rng:NextNumber(53,75),
-  math.sin(a)*rng:NextNumber(19,34))
- between("Braco da arvore",start,tip,3.8,P.bark,Enum.Material.Wood,sacred)
- local leaves=orb("Dossel dourado",tip+Vector3.new(0,6,0),rng:NextNumber(24,36),
-  if i%3==0 then P.canopyGold else P.canopyMid,Enum.Material.Grass,sacred)
- leaves.Size=Vector3.new(leaves.Size.X*1.18,leaves.Size.Y*0.66,leaves.Size.Z*1.12)
- leaves.CanCollide=false
+if forestHeroBuilt then
+ core.Transparency=1
+ core.CanCollide=false
+ -- A propria malha Beechwood detalhada fornece tronco e copa.
+else
+ -- Fallback do marco central somente se a malha licenciada estiver indisponivel.
+ for i=1,10 do
+  local a=i*PI*2/10
+  local start=Vector3.new(center.X,43,center.Z)
+  local tip=center+Vector3.new(math.cos(a)*rng:NextNumber(19,34),rng:NextNumber(53,75),
+   math.sin(a)*rng:NextNumber(19,34))
+  between("Braco da arvore",start,tip,3.8,P.bark,Enum.Material.Wood,sacred)
+  local leaves=orb("Dossel dourado",tip+Vector3.new(0,6,0),rng:NextNumber(24,36),
+   if i%3==0 then P.canopyGold else P.canopyMid,Enum.Material.Grass,sacred)
+  leaves.Size=Vector3.new(leaves.Size.X*1.18,leaves.Size.Y*0.66,leaves.Size.Z*1.12)
+  leaves.CanCollide=false
+ end
+ orb("Coroa do santuario",center+Vector3.new(0,crownY+17,0),42,
+  P.canopy,Enum.Material.Grass,sacred).CanCollide=false
 end
-orb("Coroa do santuario",center+Vector3.new(0,crownY+17,0),42,
- P.canopy,Enum.Material.Grass,sacred).CanCollide=false
 
 -- Círculo de pedras cerimoniais, inteligível na aproximação.
 for i=1,12 do
@@ -644,6 +660,25 @@ emitter.Speed=NumberRange.new(0.3,1.5)
 emitter.SpreadAngle=Vector2.new(180,180)
 emitter.Parent=fireflies
 
+-- Luz de destaque controlada nos dois marcos: 2 luzes, sem espalhar dezenas no mapa.
+local function glow(name,pos,tint,range)
+ local holder=part(name,Vector3.new(1,1,1),CFrame.new(pos),tint,Enum.Material.SmoothPlastic,effects)
+ holder.Transparency=1
+ holder.CanCollide=false
+ holder.CastShadow=false
+ local light=Instance.new("PointLight")
+ light.Color=tint
+ light.Range=range
+ light.Brightness=0.7
+ light.Shadows=false
+ light.Parent=holder
+ return light
+end
+local ancientGlow=glow("Luar sob a arvore",center+Vector3.new(0,6,11),
+ Color3.fromRGB(255,206,142),30)
+local lakeGlow=glow("Luz da runa no lago",Vector3.new(-101,7,-164),
+ Color3.fromRGB(127,180,235),25)
+
 -- Perfis calibrados para a direção de arte: quente, crepúsculo frio e noite azul.
 local moods={
  {
@@ -651,21 +686,21 @@ local moods={
   ambient=Color3.fromRGB(81,91,116), outdoor=Color3.fromRGB(160,133,126),
   atm=Color3.fromRGB(246,196,148), decay=Color3.fromRGB(121,129,166),
   tint=Color3.fromRGB(255,230,203), exposure=0.02,
-  cloud=Color3.fromRGB(255,208,172), stars=0, rays=0.13,
+  cloud=Color3.fromRGB(255,208,172), stars=0, rays=0.13, glow=0.65,
  },
  {
   name="Cold Twilight", clock=19.0, brightness=1.55,
   ambient=Color3.fromRGB(62,75,121), outdoor=Color3.fromRGB(98,104,153),
   atm=Color3.fromRGB(155,154,207), decay=Color3.fromRGB(92,112,167),
   tint=Color3.fromRGB(208,211,255), exposure=-0.09,
-  cloud=Color3.fromRGB(175,166,219), stars=1400, rays=0.05,
+  cloud=Color3.fromRGB(175,166,219), stars=1400, rays=0.05, glow=1.15,
  },
  {
   name="Starry Dream Night", clock=23.6, brightness=1.1,
   ambient=Color3.fromRGB(38,49,98), outdoor=Color3.fromRGB(66,84,121),
   atm=Color3.fromRGB(88,117,175), decay=Color3.fromRGB(43,54,107),
   tint=Color3.fromRGB(185,201,255), exposure=-0.15,
-  cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0,
+  cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0, glow=1.75,
  }
 }
 
@@ -726,6 +761,8 @@ local function applyMood(mood)
  atmosphere.Decay=mood.decay
  grade.TintColor=mood.tint
  rays.Intensity=mood.rays
+ ancientGlow.Brightness=mood.glow
+ lakeGlow.Brightness=mood.glow*0.72
  sky.StarCount=mood.stars
  clouds.Color=mood.cloud
  world:SetAttribute("LightingMood",mood.name)
@@ -733,9 +770,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",10)
+world:SetAttribute("WorldVersion",11)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v10:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v11:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
@@ -764,6 +801,8 @@ task.spawn(function()
     grade.TintColor=start.tint:Lerp(target.tint,smooth)
     clouds.Color=start.cloud:Lerp(target.cloud,smooth)
     rays.Intensity=start.rays+(target.rays-start.rays)*smooth
+    ancientGlow.Brightness=start.glow+(target.glow-start.glow)*smooth
+    lakeGlow.Brightness=ancientGlow.Brightness*0.72
     if t>=1 then break end
     task.wait(0.18)
    end
