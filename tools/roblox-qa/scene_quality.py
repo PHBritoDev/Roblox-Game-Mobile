@@ -25,6 +25,16 @@ trunk_obstructions = [
     if -250 <= p["p"][2] <= 24
     and abs(p["p"][0] - path_x(p["p"][2])) < (7.5 + p["s"][0]/2)
 ]
+# Forest Pack parts use textured meshes; their bounding boxes are only a rough
+# obstruction estimate (not equivalent to a collision test).
+forest_trunk_obstructions = [
+    {"name": p["n"], "position": p["p"], "size": p["s"]}
+    for p in parts
+    if p.get("origin") == "ForestPack"
+    and "Trunk" in p["n"]
+    and -232 <= p["p"][2] <= 24
+    and abs(p["p"][0] - path_x(p["p"][2])) < (10 + min(p["s"][0] / 2, 24))
+]
 report = {
     "kind": "geometric_proxy_qa",
     "robloxScreenshot": False,
@@ -38,11 +48,13 @@ report = {
     "treeCanopySections": counts["Copa em camadas"]+counts["Coroa alta"],
     "relicColumns": counts["Sentinela esquecida"]+counts["Sentinela quebrada"]+counts["Pilar do santuario"],
     "trunksIntersectingMainPath": trunk_obstructions[:20],
+    "forestMeshTrunksCloseToPath": forest_trunk_obstructions[:20],
     "pass": len(parts) == scene["meta"]["partsTotal"]
        and forest_models >= 25
        and origins["ForestPack"] >= 35
        and counts["Tronco musgoso"] <= 45
-       and len(trunk_obstructions) == 0,
+       and len(trunk_obstructions) == 0
+       and len(forest_trunk_obstructions) == 0,
     "limitations": [
         "Does not test walkability, collision or FPS in an actual Roblox client",
         "Roblox terrain and actual lighting are not reconstructed faithfully",
