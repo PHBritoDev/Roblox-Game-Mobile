@@ -57,15 +57,46 @@ jobs:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
         run: |
           set -euo pipefail
-          curl --fail-with-body --show-error --silent --retry 2 \
+          status=$(curl --show-error --silent --retry 2 \
             --request POST \
             "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=${MODE}" \
             --header "x-api-key: ${ROBLOX_API_KEY}" \
             --header "Content-Type: application/xml" \
             --data-binary @DreamcorePrototype.rbxlx \
-            --output resultado-publicacao.json
-          echo "Resposta da API:"
-          cat resultado-publicacao.json
+            --output resultado-publicacao.json \
+            --write-out '%{http_code}')
+          echo "Status HTTP da API Roblox: ${status}"
+          if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          raw = Path("resultado-publicacao.json").read_text(errors="replace")
+          try:
+              data = json.loads(raw)
+              if isinstance(data, dict):
+                  errs = data.get("errors")
+                  if isinstance(errs, list):
+                      msg = "; ".join(str(e.get("message", e.get("code", "erro"))) for e in errs if isinstance(e, dict))
+                  else:
+                      msg = str(data.get("message", data.get("error", "Resposta sem mensagem")))
+              else:
+                  msg = "Formato inesperado de resposta"
+          except ValueError:
+              msg = "Resposta nao-JSON recebida; consulte as permissoes Open Cloud"
+          key = os.environ.get("ROBLOX_API_KEY", "")
+          if key:
+              msg = msg.replace(key, "[CHAVE OCULTA]")
+          print("Diagnostico Roblox:", msg[:500])
+          PY
+            exit 1
+          fi
+          echo "Publicacao aceita pelo Roblox."
+          python3 - <<'PY'
+          import json
+          with open("resultado-publicacao.json") as file:
+              result = json.load(file)
+          print("Numero da versao:", result.get("versionNumber", "nao informado"))
+          PY
       - name: Salvar comprovante
         uses: actions/upload-artifact@v4
         with:
