@@ -520,19 +520,20 @@ sacred.Name="Arvore da Primeira Memoria"
 sacred.Parent=landmarks
 local center=Vector3.new(pathX(-245),0,-265)
 local crownY=64
-local core=part("Cerne antigo",Vector3.new(11,58,11),
- CFrame.new(center.X,29,center.Z),P.barkLight,Enum.Material.Wood,sacred)
-for i=1,8 do
- local a=i*PI/4
- local low=center+Vector3.new(math.cos(a)*9,1,math.sin(a)*9)
- local high=center+Vector3.new(math.cos(a)*3,23,math.sin(a)*3)
- between("Raiz colossal",low,high,3.7,P.bark,Enum.Material.Wood,sacred)
-end
 if forestHeroBuilt then
- core.Transparency=1
- core.CanCollide=false
- -- A propria malha Beechwood detalhada fornece tronco e copa.
+ -- Sem cilindros, raízes geométricas ou tronco invisível sobre a malha hero.
+ -- O modelo licenciado é o único volume do marco central.
+ world:SetAttribute("HeroUsesMeshOnly",true)
 else
+ world:SetAttribute("HeroUsesMeshOnly",false)
+ local core=part("Cerne antigo",Vector3.new(11,58,11),
+  CFrame.new(center.X,29,center.Z),P.barkLight,Enum.Material.Wood,sacred)
+ for i=1,8 do
+  local a=i*PI/4
+  local low=center+Vector3.new(math.cos(a)*9,1,math.sin(a)*9)
+  local high=center+Vector3.new(math.cos(a)*3,23,math.sin(a)*3)
+  between("Raiz colossal",low,high,3.7,P.bark,Enum.Material.Wood,sacred)
+ end
  -- Fallback do marco central somente se a malha licenciada estiver indisponivel.
  for i=1,10 do
   local a=i*PI*2/10
@@ -597,10 +598,12 @@ for i=1,36 do
    Enum.Material.Neon,details)
   fungi.CanCollide=false
  else
-  local bush=orb("Arbusto de sub-bosque",Vector3.new(x,1.15,z),
-   rng:NextNumber(2.3,4.2),if i%3==0 then P.mossLight else P.moss,
-   Enum.Material.Grass,details)
-  bush.CanCollide=false
+  -- Retirar os arbustos-esfera que dominavam a silhueta do primeiro plano.
+  -- As samambaias MeshPart do Forest Pack compõem o estrato baixo.
+  local petal=orb("Flor silvestre discreta",Vector3.new(x,0.9,z),
+   rng:NextNumber(0.35,0.65),if i%3==0 then P.flower else P.mossLight,
+   Enum.Material.SmoothPlastic,details)
+  petal.CanCollide=false
  end
 end
 
@@ -834,9 +837,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",14)
+world:SetAttribute("WorldVersion",15)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v14:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v15:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
