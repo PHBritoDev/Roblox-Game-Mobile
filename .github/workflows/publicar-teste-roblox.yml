@@ -1,0 +1,74 @@
+name: Enviar mapa para Roblox (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      universo_id:
+        description: "Universe ID da experiencia de teste existente"
+        required: true
+        type: string
+      lugar_id:
+        description: "Place ID do lugar de teste existente"
+        required: true
+        type: string
+      modo:
+        description: "Saved prepara uma versao; Published libera a versao para a experiencia"
+        required: true
+        type: choice
+        default: Saved
+        options:
+          - Saved
+          - Published
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    environment: roblox-teste
+    steps:
+      - name: Conferir entradas e configuracao
+        env:
+          UNIVERSE: ${{ inputs.universo_id }}
+          PLACE: ${{ inputs.lugar_id }}
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: |
+          set -euo pipefail
+          [[ "$UNIVERSE" =~ ^[0-9]+$ ]] || { echo "Universe ID invalido"; exit 1; }
+          [[ "$PLACE" =~ ^[0-9]+$ ]] || { echo "Place ID invalido"; exit 1; }
+          if [ -z "$ROBLOX_API_KEY" ]; then
+            echo "Configure ROBLOX_API_KEY em GitHub Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - name: Instalar Rojo
+        run: cargo install rojo --version 7.6.1 --locked
+      - name: Construir arquivo do mapa
+        run: rojo build default.project.json -o DreamcorePrototype.rbxlx
+      - name: Enviar versao ao lugar existente
+        env:
+          UNIVERSE: ${{ inputs.universo_id }}
+          PLACE: ${{ inputs.lugar_id }}
+          MODE: ${{ inputs.modo }}
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent --retry 2 \
+            --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=${MODE}" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @DreamcorePrototype.rbxlx \
+            --output resultado-publicacao.json
+          echo "Resposta da API:"
+          cat resultado-publicacao.json
+      - name: Salvar comprovante
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-envio-roblox
+          path: resultado-publicacao.json
+          if-no-files-found: error
