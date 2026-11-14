@@ -13,10 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Instalar Rojo 7.6.1
-        run: cargo install rojo --version 7.6.1 --locked
+      - name: Reutilizar compilador Rojo entre builds
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/rojo
+          key: rojo-7.6.1-${{ runner.os }}-v1
+      - name: Instalar Rojo 7.6.1 se necessario
+        run: |
+          if ! command -v rojo >/dev/null 2>&1; then
+            cargo install rojo --version 7.6.1 --locked
+          fi
       - name: Gerar arquivo do prototipo
         run: rojo build default.project.json -o DreamcorePrototype.rbxlx
+      - name: Provar que o Place tem iluminacao Realistic
+        run: |
+          grep -Fq '<token name="LightingStyle">0</token>' DreamcorePrototype.rbxlx
+          grep -Fq '<bool name="PrioritizeLightingQuality">true</bool>' DreamcorePrototype.rbxlx
+          grep -Fq '<bool name="GlobalShadows">true</bool>' DreamcorePrototype.rbxlx
+          echo 'Lighting Realistic e prioridade de sombras presentes no arquivo do Roblox.'
       - name: Publicar artefato para revisao
         uses: actions/upload-artifact@v4
         with:
