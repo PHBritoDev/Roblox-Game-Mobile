@@ -1,0 +1,53 @@
+name: Laboratorio visual proxy (geometria Roblox)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/server/DreamcoreWorld.server.luau'
+      - 'tools/roblox-qa/snapshot_scene.py'
+      - 'tools/roblox-qa/export_scene.luau'
+      - 'tools/roblox-qa/render_scene.py'
+      - '.github/workflows/visual-proxy-roblox.yml'
+permissions:
+  contents: read
+concurrency:
+  group: preview-proxy-world1
+  cancel-in-progress: true
+jobs:
+  preview:
+    name: Exportar geometria da engine e renderizar proxy 3D
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+      ROBLOX_UNIVERSE_ID: '2660433574'
+      ROBLOX_PLACE_ID: '6947682498'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar autorizacao
+        run: |
+          test -n "$ROBLOX_API_KEY" || { echo "Chave Open Cloud nao configurada"; exit 1; }
+      - name: Exportar snapshot da geometria usando a engine Roblox headless
+        run: python3 tools/roblox-qa/snapshot_scene.py
+      - name: Instalar Blender para renderizar offline (sem Studio)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender
+      - name: Renderizar 3 perspectivas de floresta
+        run: blender --background --threads 2 --python tools/roblox-qa/render_scene.py
+      - name: Montar clipe MP4 com as tres perspectivas estaticas
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -loop 1 -t 3 -i artifacts/visual-preview/preview_spawn.png \
+            -loop 1 -t 3 -i artifacts/visual-preview/preview_approach.png \
+            -loop 1 -t 3 -i artifacts/visual-preview/preview_canopy.png \
+            -filter_complex "[0:v]fps=15,format=yuv420p[v0];[1:v]fps=15,format=yuv420p[v1];[2:v]fps=15,format=yuv420p[v2];[v0][v1][v2]concat=n=3:v=1:a=0[out]" \
+            -map '[out]' -c:v libx264 -pix_fmt yuv420p -crf 27 artifacts/visual-preview/preview_montagem.mp4
+      - name: Salvar screenshots proxy, cena e video para auditoria
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PREVIEW-PROXY-nao-e-screenshot-roblox
+          path: artifacts/visual-preview/
+          retention-days: 14
+          if-no-files-found: warn
