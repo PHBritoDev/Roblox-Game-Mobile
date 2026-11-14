@@ -1,0 +1,28 @@
+name: Auditar Forest Pack detalhado
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/roblox-qa/probe_forest_asset.luau'
+      - 'tools/roblox-qa/run_forest_probe.py'
+      - '.github/workflows/auditar-forest.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspecionar modelos, superficies e scripts isoladamente
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: python3 tools/roblox-qa/run_forest_probe.py
+      - name: Arquivar laudo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-forest-pack
+          path: artifacts/assets/forest_probe.json
+          if-no-files-found: warn
