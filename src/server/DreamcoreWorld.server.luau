@@ -496,6 +496,7 @@ local okForest,forestPack=pcall(function()
 end)
 local forestCount=0
 local forestHeroBuilt=false
+local forestIntegrated,forestError=xpcall(function()
 if okForest and forestPack then
  for _,descendant in forestPack:GetDescendants() do
   if descendant:IsA("LuaSourceContainer") then descendant:Destroy() end
@@ -648,6 +649,13 @@ else
   branchTree(site.x,site.z,site.s,props)
  end
  warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
+end
+end,debug.traceback)
+if not forestIntegrated then
+ warn("[Dreamcore] Forest Pack integracao falhou: "..tostring(forestError))
+ world:SetAttribute("ForestPackIntegrationFailed",true)
+ ReplicatedStorage:SetAttribute("ForestAssetWarning","ForestPack")
+ -- O monumento e a iluminacao seguem com o fallback integrado abaixo.
 end
 world:SetAttribute("ForestMeshTrees",forestCount)
 print("[Dreamcore] Floresta com SurfaceAppearance:",forestCount,"modelos")
