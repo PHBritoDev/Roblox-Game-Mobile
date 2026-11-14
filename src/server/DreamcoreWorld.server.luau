@@ -194,6 +194,12 @@ local meshTreeSites={}
 local forestTreeSites={}
 local function plantOrReserve(x,z,s,useMesh)
  if useMesh then
+  -- Mesmo afastamento das arvores Forest Pack: a copa nao deve fechar o corredor.
+  -- Usa a coordenada real da trilha no Z do exemplar, inclusive nas curvas.
+  local offset=x-pathX(z)
+  if z>-238 and z<32 and math.abs(offset)<52 then
+   x=pathX(z)+(if offset>=0 then 1 else -1)*52
+  end
   table.insert(meshTreeSites,{x=x,z=z,s=s})
  elseif math.abs(x-pathX(z))<73 or rng:NextNumber()<0.56 then
   -- Arvores detalhadas enquadram o corredor, mas troncos nao invadem a trilha.
@@ -881,9 +887,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",23)
+world:SetAttribute("WorldVersion",24)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v23:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v24:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
