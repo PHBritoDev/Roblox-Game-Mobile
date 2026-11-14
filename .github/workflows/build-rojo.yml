@@ -1,0 +1,25 @@
+name: Construir prototipo Roblox (Rojo)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'default.project.json'
+      - '.github/workflows/build-rojo.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar Rojo 7.6.1
+        run: cargo install rojo --version 7.6.1 --locked
+      - name: Gerar arquivo do prototipo
+        run: rojo build default.project.json -o DreamcorePrototype.rbxlx
+      - name: Publicar artefato para revisao
+        uses: actions/upload-artifact@v4
+        with:
+          name: DreamcorePrototype
+          path: DreamcorePrototype.rbxlx
+          if-no-files-found: error
