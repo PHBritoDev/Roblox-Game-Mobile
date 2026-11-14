@@ -77,6 +77,28 @@ for i=1,32 do
  terrain:FillBall(Vector3.new(math.cos(theta)*r,-10,math.sin(theta)*r-90),
   rng:NextNumber(45,92),Enum.Material.Grass)
 end
+-- V8: terreno esculpido em volumes suaves, com silhueta distante e enquadramento.
+-- Trilha principal fica em terreno nivelado; elevacoes sao fora da zona navegavel.
+local ridgeRng=Random.new(83214)
+for side=-1,1,2 do
+ for i=1,18 do
+  local z=100-i*26
+  local centerX=side*(118+ridgeRng:NextNumber(-16,27))
+  local rise=ridgeRng:NextNumber(16,44)
+  local radius=ridgeRng:NextNumber(27,49)
+  terrain:FillBall(Vector3.new(centerX,-radius*0.50+rise*0.42,z),radius,Enum.Material.Grass)
+  terrain:FillBall(Vector3.new(centerX+side*14,-radius*0.74+rise*0.30,z-10),radius*0.75,Enum.Material.Rock)
+ end
+end
+-- Colinas recortadas no horizonte, não blocos flutuantes.
+for i=1,13 do
+ local x=-260+i*40
+ local z=-375+math.sin(i*0.78)*18
+ local radius=ridgeRng:NextNumber(32,58)
+ terrain:FillBall(Vector3.new(x,-radius*0.38,z),radius,Enum.Material.Rock)
+ terrain:FillBall(Vector3.new(x+9,-radius*0.24,z+12),radius*0.78,Enum.Material.Grass)
+end
+
 -- Rio e desfiladeiro a direita; agua real do Terrain, margens naturais.
 for i=0,19 do
  local z=115-i*23
@@ -273,6 +295,30 @@ if okPack and sourcePack then
  end
  -- Substituicoes avaliadas pelo agente: reduzir repeticao de copas esfericas.
  -- Tres arvores oficiais de silhuetas distintas, ancoradas e sem scripts.
+ -- Vegetacao profissional curada por planos: samambaias e tufos de grama
+ -- próximos ao jogador (não espalhar 200 clones pela cena).
+ local fernNames={
+  "Meshes/Fern_Plant_Fern_Leaves_01",
+  "Meshes/PolygonNature_Plant_Grass_05",
+  "Meshes/Undergrowth",
+ }
+ for i=1,34 do
+  local z=25-i*8.1
+  local edge=if i%2==0 then 1 else -1
+  local x=pathX(z)+edge*(10+(i%4)*3)
+  local template=lookup[fernNames[(i-1)%#fernNames+1]]
+  if template and template:IsA("MeshPart") then
+   local leaf=template:Clone()
+   leaf.Name="Synty — estrato de samambaias "..i
+   local scale=2.3+rng:NextNumber(0.2,1.6)
+   leaf.Size=leaf.Size*(scale/math.max(leaf.Size.Y,0.15))
+   leaf.CFrame=CFrame.new(x,leaf.Size.Y*0.49,z)*CFrame.Angles(0,i*1.81,0)
+   leaf.Anchored=true
+   leaf.CanCollide=false
+   leaf.CastShadow=false
+   leaf.Parent=curated
+  end
+ end
  local treeTypes={
   "Meshes/Pine_Tree_Pine_Large_01",
   "Meshes/PolygonNature_Tree_Round_04",
@@ -597,9 +643,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",7)
+world:SetAttribute("WorldVersion",8)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v7:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v8:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
