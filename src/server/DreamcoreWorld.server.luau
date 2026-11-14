@@ -172,7 +172,7 @@ local floorReady=false
 repeat
  task.wait(0.1)
  floorReady=true
- for _,point in {Vector3.new(0,12,24),Vector3.new(0,12,-254),Vector3.new(90,12,-89),Vector3.new(-62,12,-151)} do
+ for _,point in {Vector3.new(0,12,24),Vector3.new(0,12,-254),Vector3.new(90,12,-89),Vector3.new(-54,12,-151)} do
   local hit=Workspace:Raycast(point,Vector3.new(0,-24,0),readiness)
   if not hit or math.abs(hit.Position.Y)>0.25 then floorReady=false break end
  end
