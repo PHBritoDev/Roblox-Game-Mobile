@@ -472,7 +472,7 @@ if okForest and forestPack then
     end
     if hasMesh then
      local okSize,size=pcall(function() return item:GetExtentsSize() end)
-     if okSize and size.Y>0.1 and size.Y<55 and #undergrowthTemplates<16 then
+     if okSize and size.Y>0.1 and size.Y<55 then
       table.insert(undergrowthTemplates,item)
      end
     end
@@ -484,6 +484,15 @@ if okForest and forestPack then
  table.sort(undergrowthTemplates,function(a,b)
   return a:GetFullName()<b:GetFullName()
  end)
+ -- Selecionar somente depois de ordenar: o limite anterior dependia da
+ -- ordem arbitraria de GetDescendants e mudava as especies entre builds.
+ while #undergrowthTemplates>16 do
+  table.remove(undergrowthTemplates)
+ end
+ local terrainRayParams=RaycastParams.new()
+ terrainRayParams.FilterType=Enum.RaycastFilterType.Include
+ terrainRayParams.FilterDescendantsInstances={terrain}
+ terrainRayParams.IgnoreWater=true
  local undergrowthPlaced=0
  for i=1,58 do
   local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
@@ -505,7 +514,11 @@ if okForest and forestPack then
     local sizeGoal=1.65+(i%5)*0.38
     foliage:ScaleTo(foliage:GetScale()*sizeGoal/math.max(extent.Y,0.1))
     local boundsCF,boundsSize=foliage:GetBoundingBox()
-    local desired=CFrame.new(x,boundsSize.Y*0.47,z)*CFrame.Angles(0,i*0.61,0)
+    -- Assentar cada planta no relevo real, sem flutuar nem atravessar
+    -- o solo inclinado. Raycast inclui apenas Terrain (nao outros props).
+    local groundHit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),terrainRayParams)
+    local groundY=if groundHit then groundHit.Position.Y else 0
+    local desired=CFrame.new(x,groundY+boundsSize.Y*0.5-0.08,z)*CFrame.Angles(0,i*0.61,0)
     foliage:PivotTo(desired*boundsCF:Inverse()*foliage:GetPivot())
     foliage.Parent=naturalForest
    end)
@@ -855,9 +868,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",20)
+world:SetAttribute("WorldVersion",21)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v20:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v21:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
