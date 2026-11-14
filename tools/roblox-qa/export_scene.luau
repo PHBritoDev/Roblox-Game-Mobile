@@ -12,6 +12,8 @@ local snapshot = {
   ambient = { Lighting.Ambient.R, Lighting.Ambient.G, Lighting.Ambient.B },
   descendantCount = #world:GetDescendants(),
   forestModels = world:GetAttribute("ForestMeshTrees") or 0,
+  forestUndergrowthModels = world:GetAttribute("ForestUndergrowthModels") or 0,
+  forestUndergrowthVariants = world:GetAttribute("ForestUndergrowthVariants") or 0,
   worldVersion = world:GetAttribute("WorldVersion") or 0,
  }
 }
