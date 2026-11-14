@@ -78,10 +78,28 @@ if scene_path.exists():
         by_name[item.get("n", "")] = by_name.get(item.get("n", ""), 0) + 1
     if by_name.get("Copa em camadas", 0) > 250:
         report["warnings"].append("Copas repetidas: possivel silhueta circular generica. Exige revisao artistica.")
-    if by_name.get("Arvore da Primeira Memoria", 0) == 0:
-        # The tree is a model, not a BasePart; verify its unique core instead.
-        if by_name.get("Cerne antigo", 0) < 1:
-            report["errors"].append("Landmark principal nao apareceu no snapshot.")
+    # The landmark is either an authored fallback core or the licensed Forest Pack
+    # hero mesh. Model names are not exported as BaseParts; validate mesh position
+    # and scale instead of demanding the old cylinder after the V15 art upgrade.
+    hero_z = -265.0
+    hero_x = math.sin((-245 + 5) * 0.027) * 10 + math.sin(-245 * 0.059) * 2.5
+    hero_mesh = [
+        item for item in parts
+        if item.get("origin") == "ForestPack"
+        and item.get("shape") == "MeshPart"
+        and item.get("n") == "Trunk"
+        and abs(item.get("p", [0, 0, 0])[0] - hero_x) < 16
+        and abs(item.get("p", [0, 0, 0])[2] - hero_z) < 17
+        and item.get("s", [0, 0, 0])[1] >= 48
+    ]
+    has_fallback_core = by_name.get("Cerne antigo", 0) >= 1
+    report["landmark"] = {
+        "forestPackHeroMesh": len(hero_mesh) > 0,
+        "authoredFallbackCore": has_fallback_core,
+        "verifiedInProxy": len(hero_mesh) > 0 or has_fallback_core,
+    }
+    if not report["landmark"]["verifiedInProxy"]:
+        report["errors"].append("Landmark principal ausente: sem tronco hero mesh ou fallback.")
     if by_name.get("Nenufar de memoria", 0) < 3:
         report["warnings"].append("Lago do Reflexo possivelmente incompleto no snapshot.")
     if by_name.get("Synty — Meshes/Pine_Tree_Pine_Large_01", 0) < 1:
