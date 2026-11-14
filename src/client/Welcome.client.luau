@@ -32,19 +32,38 @@ local title=label("WorldTitle",0.095,0.07,28,"FLORESTA DAS MEMÓRIAS")
 title.Font=Enum.Font.GothamBold
 local subtitle=label("WorldSubtitle",0.167,0.06,15,"Mundo I  ·  Onde a luz recorda")
 local hint=label("WorldHint",0.835,0.05,14,"Siga a trilha até a árvore ancestral")
--- A chegada acompanha o servidor e pede streaming na area inicial antes da vinheta.
-hint.Text="Carregando a floresta…"
+-- V30: nao declarar falha apenas porque assets/terrain ainda estao gerando.
+-- O cliente observa explicitamente Ready/Failed e apresenta estado de progresso.
+hint.Text="Preparando a floresta…"
 hint.TextTransparency=0
-local deadline=os.clock()+45
-while ReplicatedStorage:GetAttribute("ForestState")~="Ready"
- and ReplicatedStorage:GetAttribute("ForestState")~="Failed" and os.clock()<deadline do
- task.wait(0.25)
+local world=workspace:FindFirstChild("DreamcoreGenerated")
+local deadline=time()+120
+local state=ReplicatedStorage:GetAttribute("ForestState")
+while state~="Ready" and state~="Failed" and time()<deadline do
+ task.wait(0.35)
+ state=ReplicatedStorage:GetAttribute("ForestState")
+ world=workspace:FindFirstChild("DreamcoreGenerated")
+ if state~="Failed" then
+  hint.Text=if state=="Generating" then "Gerando solo e árvores da floresta…" else "Conectando ao mundo…"
+ end
 end
-if ReplicatedStorage:GetAttribute("ForestState")=="Ready" then
- pcall(function() player:RequestStreamAroundAsync(Vector3.new(0,4,8),8) end)
+if state=="Ready" then
  hint.Text="Siga a trilha até a árvore ancestral"
+ -- Streaming pode falhar por rede; nao transformar isto em erro de geracao.
+ task.spawn(function()
+  pcall(function() player:RequestStreamAroundAsync(Vector3.new(0,4,8),10) end)
+ end)
+elseif state=="Failed" then
+ hint.Text="Falha ao gerar o mundo no servidor. Equipe avisada."
 else
- hint.Text="A floresta demorou a carregar. Tente entrar novamente."
+ hint.Text="O mundo ainda está carregando. Explore quando aparecer."
+ -- Nao afirmar que a geracao falhou: pode apenas estar atrasada no servidor.
+ task.spawn(function()
+  while gui.Parent and ReplicatedStorage:GetAttribute("ForestState")~="Ready" do
+   task.wait(2)
+  end
+  if gui.Parent then hint.Text="Siga a trilha até a árvore ancestral" end
+ end)
 end
 subtitle.Text=string.format("Mundo I · V%s · Roblox %s",tostring(ReplicatedStorage:GetAttribute("ForestVersion") or "?"),tostring(game.PlaceVersion))
 for _,t in ipairs({title,subtitle,hint}) do
