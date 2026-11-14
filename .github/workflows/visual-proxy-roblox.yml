@@ -9,6 +9,8 @@ on:
       - 'tools/roblox-qa/export_scene.luau'
       - 'tools/roblox-qa/render_scene.py'
       - 'tools/roblox-qa/scene_quality.py'
+      - 'tools/roblox-qa/review_visual.py'
+      - 'src/client/**'
       - '.github/workflows/visual-proxy-roblox.yml'
 permissions:
   contents: read
@@ -39,6 +41,10 @@ jobs:
           sudo apt-get install -y -qq blender ffmpeg
       - name: Renderizar 3 perspectivas de floresta
         run: blender --background --threads 2 --python tools/roblox-qa/render_scene.py
+      - name: Preparar agente revisor de imagens
+        run: python3 -m pip install --user --disable-pip-version-check pillow
+      - name: Revisar imagens, detectar falhas e produzir contato visual
+        run: python3 tools/roblox-qa/review_visual.py
       - name: Montar clipe MP4 com as tres perspectivas estaticas
         run: |
           ffmpeg -hide_banner -loglevel error -y -loop 1 -t 3 -i artifacts/visual-preview/preview_spawn.png \
