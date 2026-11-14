@@ -22,8 +22,9 @@ terrain.WaterTransparency=0.32
 terrain.WaterReflectance=0.2
 terrain.WaterWaveSize=0.18
 terrain.WaterWaveSpeed=7
-terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(91,137,94))
-terrain:SetMaterialColor(Enum.Material.Ground,Color3.fromRGB(116,102,83))
+terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(89,135,92))
+terrain:SetMaterialColor(Enum.Material.LeafyGrass,Color3.fromRGB(72,118,82))
+terrain:SetMaterialColor(Enum.Material.Ground,Color3.fromRGB(125,108,84))
 terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(119,124,125))
 Workspace.GlobalWind=Vector3.new(4.5,0,1.8)
 
@@ -94,40 +95,26 @@ local details=group("Vegetacao baixa e rochas")
 local landmarks=group("Pontos de interesse")
 local effects=group("Luzes e atmosfera diegetica")
 
--- Composicao central: trilha em S, rio lateral e horizonte enquadrado pelas copas.
-terrain:FillBlock(CFrame.new(0,-19,-90),Vector3.new(680,38,790),Enum.Material.Grass)
-terrain:FillBlock(CFrame.new(0,-25,-112),Vector3.new(24,9,380),Enum.Material.Ground)
-for i=1,32 do
- local theta=(i/32)*PI*2
- local r=270+rng:NextNumber(-16,25)
- terrain:FillBall(Vector3.new(math.cos(theta)*r,-10,math.sin(theta)*r-90),
-  rng:NextNumber(45,92),Enum.Material.Grass)
+-- V27: planicie continua de fantasia. Sem aneis de esferas ou cristas montanhosas.
+-- O piso principal termina em Y=0; as camadas baixas nunca cobrem o personagem.
+terrain:FillBlock(CFrame.new(0,-20,-90),Vector3.new(680,40,790),Enum.Material.Grass)
+local meadowRng=Random.new(271127)
+-- Manchas de musgo / terra em camadas rasas e ovaladas (sem colinas artificiais).
+-- Centros abaixo do piso: topo limitado a 0.35 stud.
+for i=1,86 do
+ local x=meadowRng:NextNumber(-315,315)
+ local z=meadowRng:NextNumber(-450,265)
+ local r=meadowRng:NextNumber(9,25)
+ local material=if i%5==0 then Enum.Material.Ground else Enum.Material.LeafyGrass
+ terrain:FillBall(Vector3.new(x,-r+0.32,z),r,material)
 end
--- V26: clareira legivel no mobile. Colinas BAIXAS, distantes da trilha.
--- Captura real V25 revelou paredes de morro escondendo a floresta e o horizonte.
--- Esferas de Terrain sao volumetricas: centro + raio define a altura real.
-local ridgeRng=Random.new(83214)
-for side=-1,1,2 do
- for i=1,15 do
-  local z=95-i*30
-  local centerX=side*(174+ridgeRng:NextNumber(-12,30))
-  local radius=ridgeRng:NextNumber(24,39)
-  local summit=ridgeRng:NextNumber(7,17)
-  terrain:FillBall(Vector3.new(centerX,summit-radius,z),radius,Enum.Material.Grass)
-  -- Afloramentos baixos, nunca blocos que invadam o corredor.
-  if i%3==0 then
-   local rockRadius=radius*0.42
-   terrain:FillBall(Vector3.new(centerX+side*13,5-rockRadius,z-9),
-    rockRadius,Enum.Material.Rock)
-  end
- end
-end
--- Silhueta distante em camadas, sem bloquear o ponto de fuga da trilha.
-for i=1,11 do
- local x=-275+i*50
- local z=-405+math.sin(i*0.78)*13
- local radius=ridgeRng:NextNumber(24,40)
- terrain:FillBall(Vector3.new(x,12-radius,z),radius,Enum.Material.Grass)
+-- Ilhas discretas de solo quente junto as margens, sem invadir o centro da trilha.
+for i=1,34 do
+ local z=25-i*8.3
+ local x=math.sin((z+5)*0.027)*10+math.sin(z*0.059)*2.5
+ local side=if i%2==0 then 1 else -1
+ local radius=meadowRng:NextNumber(6,13)
+ terrain:FillBall(Vector3.new(x+side*meadowRng:NextNumber(15,29),-radius+0.28,z),radius,Enum.Material.Ground)
 end
 
 -- Rio sinuoso: margens orgânicas e água de Terrain em volumes sobrepostos.
@@ -146,11 +133,11 @@ end
 for i=0,48 do
  local z=24-i*5.8
  local x=pathX(z)
- terrain:FillBlock(CFrame.new(x,0.12,z),Vector3.new(15,1.3,7.5),Enum.Material.Ground)
+ terrain:FillBlock(CFrame.new(x,0.04,z),Vector3.new(18,0.45,8.0),Enum.Material.Ground)
  if i%3 == 0 then
   local side=if i%2==0 then 1 else -1
   local stone=part("Pedra de trilha",Vector3.new(rng:NextNumber(2,4),0.5,rng:NextNumber(2,4)),
-   CFrame.new(x+side*rng:NextNumber(4,6),0.6,z),P.stone,Enum.Material.Slate,details)
+   CFrame.new(x+side*rng:NextNumber(7.3,9.5),0.34,z),P.stone,Enum.Material.Slate,details)
   stone.CFrame=stone.CFrame*CFrame.Angles(0,rng:NextNumber(0,PI),0)
  end
 end
@@ -807,11 +794,11 @@ local lakeGlow=glow("Luz da runa no lago",Vector3.new(-101,7,-164),
 -- Perfis calibrados para a direção de arte: quente, crepúsculo frio e noite azul.
 local moods={
  {
-  name="Golden Nostalgia", clock=17.35, brightness=2.6,
-  ambient=Color3.fromRGB(81,91,116), outdoor=Color3.fromRGB(160,133,126),
-  atm=Color3.fromRGB(246,196,148), decay=Color3.fromRGB(121,129,166),
-  tint=Color3.fromRGB(255,230,203), exposure=0.02,
-  cloud=Color3.fromRGB(255,208,172), stars=0, rays=0.13, glow=0.65,
+  name="Golden Nostalgia", clock=16.75, brightness=2.35,
+  ambient=Color3.fromRGB(72,95,118), outdoor=Color3.fromRGB(148,147,133),
+  atm=Color3.fromRGB(235,212,178), decay=Color3.fromRGB(139,158,159),
+  tint=Color3.fromRGB(255,240,219), exposure=-0.08,
+  cloud=Color3.fromRGB(245,214,192), stars=0, rays=0.065, glow=0.72,
  },
  {
   name="Cold Twilight", clock=19.0, brightness=1.55,
@@ -831,21 +818,21 @@ local moods={
 
 local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
 atmosphere.Name="DreamcoreAtmosphere"
-atmosphere.Density=0.29
-atmosphere.Offset=0.08
-atmosphere.Haze=1.25
-atmosphere.Glare=0.22
+atmosphere.Density=0.18
+atmosphere.Offset=0.12
+atmosphere.Haze=0.75
+atmosphere.Glare=0.12
 atmosphere.Parent=Lighting
 local bloom=Lighting:FindFirstChild("DreamcoreBloom") or Instance.new("BloomEffect")
 bloom.Name="DreamcoreBloom"
-bloom.Intensity=0.22
+bloom.Intensity=0.14
 bloom.Size=21
 bloom.Threshold=1.8
 bloom.Parent=Lighting
 local grade=Lighting:FindFirstChild("DreamcoreColor") or Instance.new("ColorCorrectionEffect")
 grade.Name="DreamcoreColor"
-grade.Saturation=0.08
-grade.Contrast=0.11
+grade.Saturation=0.035
+grade.Contrast=0.075
 grade.Parent=Lighting
 local rays=Lighting:FindFirstChild("DreamcoreSunRays") or Instance.new("SunRaysEffect")
 rays.Name="DreamcoreSunRays"
@@ -853,7 +840,7 @@ rays.Spread=0.82
 rays.Parent=Lighting
 local depth=Lighting:FindFirstChild("DreamcoreDepth") or Instance.new("DepthOfFieldEffect")
 depth.Name="DreamcoreDepth"
-depth.FarIntensity=0.06
+depth.FarIntensity=0.025
 depth.NearIntensity=0
 depth.FocusDistance=105
 depth.InFocusRadius=85
@@ -864,11 +851,11 @@ sky.CelestialBodiesShown=true
 sky.Parent=Lighting
 local clouds=terrain:FindFirstChild("DreamcoreClouds") or Instance.new("Clouds")
 clouds.Name="DreamcoreClouds"
-clouds.Cover=0.4
-clouds.Density=0.35
+clouds.Cover=0.31
+clouds.Density=0.24
 clouds.Parent=terrain
 Lighting.GlobalShadows=true
-Lighting.ShadowSoftness=0.30
+Lighting.ShadowSoftness=0.38
 Lighting.GeographicLatitude=35
 Lighting.EnvironmentDiffuseScale=0.45
 Lighting.EnvironmentSpecularScale=0.55
@@ -880,8 +867,8 @@ local function applyMood(mood)
  Lighting.OutdoorAmbient=mood.outdoor
  Lighting.ExposureCompensation=mood.exposure
  Lighting.FogColor=mood.atm
- Lighting.FogStart=125
- Lighting.FogEnd=750
+ Lighting.FogStart=225
+ Lighting.FogEnd=1050
  atmosphere.Color=mood.atm
  atmosphere.Decay=mood.decay
  grade.TintColor=mood.tint
@@ -895,9 +882,10 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",26)
+world:SetAttribute("WorldVersion",27)
+world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v26:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v27:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
