@@ -125,12 +125,14 @@ for i=1,13 do
  terrain:FillBall(Vector3.new(x+9,-radius*0.24,z+12),radius*0.78,Enum.Material.Grass)
 end
 
--- Rio e desfiladeiro a direita; agua real do Terrain, margens naturais.
+-- Rio sinuoso: margens orgânicas e água de Terrain em volumes sobrepostos.
+-- Esferas contínuas evitam as quinas e emendas retangulares visíveis do V18.
+-- Superfície da água em ~Y=1, sem transbordar sobre a trilha central.
 for i=0,19 do
  local z=115-i*23
  local x=125+math.sin(i*0.32)*24
  terrain:FillBall(Vector3.new(x,-6,z),22,Enum.Material.Air)
- terrain:FillBlock(CFrame.new(x,-6,z),Vector3.new(31,10,30),Enum.Material.Water)
+ terrain:FillBall(Vector3.new(x,-15,z),16,Enum.Material.Water)
 end
 -- Caminho deliberado, nao dispersao aleatoria.
 local function pathX(z)
@@ -848,9 +850,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",18)
+world:SetAttribute("WorldVersion",19)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v18:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v19:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
