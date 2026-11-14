@@ -395,6 +395,50 @@ for i=1,12 do
  root.CanCollide=false
 end
 
+-- Santuario secundario: Lago do Reflexo. Composicao lateral à trilha, zona de descanso.
+-- Um local intencional para explorar; nao espalhar decorações sem propósito.
+local reflection=group("Lago do Reflexo — recanto nostalgico")
+local poolCenter=Vector3.new(-84,0,-151)
+terrain:FillBall(Vector3.new(poolCenter.X,-5.1,poolCenter.Z),18,Enum.Material.Air)
+terrain:FillBlock(CFrame.new(poolCenter.X,-3.6,poolCenter.Z),Vector3.new(31,8,30),Enum.Material.Water)
+-- Pedras de aproximação ligam a trilha ao pequeno lago, sem interromper o caminho.
+for index=1,6 do
+ local p=Vector3.new(-18-index*8,0.8,-140-index*2)
+ local slab=part("Degrau de pedra na beira do lago",
+  Vector3.new(5.2,1.1,4.7),CFrame.new(p)*CFrame.Angles(0,index*0.11,0),
+  P.stone,Enum.Material.Slate,reflection)
+ slab.CanCollide=true
+end
+for i=1,13 do
+ local angle=i*2*PI/13
+ local r=20+rng:NextNumber(-2.8,2.8)
+ local x=poolCenter.X+math.cos(angle)*r
+ local z=poolCenter.Z+math.sin(angle)*r
+ local boulder=orb("Pedra de margem antiga",Vector3.new(x,0.8,z),
+  rng:NextNumber(3,6),P.stone,Enum.Material.Rock,reflection)
+ boulder.Size=Vector3.new(boulder.Size.X,2.4,boulder.Size.Z)
+ boulder.CanCollide=false
+end
+-- Obelisco partido: silhueta unica, sutil brilho interior.
+local obelisk=part("Marco das aguas esquecidas",Vector3.new(4.8,16,4.5),
+ CFrame.new(-101,8,-164)*CFrame.Angles(0,0.35,math.rad(-5)),
+ P.stone,Enum.Material.Slate,reflection)
+local sigil=part("Runa de agua silenciosa",Vector3.new(0.25,9.3,2.6),
+ obelisk.CFrame*CFrame.new(2.5,0,0),
+ P.blue,Enum.Material.Neon,reflection)
+sigil.Transparency=0.38
+sigil.CanCollide=false
+sigil.CastShadow=false
+-- Pequenos nenúfares na superficie d'agua, nao afetam movimento.
+for i=1,7 do
+ local ang=(i/7)*PI*2
+ local radius=6+(i%3)*3
+ local leaf=orb("Nenufar de memoria",Vector3.new(poolCenter.X+math.cos(ang)*radius,0.58,poolCenter.Z+math.sin(ang)*radius),
+  3.7,P.mossLight,Enum.Material.Grass,reflection)
+ leaf.Size=Vector3.new(leaf.Size.X,0.2,leaf.Size.Z)
+ leaf.CanCollide=false
+end
+
 -- Partículas leves confinadas à clareira, evitando dezenas de luzes dinâmicas.
 local fireflies=part("Vagalumes na clareira",Vector3.new(1,1,1),
  CFrame.new(center+Vector3.new(0,7,34)),P.firefly,Enum.Material.SmoothPlastic,effects)
@@ -509,9 +553,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",5)
+world:SetAttribute("WorldVersion",6)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v5:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v6:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
