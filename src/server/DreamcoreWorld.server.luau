@@ -117,7 +117,8 @@ local landmarks=group("Pontos de interesse")
 local effects=group("Luzes e atmosfera diegetica")
 
 -- Um unico campo de voxels: a troca de material nao altera a altura do piso.
--- Resolucao nativa 4 studs; sem FillBall sobrepondo trilha ou formando colinas.
+-- Resolucao nativa 4 studs; camada superior meia ocupada fixa a isosuperficie em Y=0.
+-- Medido na engine: ocupacao cheia nesta camada projetava o piso em Y=2.
 pathX = function(z)
  return math.sin((z+5)*0.027)*10 + math.sin(z*0.059)*2.5
 end
@@ -130,7 +131,9 @@ local function inWalkway(x,z,margin)
   or (x>=-64 and x<=pathX(-151) and math.abs(z+151)<6+margin)
 end
 local function reservedSite(x,z,margin)
- return inWalkway(x,z,margin) or math.abs(x-riverX(z))<25+margin
+ return (math.abs(z+151)<27 and x>-90 and x<5)
+  or (math.abs(z+89)<24 and x>5 and x<176)
+  or inWalkway(x,z,margin) or math.abs(x-riverX(z))<25+margin
   or ((x+84)^2+(z+151)^2)<(22+margin)^2
 end
 terrain:FillBlock(CFrame.new(0,-28,-92),Vector3.new(680,24,792),Enum.Material.Ground)
@@ -141,7 +144,7 @@ for ix=1,170 do
  for iz=1,198 do
   local x,z=-340+(ix-0.5)*4,-488+(iz-0.5)*4
   local waterDistance=math.min(math.abs(x-riverX(z))-14,math.sqrt((x+84)^2+(z+151)^2)-11)
-  local bed=-9*(1-math.clamp(waterDistance/9,0,1))
+  local bed=-2-9*(1-math.clamp(waterDistance/9,0,1))
   local noise=math.noise(x/39,z/39,6.7)+0.32*math.noise(x/13,z/13,2)
   local trail=inWalkway(x,z,0.8*math.noise(x/11,z/11,4))
   local surface=if trail then Enum.Material.Ground else
@@ -150,7 +153,7 @@ for ix=1,170 do
   for iy=1,4 do
    local bottom=-16+(iy-1)*4
    local solid=math.clamp((bed-bottom)/4,0,1)
-   local water=math.clamp((-2-bottom)/4,0,1)
+   local water=math.clamp((-4-bottom)/4,0,1)
    -- A camada mais alta de agua ocupa apenas meio voxel; margens continuam solidas.
    materials[ix][iy][iz]=if solid>0 then surface else if water>0 then Enum.Material.Water else Enum.Material.Air
    occupancies[ix][iy][iz]=if solid>0 then solid else water
@@ -659,6 +662,7 @@ end
 for i=1,8 do
  local x=pathX(-105)+(if i%2==0 then 1 else -1)*rng:NextNumber(16,24)
  local z=-100+rng:NextNumber(-18,18)
+ if inWalkway(x,z,4) then continue end
  local rock=orb("Pedra coberta de musgo",Vector3.new(x,0.8,z),
   rng:NextNumber(3,7),P.stone,Enum.Material.Slate,details)
  rock.Size=Vector3.new(rock.Size.X,2.2,rock.Size.Z)
