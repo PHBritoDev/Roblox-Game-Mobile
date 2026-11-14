@@ -1,0 +1,4 @@
+AUTORIZADO PUBLICAR V29 NO PLACE DE TESTE 6947682498
+Fonte validada: PR #2, merge 2dcbc4b23919d472c034671a09578266f5b9f6d3
+Destino: Universe 2660433574 / Place 6947682498 (teste)
+Pedido explicito do criador: publicar V29 para jogar e testar no Android
