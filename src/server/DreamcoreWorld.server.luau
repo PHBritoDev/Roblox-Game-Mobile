@@ -14,6 +14,18 @@ local world = Instance.new("Folder")
 world.Name = "DreamcoreGenerated"
 world.Parent = Workspace
 terrain:Clear()
+-- Materiais e vento fazem parte da qualidade: grama se move mesmo sem VFX extra.
+terrain.Decoration=true
+terrain.GrassLength=0.65
+terrain.WaterColor=Color3.fromRGB(71,144,137)
+terrain.WaterTransparency=0.32
+terrain.WaterReflectance=0.2
+terrain.WaterWaveSize=0.18
+terrain.WaterWaveSpeed=7
+terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(91,137,94))
+terrain:SetMaterialColor(Enum.Material.Ground,Color3.fromRGB(116,102,83))
+terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(119,124,125))
+Workspace.GlobalWind=Vector3.new(4.5,0,1.8)
 
 local P = {
  earth = Color3.fromRGB(83, 94, 72),
@@ -619,6 +631,7 @@ clouds.Cover=0.4
 clouds.Density=0.35
 clouds.Parent=terrain
 Lighting.GlobalShadows=true
+Lighting.ShadowSoftness=0.30
 Lighting.GeographicLatitude=35
 Lighting.EnvironmentDiffuseScale=0.45
 Lighting.EnvironmentSpecularScale=0.55
@@ -643,9 +656,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",8)
+world:SetAttribute("WorldVersion",9)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v8:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v9:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
