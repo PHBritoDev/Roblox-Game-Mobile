@@ -252,21 +252,28 @@ local function branchTree(x,z,s,family)
    twig.CanCollide=false
    twig.CanQuery=false
    twig.CastShadow=false
-   local blade=part("Leque de folhas afilado",
-    Vector3.new(3.8*s,1.65*s,reach*1.42),
-    CFrame.lookAt((stem+tip)*0.5,tip)*CFrame.Angles(0,angle*0.09,0),
-    if petal==1 and tier==2 then P.canopyGold else tint,
-    Enum.Material.Grass,family)
-   blade.Shape=Enum.PartType.Wedge
+   local blade=Instance.new("WedgePart")
+   blade.Name="Leque de folhas afilado"
+   blade.Size=Vector3.new(3.8*s,1.65*s,reach*1.42)
+   blade.CFrame=CFrame.lookAt((stem+tip)*0.5,tip)*CFrame.Angles(0,angle*0.09,0)
+   blade.Color=if petal==1 and tier==2 then P.canopyGold else tint
+   blade.Material=Enum.Material.Grass
+   blade.Anchored=true
+   blade.Parent=family
    blade.CanCollide=false
    blade.CanQuery=false
    blade.CastShadow=tier==3
   end
  end
  -- Pequena ponta superior sem copa esferica.
- local apex=part("Coroa em ponta",Vector3.new(3.2*s,5*s,3.2*s),
-  CFrame.new(x+tilt*h*0.3,h+0.4*s,z),tint,Enum.Material.Grass,family)
- apex.Shape=Enum.PartType.Wedge
+ local apex=Instance.new("WedgePart")
+ apex.Name="Coroa em ponta"
+ apex.Size=Vector3.new(3.2*s,5*s,3.2*s)
+ apex.CFrame=CFrame.new(x+tilt*h*0.3,h+0.4*s,z)
+ apex.Color=tint
+ apex.Material=Enum.Material.Grass
+ apex.Anchored=true
+ apex.Parent=family
  apex.CanCollide=false
  apex.CanQuery=false
 end
