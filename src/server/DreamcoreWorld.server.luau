@@ -162,6 +162,40 @@ for i=1,68 do
  end
 end
 
+-- Arvores ribeirinhas: silhueta pendente, diferente das copas redondas do bosque.
+-- Colocadas manualmente fora da trilha para criar contraste e enquadrar o rio.
+local willow=group("Salgueiros da margem — copa pendente")
+local function riverWillow(x,z,scale)
+ local h=20*scale
+ local bend=rng:NextNumber(-3,3)
+ local start=Vector3.new(x,0.8,z)
+ local trunkTop=Vector3.new(x+bend,h,z)
+ between("Tronco curvo ribeirinho",start,trunkTop,2.7*scale,P.bark,Enum.Material.Wood,willow)
+ local shade=if rng:NextNumber()<0.45 then P.canopyMid else P.canopy
+ local crown=orb("Dossel de salgueiro",trunkTop+Vector3.new(0,1.8*scale,0),
+  11*scale,shade,Enum.Material.Grass,willow)
+ crown.Size=Vector3.new(19*scale,5.5*scale,15*scale)
+ crown.CanCollide=false
+ for j=1,8 do
+  local angle=(j/8)*PI*2
+  local reach=rng:NextNumber(6.5,10)*scale
+  local top=trunkTop+Vector3.new(math.cos(angle)*reach,1.9*scale,math.sin(angle)*reach)
+  between("Galho flexivel",trunkTop,top,0.68*scale,P.barkLight,Enum.Material.Wood,willow).CanCollide=false
+  local drop=rng:NextNumber(7,12)*scale
+  local veil=orb("Véu vegetal pendente",top+Vector3.new(0,-drop/2,0),
+   4.2*scale,shade,Enum.Material.Grass,willow)
+  veil.Size=Vector3.new(3.6*scale,drop,3.6*scale)
+  veil.CanCollide=false
+ end
+end
+riverWillow(84,64,1.4)
+riverWillow(97,18,1.1)
+riverWillow(78,-25,1.35)
+riverWillow(90,-75,1.17)
+riverWillow(83,-144,1.42)
+riverWillow(103,-203,1.23)
+riverWillow(148,-268,1.36)
+
 -- Landmark: a Arvore da Primeira Memoria, dominante na silhueta.
 local sacred=Instance.new("Model")
 sacred.Name="Arvore da Primeira Memoria"
@@ -409,9 +443,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",3)
+world:SetAttribute("WorldVersion",4)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v3:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v4:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
