@@ -129,10 +129,12 @@ local function branchTree(x,z,s,family)
   between("Galho escultural",Vector3.new(x,h*0.68,z),tip,0.9*s,P.barkLight,Enum.Material.Wood,family)
   local leaf=orb("Copa em camadas",tip+Vector3.new(0,2.1*s,0),rng:NextNumber(8,11)*s,
    tint,Enum.Material.Grass,family)
+  leaf.Size=Vector3.new(leaf.Size.X*1.16,leaf.Size.Y*0.63,leaf.Size.Z*1.04)
   leaf.CanCollide=false
  end
  local upper=orb("Coroa alta",Vector3.new(x,h+2*s,z),rng:NextNumber(9,12)*s,
   tint,Enum.Material.Grass,family)
+ upper.Size=Vector3.new(upper.Size.X,upper.Size.Y*0.73,upper.Size.Z)
  upper.CanCollide=false
 end
 
@@ -182,6 +184,7 @@ for i=1,10 do
  between("Braco da arvore",start,tip,3.8,P.bark,Enum.Material.Wood,sacred)
  local leaves=orb("Dossel dourado",tip+Vector3.new(0,6,0),rng:NextNumber(24,36),
   if i%3==0 then P.canopyGold else P.canopyMid,Enum.Material.Grass,sacred)
+ leaves.Size=Vector3.new(leaves.Size.X*1.18,leaves.Size.Y*0.66,leaves.Size.Z*1.12)
  leaves.CanCollide=false
 end
 orb("Coroa do santuario",center+Vector3.new(0,crownY+17,0),42,
@@ -240,6 +243,56 @@ for i=1,155 do
    Enum.Material.Grass,details)
   bush.CanCollide=false
  end
+end
+
+-- Capitulo visual: vestigios de uma civilizacao que venerava a arvore ancestral.
+-- Composicao deliberada: marcos em pontos fixos, nao props aleatorios no mapa.
+local relics=group("Ruinas da antiga floresta")
+local function stoneColumn(name,x,z,height,tilt)
+ local col=part(name,Vector3.new(4.4,height,4.4),
+  CFrame.new(x,height*0.5+0.6,z)*CFrame.Angles(tilt,0,tilt*0.44),
+  P.stone,Enum.Material.Rock,relics)
+ col.CanCollide=true
+ local crest=part("Capitel esculpido",Vector3.new(6.5,1.25,6.5),
+  col.CFrame*CFrame.new(0,height*0.5+0.4,0),
+  P.stone,Enum.Material.Slate,relics)
+ crest.CanCollide=false
+end
+
+-- Primeiro enquadramento: ruinas baixas conduzem o olhar para o corredor.
+stoneColumn("Sentinela esquecida",pathX(-38)-16,-39,9,math.rad(-5))
+stoneColumn("Sentinela esquecida",pathX(-63)+18,-61,11,math.rad(6))
+stoneColumn("Sentinela quebrada",pathX(-168)-17,-166,6,math.rad(-13))
+-- Um arco antigo quebrado junto da clareira, criando profundidade de silhueta.
+stoneColumn("Pilar do santuario",center.X-26,center.Z+25,20,math.rad(2))
+stoneColumn("Pilar do santuario",center.X+28,center.Z+25,16,math.rad(-4))
+local fallen=between("Travessa tombada",
+ Vector3.new(center.X-23,2,center.Z+17),Vector3.new(center.X+10,3,center.Z+13),
+ 2.8,P.stone,Enum.Material.Slate,relics)
+fallen.CanCollide=false
+
+-- Faixas de neblina rente ao chao: planos dispersos e sem luzes dinamicas.
+local function mistBank(x,z,w,d)
+ local bank=part("Bruma baixa entre as raizes",Vector3.new(w,0.22,d),
+  CFrame.new(x,1.05,z),Color3.fromRGB(181,210,197),
+  Enum.Material.SmoothPlastic,effects)
+ bank.CanCollide=false
+ bank.CastShadow=false
+ bank.Transparency=0.86
+end
+mistBank(-50,-123,48,22)
+mistBank(46,-194,60,19)
+mistBank(center.X-39,center.Z+4,40,17)
+
+-- Raizes mortas junto das trilhas, revelando a idade e o ciclo da floresta.
+for i=1,12 do
+ local z=-18-i*21
+ local dir=if i%2==0 then 1 else -1
+ local x=pathX(z)+dir*(17+rng:NextNumber(0,8))
+ local a=Vector3.new(x,0.9,z-3)
+ local b=Vector3.new(x+dir*7,1.6,z+3)
+ local root=between("Raiz fossilizada",a,b,1.7,P.bark,Enum.Material.Wood,details)
+ root.CanCollide=false
 end
 
 -- Partículas leves confinadas à clareira, evitando dezenas de luzes dinâmicas.
@@ -356,18 +409,19 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",2)
+world:SetAttribute("WorldVersion",3)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v2:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v3:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
  local hold=145
  local transition=48
  while world.Parent do
-  for index=1,#moods do
-   local start=moods[index]
-   local target=moods[(index%#moods)+1]
+  local sequence={1,2,3,2}
+  for index=1,#sequence do
+   local start=moods[sequence[index]]
+   local target=moods[sequence[(index%#sequence)+1]]
    applyMood(start)
    task.wait(hold)
    local begun=os.clock()
@@ -375,6 +429,7 @@ task.spawn(function()
     local t=math.clamp((os.clock()-begun)/transition,0,1)
     local smooth=t*t*(3-2*t)
     Lighting.ClockTime=start.clock+(target.clock-start.clock)*smooth
+    sky.StarCount=if smooth>0.55 then target.stars else start.stars
     Lighting.Brightness=start.brightness+(target.brightness-start.brightness)*smooth
     Lighting.Ambient=start.ambient:Lerp(target.ambient,smooth)
     Lighting.OutdoorAmbient=start.outdoor:Lerp(target.outdoor,smooth)
