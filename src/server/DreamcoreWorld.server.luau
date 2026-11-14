@@ -5,7 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 ReplicatedStorage:SetAttribute("ForestState","Generating")
-ReplicatedStorage:SetAttribute("ForestVersion",29)
+ReplicatedStorage:SetAttribute("ForestVersion",30)
 local terrain = Workspace.Terrain
 local rng = Random.new(67001)
 local PI = math.pi
@@ -167,17 +167,23 @@ local readiness=RaycastParams.new()
 readiness.FilterType=Enum.RaycastFilterType.Include
 readiness.FilterDescendantsInstances={terrain}
 readiness.IgnoreWater=true
-local readyDeadline=os.clock()+10
+-- V30: a colisao do Terrain e calculada de forma assincrona em servidores
+-- publicos. O antigo assert apos 10s abortava o mundo inteiro no Android.
+-- A espera e limitada; se a fisica demorar, o spawn solido garante apoio
+-- enquanto a engine termina de atualizar o solo. Nao ocultar a falha.
+local readyDeadline=time()+20
 local floorReady=false
 repeat
- task.wait(0.1)
+ task.wait(0.15)
  floorReady=true
  for _,point in {Vector3.new(0,12,24),Vector3.new(0,12,-254),Vector3.new(90,12,-89),Vector3.new(-54,12,-151)} do
   local hit=Workspace:Raycast(point,Vector3.new(0,-24,0),readiness)
-  if not hit or math.abs(hit.Position.Y)>0.25 then floorReady=false break end
+  if not hit or math.abs(hit.Position.Y)>0.45 then floorReady=false break end
  end
-until floorReady or os.clock()>=readyDeadline
-assert(floorReady,"Terrain ainda sem apoio fisico apos geracao")
+until floorReady or time()>=readyDeadline
+if not floorReady then
+ warn("[Dreamcore] Colisao do terreno ainda pendente; continuando a gerar arvores e spawn.")
+end
 
 -- Folhas originais achatadas nas bordas; sem colisao, sombras ou alpha cards extras.
 for i=1,90 do
@@ -942,16 +948,17 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",29)
+world:SetAttribute("WorldVersion",30)
 world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 world:SetAttribute("GenerationComplete",true)
+world:SetAttribute("TerrainCollisionReadyAtBuild",floorReady)
 world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
 ReplicatedStorage:SetAttribute("ForestState","Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v29:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v30:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
