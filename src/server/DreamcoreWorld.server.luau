@@ -224,29 +224,51 @@ spawn.Duration=0
 spawn.CanCollide=true
 spawn.Parent=world
 
+-- Fallback sem assets: copas em leques escalonados, nao esferas empilhadas.
+-- Folhagem nao-colisiva, tronco solido; usa apenas primitivas nativas.
 local function branchTree(x,z,s,family)
- local h=17*s
- local base=Vector3.new(x,0.5,z)
- local trunk=part("Tronco musgoso",Vector3.new(2.7*s,h,2.7*s),
-  CFrame.new(x,h/2,z),P.bark,Enum.Material.Wood,family)
- trunk.CFrame=trunk.CFrame*CFrame.Angles(rng:NextNumber(-0.04,0.04),0,rng:NextNumber(-0.04,0.04))
- local count=2
- local tint=if rng:NextNumber()<0.22 then P.canopyGold else
-  if rng:NextNumber()<0.49 then P.canopyMid else P.canopy
- for j=1,count do
-  local angle=j*PI*2/count + rng:NextNumber(-0.5,0.5)
-  local reach=(4.2+rng:NextNumber(-1,2.5))*s
-  local tip=Vector3.new(x+math.cos(angle)*reach, h*rng:NextNumber(0.76,1.02),z+math.sin(angle)*reach)
-  between("Galho escultural",Vector3.new(x,h*0.68,z),tip,0.9*s,P.barkLight,Enum.Material.Wood,family)
-  local leaf=orb("Copa em camadas",tip+Vector3.new(0,2.1*s,0),rng:NextNumber(8,11)*s,
-   tint,Enum.Material.Grass,family)
-  leaf.Size=Vector3.new(leaf.Size.X*1.16,leaf.Size.Y*0.63,leaf.Size.Z*1.04)
-  leaf.CanCollide=false
+ local h=19*s
+ local tilt=rng:NextNumber(-0.11,0.11)
+ local tint=if rng:NextNumber()<0.18 then P.canopyGold else
+  if rng:NextNumber()<0.52 then P.canopyMid else P.canopy
+ local trunk=part("Tronco organico inclinado",Vector3.new(2.6*s,h,2.6*s),
+  CFrame.new(x,h*0.5,z)*CFrame.Angles(tilt,0,tilt*0.6),
+  P.bark,Enum.Material.Wood,family)
+ trunk.Shape=Enum.PartType.Cylinder
+ trunk:SetAttribute("CollisionRole","Trunk")
+ -- Silhueta irregular: camadas afiladas de folhas elipticas em orientacoes distintas.
+ -- 12 laminas por arvore, sombras somente nas mais altas para conter custo Android.
+ for tier=1,3 do
+  local height=h*(0.48+tier*0.155)
+  local spread=(9.8-tier*1.75)*s
+  for petal=1,4 do
+   local angle=(petal-1)*PI*0.5+tier*0.43+rng:NextNumber(-0.17,0.17)
+   local reach=spread*rng:NextNumber(0.82,1.12)
+   local dx=math.cos(angle)*reach*0.53
+   local dz=math.sin(angle)*reach*0.53
+   local stem=Vector3.new(x+tilt*height*0.35,height-2*s,z)
+   local tip=stem+Vector3.new(dx,height*0.075+2.2*s,dz)
+   local twig=between("Galho ramificado",stem,tip,0.48*s,P.barkLight,Enum.Material.Wood,family)
+   twig.CanCollide=false
+   twig.CanQuery=false
+   twig.CastShadow=false
+   local blade=part("Leque de folhas afilado",
+    Vector3.new(3.8*s,1.65*s,reach*1.42),
+    CFrame.lookAt((stem+tip)*0.5,tip)*CFrame.Angles(0,angle*0.09,0),
+    if petal==1 and tier==2 then P.canopyGold else tint,
+    Enum.Material.Grass,family)
+   blade.Shape=Enum.PartType.Wedge
+   blade.CanCollide=false
+   blade.CanQuery=false
+   blade.CastShadow=tier==3
+  end
  end
- local upper=orb("Coroa alta",Vector3.new(x,h+2*s,z),rng:NextNumber(9,12)*s,
-  tint,Enum.Material.Grass,family)
- upper.Size=Vector3.new(upper.Size.X,upper.Size.Y*0.73,upper.Size.Z)
- upper.CanCollide=false
+ -- Pequena ponta superior sem copa esferica.
+ local apex=part("Coroa em ponta",Vector3.new(3.2*s,5*s,3.2*s),
+  CFrame.new(x+tilt*h*0.3,h+0.4*s,z),tint,Enum.Material.Grass,family)
+ apex.Shape=Enum.PartType.Wedge
+ apex.CanCollide=false
+ apex.CanQuery=false
 end
 
 -- Mistura de copas autorais com futuras arvores MeshPart oficiais.
