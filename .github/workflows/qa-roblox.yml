@@ -20,6 +20,8 @@ jobs:
           python-version: '3.12'
       - name: Auditar scripts e documentar limites
         run: python tools/roblox-qa/audit.py
+      - name: Testar rejeicao de regressões de navegacao
+        run: python -m unittest discover -s tools/roblox-qa -p 'test_*.py'
       - name: Publicar relatório verificável
         if: always()
         uses: actions/upload-artifact@v4

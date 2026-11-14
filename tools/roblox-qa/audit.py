@@ -30,7 +30,7 @@ def main():
     observations = {
         'uses_terrain_clear': 'terrain:Clear()' in src,
         'sunrays_effect': 'SunRaysEffect' in src,
-        'dynamic_time_of_day': bool(re.search(r'(TweenService|RunService|while\s+true)', src)),
+        'dynamic_time_of_day': bool(re.search(r'(TweenService|RunService|while\s+world\.Parent)', src)),
     }
     if observations['uses_terrain_clear']:
         issues.append('Terrain:Clear() apaga o terreno preexistente quando o script roda.')
