@@ -21,6 +21,7 @@ local snapshot = {
  }
 }
 snapshot.assets = {
+ source=world:GetAttribute("AssetSource"),
  syntyLoad=world:GetAttribute("SyntyLoadSucceeded"),
  forestLoad=world:GetAttribute("ForestPackLoadSucceeded"),
  syntyIntegration=world:GetAttribute("SyntyIntegrationSucceeded"),

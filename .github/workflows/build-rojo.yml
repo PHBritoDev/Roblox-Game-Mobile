@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'assets/**'
       - 'default.project.json'
       - '.github/workflows/build-rojo.yml'
   workflow_dispatch:
@@ -31,6 +32,8 @@ jobs:
           grep -Fq '<bool name="PrioritizeLightingQuality">true</bool>' DreamcorePrototype.rbxlx
           grep -Fq '<bool name="GlobalShadows">true</bool>' DreamcorePrototype.rbxlx
           echo 'Lighting Realistic e prioridade de sombras presentes no arquivo do Roblox.'
+      - name: Auditar biblioteca incluida no Place
+        run: python3 tools/roblox-qa/audit_bundled_assets.py
       - name: Publicar artefato para revisao
         uses: actions/upload-artifact@v4
         with:

@@ -430,6 +430,8 @@ end
 -- Nunca parentear o pacote original nem ativar scripts de terceiros.
 local curated=group("Vegetacao licenciada Roblox — Synty Nature")
 local InsertService=game:GetService("InsertService")
+local bundled=game:GetService("ServerStorage"):FindFirstChild("ForestLibrary")
+world:SetAttribute("AssetSource",if bundled then "Bundled" else "InsertService")
 stage("LoadingSynty")
 -- Um asset externo nunca pode abortar o mundo inteiro, mesmo se carregar
 -- com sucesso e uma malha/modelo especifico falhar durante a configuracao.
@@ -437,6 +439,7 @@ local sourcePack
 local syntyIntegrated,syntyError=xpcall(function()
 local okPack
 okPack,sourcePack=pcall(function()
+ if bundled and bundled:FindFirstChild("Synty") then return bundled.Synty:Clone() end
  return InsertService:LoadAsset(6933438443)
 end)
 world:SetAttribute("SyntyLoadSucceeded",okPack and sourcePack~=nil)
@@ -536,6 +539,7 @@ if okPack and sourcePack then
  }
  local meshPlaced=0
  for i,site in meshTreeSites do
+  if i%6==0 then task.wait() end
   local template=lookup[treeTypes[(i-1)%#treeTypes+1]]
   if template and template:IsA("MeshPart") then
    local tree=template:Clone()
@@ -583,6 +587,7 @@ world:SetAttribute("SyntyIntegrationSucceeded",syntyIntegrated)
 local naturalForest=group("Bosque premium — Forest Pack licenciado")
 stage("LoadingForestPack")
 local okForest,forestPack=pcall(function()
+ if bundled and bundled:FindFirstChild("ForestPack") then return bundled.ForestPack:Clone() end
  return InsertService:LoadAsset(6432306802)
 end)
 local forestCount=0
@@ -648,6 +653,7 @@ if okForest and forestPack then
   tree.Parent=naturalForest
  end
  for i,site in forestTreeSites do
+  if i%6==0 then task.wait() end
   local preferred=names[(i-1)%#names+1]
   local template=candidates[preferred] or candidates["BeechwoodTree_Var03"]
   if template then
@@ -1080,16 +1086,20 @@ world:SetAttribute("WorldVersion",33)
 world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 stage("Finalizing")
-world:SetAttribute("GenerationComplete",true)
 world:SetAttribute("TerrainCollisionReadyAtBuild",floorReady)
 world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
+for _,point in {Vector3.new(0,12,24),Vector3.new(0,12,-254),Vector3.new(90,12,-89),Vector3.new(-54,12,-151)} do
+ local hit=Workspace:Raycast(point,Vector3.new(0,-24,0),readiness)
+ assert(hit and math.abs(hit.Position.Y)<0.45,"Apoio do Terrain indisponivel ao finalizar")
+end
+world:SetAttribute("GenerationComplete",true)
 ReplicatedStorage:SetAttribute("ForestState","Ready")
 stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("AuthoredTreeCount",authoredTrees)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v32:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v33:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()

@@ -83,6 +83,10 @@ def evaluate(scene):
             errors.append("Imported mesh has empty MeshId")
         if meta["partsTotal"]>6500:
             errors.append("Mobile part budget exceeded")
+    if meta.get("forcedIntegrationFailure") and (assets.get("syntyIntegration") is not False or assets.get("forestIntegration") is not False):
+        errors.append("Integration failure injection did not exercise both rollback paths")
+    if meta.get("bakedEquivalentFixture") and assets.get("source")!="Bundled":
+        errors.append("Bundled library was not used")
     asset_warnings = []
     if meta.get("forestModels", 0) < 25:
         asset_warnings.append("Forest Pack degraded/unavailable; fallback needs visual review")

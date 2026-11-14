@@ -29,7 +29,54 @@ def source_without_assets(source):
         if source.count(original) != 1:
             raise ValueError(f"Expected exactly one audited LoadAsset call for {asset_id}")
         source = source.replace(original, 'error("QA forced asset failure")', 1)
+    source = source.replace('local bundled=game:GetService("ServerStorage"):FindFirstChild("ForestLibrary")', 'local bundled=nil')
     return source
+
+
+def bundled_fixture():
+    """Engine fixture from the same official meshes; NOT a deserialized build/playtest.
+
+    Verify IDs and sizes against the committed XML before exercising bundled path.
+    Roblox headless cannot open an arbitrary local rbxlx without saving a Place.
+    """
+    manifest = json.loads((ROOT / "assets/forest-manifest.json").read_text())
+    encoded = json.dumps(manifest["packages"], ensure_ascii=False)
+    return """
+local fixtureManifest=game:GetService("HttpService"):JSONDecode([==[%s]==])
+local storage=game:GetService("ServerStorage")
+local existingLibrary=storage:FindFirstChild("ForestLibrary")
+if existingLibrary then existingLibrary:Destroy() end
+local fixture=Instance.new("Folder")
+fixture.Name="ForestLibrary"
+local allowed={Folder=true,Model=true,MeshPart=true,SurfaceAppearance=true}
+for name,entry in fixtureManifest do
+ local original=game:GetService("InsertService"):LoadAsset(entry.assetId)
+ local package=Instance.new("Folder"); package.Name=name; package.Parent=fixture
+ for _,template in entry.templates do
+  local found=original:FindFirstChild(template.name,true)
+  assert(found,"Bundled fixture template missing: "..template.name)
+  local clone=found:Clone()
+  for _,child in clone:GetDescendants() do
+   if not allowed[child.ClassName] then child:Destroy() end
+  end
+  local meshes={}
+  if clone:IsA("MeshPart") then table.insert(meshes,clone) end
+  for _,child in clone:GetDescendants() do
+   if child:IsA("MeshPart") then table.insert(meshes,child) end
+  end
+  table.sort(meshes,function(a,b) return a.MeshId<b.MeshId end)
+  assert(#meshes==#template.meshes,"Bundled fixture mesh count changed")
+  for index,mesh in meshes do
+   local expected=template.meshes[index]
+   assert(mesh.MeshId==expected.id,"Official asset changed since bake")
+   assert((mesh.Size-Vector3.new(unpack(expected.size))).Magnitude<0.01,"Baked mesh size differs")
+  end
+  clone.Parent=package
+ end
+ original:Destroy()
+end
+fixture.Parent=storage
+""" % encoded
 
 
 def source_with_integration_failure(source):
@@ -86,7 +133,8 @@ def main():
     if args.integration_failure:
         executed_source = source_with_integration_failure(executed_source)
     # Source and probe share one execution chunk; source file is never modified.
-    code = PREAMBLE + executed_source + "\n" + probe
+    fixture = "" if args.without_assets else bundled_fixture()
+    code = PREAMBLE + fixture + executed_source + "\n" + probe
     task = request(base + "/luau-execution-session-tasks", key, {"script": code})
     path = task.get("path", "")
     if not path.startswith(base + "/"):
@@ -111,6 +159,7 @@ def main():
     scene["meta"]["executedScriptSha256"] = hashlib.sha256(code.encode()).hexdigest()
     scene["meta"]["forcedAssetFailure"] = args.without_assets
     scene["meta"]["forcedIntegrationFailure"] = args.integration_failure
+    scene["meta"]["bakedEquivalentFixture"] = not args.without_assets
     scene["meta"]["taskPath"] = path
     scene["meta"]["source"] = "Luau Execution Roblox; geometria da engine, sem viewport renderizado"
     scene["meta"]["renderWarning"] = "Blender aproxima geometria/material/sol; nao reproduz shaders nem terrain Roblox"

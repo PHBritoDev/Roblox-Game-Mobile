@@ -52,6 +52,28 @@ if state=="Ready" then
  -- Streaming pode falhar por rede; nao transformar isto em erro de geracao.
  task.spawn(function()
   pcall(function() player:RequestStreamAroundAsync(Vector3.new(0,4,8),10) end)
+  -- Diagnostico local, separado do Ready do servidor e sem prometer renderizacao.
+  -- Apenas IDs de meshes visiveis neste cliente; streaming posterior fica fora da amostra.
+  local ids,seen={},{}
+  local generated=workspace:FindFirstChild("DreamcoreGenerated")
+  if generated then
+   for _,item in generated:GetDescendants() do
+    if item:IsA("MeshPart") and item.MeshId~="" and not seen[item.MeshId] then
+     seen[item.MeshId]=true; table.insert(ids,item.MeshId)
+    end
+   end
+  end
+  player:SetAttribute("ForestMeshPreloadComplete",false)
+  local failures=0
+  local ok=pcall(function()
+   game:GetService("ContentProvider"):PreloadAsync(ids,function(_,status)
+    if status~=Enum.AssetFetchStatus.Success then failures+=1 end
+   end)
+  end)
+  player:SetAttribute("ForestMeshFetchFailures",failures)
+  player:SetAttribute("ForestMeshFetchSample",#ids)
+  player:SetAttribute("ForestMeshPreloadComplete",ok)
+  if failures>0 or not ok then warn("[Dreamcore client] Falha de conteudo de malha; diagnostico local disponivel") end
  end)
 elseif state=="Failed" then
  local code=tostring(ReplicatedStorage:GetAttribute("ForestErrorCode") or "Unknown")
