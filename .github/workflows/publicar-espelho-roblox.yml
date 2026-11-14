@@ -1,0 +1,85 @@
+name: Publicar espelho de desenvolvimento Roblox
+on:
+  workflow_dispatch:
+    inputs:
+      universo_id_espelho:
+        description: 'Universe ID da COPIA de desenvolvimento (nunca a producao)'
+        required: true
+        type: string
+      lugar_id_espelho:
+        description: 'Place ID da COPIA de desenvolvimento (nunca a producao)'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: roblox-espelho-desenvolvimento
+  cancel-in-progress: false
+jobs:
+  espelho:
+    name: Compilar e enviar codigo identico ao espelho (sem tocar na producao)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: roblox-teste
+    env:
+      TARGET_UNIVERSE: ${{ inputs.universo_id_espelho }}
+      TARGET_PLACE: ${{ inputs.lugar_id_espelho }}
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar alvo separado de producao
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_UNIVERSE" =~ ^[0-9]+$ ]] || { echo "Universe ID invalido"; exit 1; }
+          [[ "$TARGET_PLACE" =~ ^[0-9]+$ ]] || { echo "Place ID invalido"; exit 1; }
+          [[ "$TARGET_UNIVERSE" != "2660433574" ]] || { echo "BLOQUEADO: Universe de producao nao pode ser usado neste workflow."; exit 1; }
+          [[ "$TARGET_PLACE" != "6947682498" ]] || { echo "BLOQUEADO: Place de producao nao pode ser usado neste workflow."; exit 1; }
+          test -n "$ROBLOX_API_KEY" || { echo "ROBLOX_API_KEY nao configurada"; exit 1; }
+      - name: Instalar Rojo
+        run: cargo install rojo --version 7.6.1 --locked
+      - name: Compilar mesma fonte da producao
+        run: rojo build default.project.json -o DreamcoreEspelho.rbxlx
+      - name: Publicar no Place espelho
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error -X POST \
+            "https://apis.roblox.com/universes/v1/${TARGET_UNIVERSE}/places/${TARGET_PLACE}/versions?versionType=Published" \
+            -H "x-api-key: ${ROBLOX_API_KEY}" \
+            -H "Content-Type: application/xml" \
+            --data-binary @DreamcoreEspelho.rbxlx \
+            -o response.json -w '%{http_code}')
+          echo "Status HTTP: $status"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            python3 - <<'PY'
+          import json
+          try:
+              d=json.load(open("response.json"))
+              print("Mensagem Roblox:",str(d.get("message",d.get("errors","Falha sem detalhes")))[:500])
+          except Exception:
+              print("Roblox recusou o envio; resposta nao-json")
+          PY
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          data=json.load(open("response.json"))
+          print("Versao espelho:",data.get("versionNumber"))
+          PY
+      - name: Registrar fonte e alvo
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          d={"kind":"roblox_development_mirror","sourceCommit":os.environ["GITHUB_SHA"],"universeId":os.environ["TARGET_UNIVERSE"],"placeId":os.environ["TARGET_PLACE"],"engine":"Roblox","sameSourceAsProduction":True,"productionModified":False}
+          Path("mirror-manifest.json").write_text(json.dumps(d,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: espelho-publicacao-manifest
+          path: |
+            mirror-manifest.json
+            response.json
+          retention-days: 14
+          if-no-files-found: warn
