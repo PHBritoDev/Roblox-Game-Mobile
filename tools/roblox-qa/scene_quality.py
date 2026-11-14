@@ -10,6 +10,8 @@ folder = root / "artifacts/visual-preview"
 scene = json.loads((folder / "scene.json").read_text(encoding="utf-8"))
 parts = scene["parts"]
 counts = Counter(p["n"] for p in parts)
+origins = Counter(p.get("origin", "Authored") for p in parts)
+forest_models = scene["meta"].get("forestModels", 0)
 
 def path_x(z):
     return math.sin((z+5)*0.027)*10 + math.sin(z*0.059)*2.5
@@ -30,16 +32,22 @@ report = {
     "sampledParts": len(parts),
     "totalGeneratedParts": scene["meta"]["partsTotal"],
     "treeTrunks": counts["Tronco musgoso"],
+    "forestPackModels": forest_models,
+    "forestPackParts": origins["ForestPack"],
+    "syntyParts": origins["Synty"],
     "treeCanopySections": counts["Copa em camadas"]+counts["Coroa alta"],
     "relicColumns": counts["Sentinela esquecida"]+counts["Sentinela quebrada"]+counts["Pilar do santuario"],
     "trunksIntersectingMainPath": trunk_obstructions[:20],
     "pass": len(parts) == scene["meta"]["partsTotal"]
-       and counts["Tronco musgoso"] >= 75
+       and forest_models >= 25
+       and origins["ForestPack"] >= 35
+       and counts["Tronco musgoso"] <= 45
        and len(trunk_obstructions) == 0,
     "limitations": [
         "Does not test walkability, collision or FPS in an actual Roblox client",
         "Roblox terrain and actual lighting are not reconstructed faithfully",
-        "The scenery quality and soundtrack require separate artistic review"
+        "The scenery quality and soundtrack require separate artistic review",
+        "The Blender proxy does not reproduce texture/alpha cards of Forest Pack MeshParts"
     ],
 }
 (folder / "scene_qa.json").write_text(json.dumps(report, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
