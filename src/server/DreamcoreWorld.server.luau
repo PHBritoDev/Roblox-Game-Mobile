@@ -103,26 +103,31 @@ for i=1,32 do
  terrain:FillBall(Vector3.new(math.cos(theta)*r,-10,math.sin(theta)*r-90),
   rng:NextNumber(45,92),Enum.Material.Grass)
 end
--- V8: terreno esculpido em volumes suaves, com silhueta distante e enquadramento.
--- Trilha principal fica em terreno nivelado; elevacoes sao fora da zona navegavel.
+-- V26: clareira legivel no mobile. Colinas BAIXAS, distantes da trilha.
+-- Captura real V25 revelou paredes de morro escondendo a floresta e o horizonte.
+-- Esferas de Terrain sao volumetricas: centro + raio define a altura real.
 local ridgeRng=Random.new(83214)
 for side=-1,1,2 do
- for i=1,18 do
-  local z=100-i*26
-  local centerX=side*(118+ridgeRng:NextNumber(-16,27))
-  local rise=ridgeRng:NextNumber(16,44)
-  local radius=ridgeRng:NextNumber(27,49)
-  terrain:FillBall(Vector3.new(centerX,-radius*0.50+rise*0.42,z),radius,Enum.Material.Grass)
-  terrain:FillBall(Vector3.new(centerX+side*14,-radius*0.74+rise*0.30,z-10),radius*0.75,Enum.Material.Rock)
+ for i=1,15 do
+  local z=95-i*30
+  local centerX=side*(174+ridgeRng:NextNumber(-12,30))
+  local radius=ridgeRng:NextNumber(24,39)
+  local summit=ridgeRng:NextNumber(7,17)
+  terrain:FillBall(Vector3.new(centerX,summit-radius,z),radius,Enum.Material.Grass)
+  -- Afloramentos baixos, nunca blocos que invadam o corredor.
+  if i%3==0 then
+   local rockRadius=radius*0.42
+   terrain:FillBall(Vector3.new(centerX+side*13,5-rockRadius,z-9),
+    rockRadius,Enum.Material.Rock)
+  end
  end
 end
--- Colinas recortadas no horizonte, não blocos flutuantes.
-for i=1,13 do
- local x=-260+i*40
- local z=-375+math.sin(i*0.78)*18
- local radius=ridgeRng:NextNumber(32,58)
- terrain:FillBall(Vector3.new(x,-radius*0.38,z),radius,Enum.Material.Rock)
- terrain:FillBall(Vector3.new(x+9,-radius*0.24,z+12),radius*0.78,Enum.Material.Grass)
+-- Silhueta distante em camadas, sem bloquear o ponto de fuga da trilha.
+for i=1,11 do
+ local x=-275+i*50
+ local z=-405+math.sin(i*0.78)*13
+ local radius=ridgeRng:NextNumber(24,40)
+ terrain:FillBall(Vector3.new(x,12-radius,z),radius,Enum.Material.Grass)
 end
 
 -- Rio sinuoso: margens orgânicas e água de Terrain em volumes sobrepostos.
@@ -890,9 +895,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",25)
+world:SetAttribute("WorldVersion",26)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v25:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v26:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
