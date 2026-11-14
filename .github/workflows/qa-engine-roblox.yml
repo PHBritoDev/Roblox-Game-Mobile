@@ -1,0 +1,32 @@
+name: QA de engine Roblox (headless)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qa-roblox-headless
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar segredos e contexto
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: |
+          test -n "$ROBLOX_API_KEY" || { echo "ROBLOX_API_KEY ausente"; exit 1; }
+      - name: Testar estrutura existente no Place Roblox
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: '2660433574'
+          ROBLOX_PLACE_ID: '6947682498'
+        run: python3 tools/roblox-qa/execute_engine_test.py
+      - name: Arquivar evidência (sem fotos)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-engine-result
+          path: artifacts/engine/resultado.json
+          if-no-files-found: warn
