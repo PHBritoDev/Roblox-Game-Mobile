@@ -847,9 +847,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",16)
+world:SetAttribute("WorldVersion",17)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v16:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v17:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
@@ -867,7 +867,10 @@ task.spawn(function()
     local t=math.clamp((os.clock()-begun)/transition,0,1)
     local smooth=t*t*(3-2*t)
     Lighting.ClockTime=start.clock+(target.clock-start.clock)*smooth
-    sky.StarCount=if smooth>0.55 then target.stars else start.stars
+    -- Contagem de estrelas evolui gradualmente, evitando o surgimento abrupto
+    -- de milhares de pontos luminosos no meio do crepusculo.
+    local starBlend=math.clamp((smooth-0.22)/0.62,0,1)
+    sky.StarCount=math.floor(start.stars+(target.stars-start.stars)*starBlend+0.5)
     Lighting.Brightness=start.brightness+(target.brightness-start.brightness)*smooth
     Lighting.Ambient=start.ambient:Lerp(target.ambient,smooth)
     Lighting.OutdoorAmbient=start.outdoor:Lerp(target.outdoor,smooth)
@@ -881,7 +884,9 @@ task.spawn(function()
     ancientGlow.Brightness=start.glow+(target.glow-start.glow)*smooth
     lakeGlow.Brightness=ancientGlow.Brightness*0.72
     if t>=1 then break end
-    task.wait(0.18)
+    -- 2 atualizacoes/s: reduz replicacao de 13 propriedades de Lighting,
+    -- sem saltos perceptiveis em transicoes de 48 segundos.
+    task.wait(0.5)
    end
   end
  end
