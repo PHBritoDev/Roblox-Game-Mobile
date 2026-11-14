@@ -55,22 +55,26 @@ if state=="Ready" then
  end)
 elseif state=="Failed" then
  local code=tostring(ReplicatedStorage:GetAttribute("ForestErrorCode") or "Unknown")
- hint.Text="Erro ao criar floresta ("..code.."). Servidor em recuperacao."
+ hint.Text="Erro ao criar floresta ("..code.."). Tente entrar em outro servidor."
 else
  hint.Text="O mundo ainda está carregando. Explore quando aparecer."
  -- Nao afirmar que a geracao falhou: pode apenas estar atrasada no servidor.
  task.spawn(function()
-  while gui.Parent and ReplicatedStorage:GetAttribute("ForestState")~="Ready" do
+  while gui.Parent do
+   local current=ReplicatedStorage:GetAttribute("ForestState")
+   if current=="Ready" then hint.Text="Siga a trilha até a árvore ancestral"; break end
+   if current=="Failed" then hint.Text="Não foi possível criar a floresta. Tente outro servidor."; break end
    task.wait(2)
   end
-  if gui.Parent then hint.Text="Siga a trilha até a árvore ancestral" end
  end)
 end
 subtitle.Text=string.format("Mundo I · V%s · Roblox %s",tostring(ReplicatedStorage:GetAttribute("ForestVersion") or "?"),tostring(game.PlaceVersion))
 for _,t in ipairs({title,subtitle,hint}) do
  TweenService:Create(t,TweenInfo.new(1.6,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
 end
-task.delay(10,function()
+task.spawn(function()
+ while gui.Parent and ReplicatedStorage:GetAttribute("ForestState")~="Ready" do task.wait(1) end
+ task.wait(10)
  if not gui.Parent then return end
  for _,t in ipairs({title,subtitle,hint}) do
   TweenService:Create(t,TweenInfo.new(2,Enum.EasingStyle.Sine,Enum.EasingDirection.In),{TextTransparency=1}):Play()

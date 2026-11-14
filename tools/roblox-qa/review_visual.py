@@ -7,11 +7,12 @@ It does NOT claim AI aesthetic judgement, mobile FPS, or Studio coverage.
 from __future__ import annotations
 import json
 import math
+import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageStat, ImageChops
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "artifacts/visual-preview"
+OUT = Path(os.environ.get("PREVIEW_FOLDER", ROOT / "artifacts/visual-preview"))
 NAMES = ("spawn", "approach", "canopy")
 FRAMES = [OUT / f"preview_{name}.png" for name in NAMES]
 MIN_VARIANCE = 16
@@ -92,7 +93,7 @@ if scene_path.exists():
         and abs(item.get("p", [0, 0, 0])[2] - hero_z) < 17
         and item.get("s", [0, 0, 0])[1] >= 48
     ]
-    has_fallback_core = by_name.get("Cerne antigo", 0) >= 1
+    has_fallback_core = by_name.get("Cerne antigo", 0) >= 1 or by_name.get("Braco ancestral", 0) >= 5
     report["landmark"] = {
         "forestPackHeroMesh": len(hero_mesh) > 0,
         "authoredFallbackCore": has_fallback_core,

@@ -6,6 +6,7 @@ Run: blender -b -t 2 --python tools/roblox-qa/render_scene.py
 import bpy
 import json
 import math
+import os
 from mathutils import Vector, Matrix
 
 # Roblox uses Y-up. Blender uses Z-up. Rotate the complete basis, including parts/cameras.
@@ -17,7 +18,7 @@ def rbscale(s):
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "artifacts/visual-preview"
+OUT = Path(os.environ.get("PREVIEW_FOLDER", ROOT / "artifacts/visual-preview"))
 scene_data = json.loads((OUT / "scene.json").read_text(encoding="utf-8"))
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
@@ -75,6 +76,26 @@ for part in scene_data["parts"]:
         bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=1,location=pos)
         obj=bpy.context.object
         obj.scale=tuple(v/2 for v in size)
+    elif part["shape"] == "Wedge":
+        # Roblox WedgePart: +Z face is high; -Z edge is low. Native geometry,
+        # unlike the deliberately approximate MeshPart representation below.
+        sx,sy,sz=part["s"]
+        verts=[rbpos((x*sx/2,y*sy/2,z*sz/2)) for x,y,z in
+               [(-1,-1,-1),(1,-1,-1),(-1,-1,1),(1,-1,1),(-1,1,1),(1,1,1)]]
+        mesh=bpy.data.meshes.new(name)
+        mesh.from_pydata(verts,[],[(0,2,3,1),(2,4,5,3),(0,1,5,4),(0,4,2),(1,3,5)])
+        mesh.update()
+        obj=bpy.data.objects.new(name,mesh)
+        bpy.context.collection.objects.link(obj)
+        obj.location=pos
+    elif part["shape"] == "Cylinder":
+        sx,sy,sz=part["s"]
+        bpy.ops.mesh.primitive_cylinder_add(vertices=12,radius=1,depth=2,location=pos)
+        obj=bpy.context.object
+        # Apply native X-axis cylinder before the instance CFrame is applied.
+        for v in obj.data.vertices:
+            x,y,z=v.co
+            v.co=Vector((z*sx/2,-y*sz/2,x*sy/2))
     elif trunk_mesh:
         # Source mesh branch bounding box is much wider than the physical trunk.
         # A cube of that size incorrectly blacks out cameras and blocks paths in previews.

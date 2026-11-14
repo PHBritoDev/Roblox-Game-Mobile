@@ -32,6 +32,15 @@ def source_without_assets(source):
     return source
 
 
+def source_with_integration_failure(source):
+    """Fail after a successful clone, not merely when the network is unavailable."""
+    for marker in ("   site.completed=true", "   if ok then forestCount+=1; site.completed=true"):
+        if source.count(marker) != 1:
+            raise ValueError("Integration fault marker missing/duplicated")
+        source = source.replace(marker, '   error("QA forced integration failure")\n'+marker, 1)
+    return source
+
+
 def request(path, key, payload=None):
     data = None if payload is None else json.dumps(payload).encode()
     req = urllib.request.Request(
@@ -57,10 +66,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--without-assets", action="store_true",
                         help="Force both licensed asset loads to fail in memory and validate fallback")
+    parser.add_argument("--integration-failure", action="store_true")
     args = parser.parse_args()
     out = ROOT / "artifacts" / "visual-preview"
     if args.without_assets:
         out /= "fallback"
+    if args.integration_failure:
+        out /= "integration-failure"
     out.mkdir(parents=True, exist_ok=True)
     key = os.environ.get("ROBLOX_API_KEY", "")
     universe = os.environ.get("ROBLOX_UNIVERSE_ID", "2660433574")
@@ -71,6 +83,8 @@ def main():
     source = (ROOT / "src/server/DreamcoreWorld.server.luau").read_text(encoding="utf-8")
     probe = (ROOT / "tools/roblox-qa/export_scene.luau").read_text(encoding="utf-8")
     executed_source = source_without_assets(source) if args.without_assets else source
+    if args.integration_failure:
+        executed_source = source_with_integration_failure(executed_source)
     # Source and probe share one execution chunk; source file is never modified.
     code = PREAMBLE + executed_source + "\n" + probe
     task = request(base + "/luau-execution-session-tasks", key, {"script": code})
@@ -96,6 +110,7 @@ def main():
     scene["meta"]["executedSourceSha256"] = hashlib.sha256(executed_source.encode()).hexdigest()
     scene["meta"]["executedScriptSha256"] = hashlib.sha256(code.encode()).hexdigest()
     scene["meta"]["forcedAssetFailure"] = args.without_assets
+    scene["meta"]["forcedIntegrationFailure"] = args.integration_failure
     scene["meta"]["taskPath"] = path
     scene["meta"]["source"] = "Luau Execution Roblox; geometria da engine, sem viewport renderizado"
     scene["meta"]["renderWarning"] = "Blender aproxima geometria/material/sol; nao reproduz shaders nem terrain Roblox"

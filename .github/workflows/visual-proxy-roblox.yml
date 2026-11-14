@@ -39,6 +39,10 @@ jobs:
         run: |
           python3 tools/roblox-qa/snapshot_scene.py --without-assets
           python3 tools/roblox-qa/scene_quality.py --folder artifacts/visual-preview/fallback
+      - name: Validar rollback apos erro durante integracao
+        run: |
+          python3 tools/roblox-qa/snapshot_scene.py --integration-failure
+          python3 tools/roblox-qa/scene_quality.py --folder artifacts/visual-preview/integration-failure
       - name: Instalar Blender para renderizar offline (sem Studio)
         run: |
           sudo apt-get update -qq
@@ -47,6 +51,12 @@ jobs:
         run: blender --background --threads 2 --python tools/roblox-qa/render_scene.py
       - name: Revisar imagens, detectar falhas e produzir contato visual
         run: python3 tools/roblox-qa/review_visual.py
+      - name: Renderizar e revisar fallback realmente usado sem assets
+        env:
+          PREVIEW_FOLDER: artifacts/visual-preview/fallback
+        run: |
+          blender --background --threads 2 --python tools/roblox-qa/render_scene.py
+          python3 tools/roblox-qa/review_visual.py
       - name: Montar clipe MP4 com as tres perspectivas estaticas
         run: |
           ffmpeg -hide_banner -loglevel error -y -loop 1 -t 3 -i artifacts/visual-preview/preview_spawn.png \

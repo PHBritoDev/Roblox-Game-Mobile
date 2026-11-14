@@ -5,7 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 ReplicatedStorage:SetAttribute("ForestState","Generating")
-ReplicatedStorage:SetAttribute("ForestVersion",32)
+ReplicatedStorage:SetAttribute("ForestVersion",33)
 ReplicatedStorage:SetAttribute("ForestStage","Starting")
 ReplicatedStorage:SetAttribute("ForestErrorCode","")
 local function stage(value)
@@ -28,14 +28,14 @@ terrain:Clear()
 -- Materiais e vento fazem parte da qualidade: grama se move mesmo sem VFX extra.
 -- Decoration e GrassLength sao propriedades NotScriptable na engine Roblox.
 -- Nunca ajustar via script: isso abortava o gerador antes do Terrain e Spawn.
-terrain.WaterColor=Color3.fromRGB(71,144,137)
+terrain.WaterColor=Color3.fromRGB(53,100,93)
 terrain.WaterTransparency=0.32
-terrain.WaterReflectance=0.2
+terrain.WaterReflectance=0.12
 terrain.WaterWaveSize=0.18
 terrain.WaterWaveSpeed=7
 terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(89,135,92))
 terrain:SetMaterialColor(Enum.Material.LeafyGrass,Color3.fromRGB(72,118,82))
-terrain:SetMaterialColor(Enum.Material.Ground,Color3.fromRGB(125,108,84))
+terrain:SetMaterialColor(Enum.Material.Ground,Color3.fromRGB(111,103,78))
 terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(119,124,125))
 Workspace.GlobalWind=Vector3.new(4.5,0,1.8)
 
@@ -158,7 +158,7 @@ for ix=1,170 do
   local trail=inWalkway(x,z,0.8*math.noise(x/11,z/11,4))
   local surface=if trail then Enum.Material.Ground else
    if noise>0.12 then Enum.Material.LeafyGrass else
-   if noise < -0.26 then Enum.Material.Ground else Enum.Material.Grass
+   if waterDistance<13 then Enum.Material.Ground else Enum.Material.Grass
   for iy=1,4 do
    local bottom=-16+(iy-1)*4
    local solid=math.clamp((bed-bottom)/4,0,1)
@@ -224,58 +224,67 @@ spawn.Duration=0
 spawn.CanCollide=true
 spawn.Parent=world
 
--- Fallback sem assets: copas em leques escalonados, nao esferas empilhadas.
--- Folhagem nao-colisiva, tronco solido; usa apenas primitivas nativas.
-local function branchTree(x,z,s,family)
- local h=19*s
- local tilt=rng:NextNumber(-0.11,0.11)
- local tint=if rng:NextNumber()<0.18 then P.canopyGold else
-  if rng:NextNumber()<0.52 then P.canopyMid else P.canopy
- local trunk=part("Tronco organico inclinado",Vector3.new(2.6*s,h,2.6*s),
-  CFrame.new(x,h*0.5,z)*CFrame.Angles(tilt,0,tilt*0.6),
-  P.bark,Enum.Material.Wood,family)
- trunk.Shape=Enum.PartType.Cylinder
- trunk:SetAttribute("CollisionRole","Trunk")
- -- Silhueta irregular: camadas afiladas de folhas elipticas em orientacoes distintas.
- -- 12 laminas por arvore, sombras somente nas mais altas para conter custo Android.
- for tier=1,3 do
-  local height=h*(0.48+tier*0.155)
-  local spread=(9.8-tier*1.75)*s
-  for petal=1,4 do
-   local angle=(petal-1)*PI*0.5+tier*0.43+rng:NextNumber(-0.17,0.17)
-   local reach=spread*rng:NextNumber(0.82,1.12)
-   local dx=math.cos(angle)*reach*0.53
-   local dz=math.sin(angle)*reach*0.53
-   local stem=Vector3.new(x+tilt*height*0.35,height-2*s,z)
-   local tip=stem+Vector3.new(dx,height*0.075+2.2*s,dz)
-   local twig=between("Galho ramificado",stem,tip,0.48*s,P.barkLight,Enum.Material.Wood,family)
-   twig.CanCollide=false
-   twig.CanQuery=false
-   twig.CastShadow=false
-   local blade=Instance.new("WedgePart")
-   blade.Name="Leque de folhas afilado"
-   blade.Size=Vector3.new(3.8*s,1.65*s,reach*1.42)
-   blade.CFrame=CFrame.lookAt((stem+tip)*0.5,tip)*CFrame.Angles(0,angle*0.09,0)
-   blade.Color=if petal==1 and tier==2 then P.canopyGold else tint
-   blade.Material=Enum.Material.Grass
-   blade.Anchored=true
-   blade.Parent=family
-   blade.CanCollide=false
-   blade.CanQuery=false
-   blade.CastShadow=tier==3
+-- Geometria autoral incluida no gerador: nenhum download para a base visual.
+-- Cylinder tem eixo X: a rotacao abaixo alinha o comprimento com o galho.
+local function woodSegment(name,a,b,radius,parent,solid)
+ local beam=part(name,Vector3.new((b-a).Magnitude,radius*2,radius*2),
+  CFrame.lookAt((a+b)*0.5,b)*CFrame.Angles(0,PI/2,0),P.barkLight,Enum.Material.Wood,parent)
+ beam.Shape=Enum.PartType.Cylinder
+ if solid then solidMesh(beam) else optimizeDecorativeMesh(beam,false) end
+ return beam
+end
+local function blade(name,cf,size,color,parent,shadow)
+ local leaf=Instance.new("WedgePart")
+ leaf.Name=name
+ leaf.Size=size
+ leaf.CFrame=cf
+ leaf.Color=color
+ leaf.Material=Enum.Material.SmoothPlastic
+ optimizeDecorativeMesh(leaf,shadow)
+ leaf.Parent=parent
+ return leaf
+end
+-- Duas cunhas opostas formam uma massa foliar lenticular, sem bolas ou caixas.
+local function leafSpray(cf,width,length,color,parent,shadow)
+ for _,side in {-1,1} do
+  blade("Folhagem autoral lanceolada",cf*CFrame.new(0,0,side*length/4)*CFrame.Angles(0,if side==1 then 0 else PI,0),
+   Vector3.new(width,math.max(0.3,width*0.22),length/2),color,parent,shadow)
+ end
+end
+local authoredTrees=0
+local function branchTree(x,z,s,family,species)
+ -- RNG local: variacao da copa nao desloca o layout nem os acessos.
+ local random=Random.new(math.floor(x*71+z*133+s*997)%2147483647)
+ species=species or (math.abs(math.floor(x+z))%3+1)
+ local tree=Instance.new("Model")
+ tree.Name="Arvore autoral — "..species
+ tree:SetAttribute("AuthoredTree",true)
+ tree.Parent=family
+ local h=(if species==2 then 25 else 20)*s
+ local base=Vector3.new(x,0,z)
+ local bend=Vector3.new(random:NextNumber(-2,2)*s,0,random:NextNumber(-2,2)*s)
+ local fork=base+Vector3.new(0,h*0.57,0)+bend
+ local top=base+Vector3.new(0,h,0)+bend*1.8
+ woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
+ woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
+ for j=1,3 do
+  local angle=j*PI*2/3+random:NextNumber(-0.3,0.3)
+  local radial=Vector3.new(math.cos(angle),0,math.sin(angle))
+  woodSegment("Raiz autoral",base+radial*3*s+Vector3.new(0,0.18,0),base+Vector3.new(0,3*s,0),0.35*s,tree,false)
+  local reach=(if species==2 then 4.6 else 7.6)*s
+  local tip=base+radial*reach+bend+Vector3.new(0,h*(0.65+j*0.08),0)
+  woodSegment("Braco autoral",fork,tip,0.42*s,tree,false)
+  for lobe=1,2 do
+   local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
+   local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
+   leafSpray(CFrame.new(center)*CFrame.Angles(0,angle+lobe*0.45,random:NextNumber(-0.13,0.13)),
+    (if species==2 then 4 else 6)*s,(if species==2 then 8 else 10)*s,color,tree,math.abs(x-pathX(z))<65)
   end
  end
- -- Pequena ponta superior sem copa esferica.
- local apex=Instance.new("WedgePart")
- apex.Name="Coroa em ponta"
- apex.Size=Vector3.new(3.2*s,5*s,3.2*s)
- apex.CFrame=CFrame.new(x+tilt*h*0.3,h+0.4*s,z)
- apex.Color=tint
- apex.Material=Enum.Material.Grass
- apex.Anchored=true
- apex.Parent=family
- apex.CanCollide=false
- apex.CanQuery=false
+ leafSpray(CFrame.new(top)*CFrame.Angles(0,0.6,0),5*s,9*s,P.canopyMid,tree,true)
+ authoredTrees+=1
+ if authoredTrees%8==0 then task.wait() end
+ return tree
 end
 
 -- Mistura de copas autorais com futuras arvores MeshPart oficiais.
@@ -339,26 +348,13 @@ end
 -- Colocadas manualmente fora da trilha para criar contraste e enquadrar o rio.
 local willow=group("Salgueiros da margem — copa pendente")
 local function riverWillow(x,z,scale)
- local h=20*scale
- local bend=rng:NextNumber(-3,3)
- local start=Vector3.new(x,0.8,z)
- local trunkTop=Vector3.new(x+bend,h,z)
- between("Tronco curvo ribeirinho",start,trunkTop,2.7*scale,P.bark,Enum.Material.Wood,willow)
- local shade=if rng:NextNumber()<0.45 then P.canopyMid else P.canopy
- local crown=orb("Dossel de salgueiro",trunkTop+Vector3.new(0,1.8*scale,0),
-  11*scale,shade,Enum.Material.Grass,willow)
- crown.Size=Vector3.new(19*scale,5.5*scale,15*scale)
- crown.CanCollide=false
- for j=1,8 do
-  local angle=(j/8)*PI*2
-  local reach=rng:NextNumber(6.5,10)*scale
-  local top=trunkTop+Vector3.new(math.cos(angle)*reach,1.9*scale,math.sin(angle)*reach)
-  between("Galho flexivel",trunkTop,top,0.68*scale,P.barkLight,Enum.Material.Wood,willow).CanCollide=false
-  local drop=rng:NextNumber(7,12)*scale
-  local veil=orb("Véu vegetal pendente",top+Vector3.new(0,-drop/2,0),
-   4.2*scale,shade,Enum.Material.Grass,willow)
-  veil.Size=Vector3.new(3.6*scale,drop,3.6*scale)
-  veil.CanCollide=false
+ local tree=branchTree(x,z,scale,willow,1)
+ -- Folhas pendentes em seis fios opacos; sem overdraw de planos transparentes.
+ for j=1,6 do
+  local angle=j*PI/3
+  local cf=CFrame.new(x+math.cos(angle)*7*scale,15*scale,z+math.sin(angle)*7*scale)
+   *CFrame.Angles(0,angle,math.rad(62))
+  leafSpray(cf,1.5*scale,9*scale,P.canopy,tree,false)
  end
 end
 riverWillow(84,64,1.4)
@@ -369,6 +365,65 @@ riverWillow(83,-144,1.42)
 riverWillow(103,-203,1.23)
 riverWillow(148,-268,1.36)
 
+-- Estrato autoral permanente: samambaias e capins agrupados nas bordas secas.
+local understory=group("Sub-bosque autoral permanente")
+local groundParams=RaycastParams.new()
+groundParams.FilterType=Enum.RaycastFilterType.Include
+groundParams.FilterDescendantsInstances={terrain}
+groundParams.IgnoreWater=true
+local plantRng=Random.new(330067)
+local function groundPlant(x,z,fern)
+ if inWalkway(x,z,-1) then return end
+ local hit=Workspace:Raycast(Vector3.new(x,10,z),Vector3.new(0,-25,0),groundParams)
+ if not hit or hit.Position.Y < -0.5 then return end
+ local base=CFrame.new(hit.Position+Vector3.new(0,0.08,0))
+ local scale=plantRng:NextNumber(0.75,1.3)
+ for j=1,(if fern then 5 else 3) do
+  local a=j*2.4+plantRng:NextNumber(0,0.4)
+  local pose=base*CFrame.Angles(0,a,0)*CFrame.new(0,0.65*scale,0.65*scale)*CFrame.Angles(-0.3,0,0)
+  if fern then
+   leafSpray(pose,0.65*scale,2.9*scale,if j%2==0 then P.mossLight else P.moss,understory,false)
+  else
+   blade("Lamina de capim",pose,Vector3.new(0.23*scale,1.8*scale,0.7*scale),P.mossLight,understory,false)
+  end
+ end
+end
+for i=1,84 do
+ local z=22-i*3.2
+ local side=if i%2==0 then 1 else -1
+ local x=pathX(z)+side*plantRng:NextNumber(11,23)
+ groundPlant(x,z,i%3==0)
+ groundPlant(x+side*2.5,z+1.8,false)
+end
+-- Margens com juncos, musgo e seixos; preserva a travessia da ponte.
+for i=1,48 do
+ local z=110-i*8
+ local side=if i%2==0 then 1 else -1
+ local x=riverX(z)+side*25
+ if math.abs(z+89)>16 then
+  groundPlant(x,z,false)
+  if i%3==0 then
+   local rock=orb("Seixo de margem",Vector3.new(x,0.3,z),2.7,P.stone,Enum.Material.Slate,details)
+   rock.Size=Vector3.new(3.4,1.3,2.3)
+   optimizeDecorativeMesh(rock,false)
+  end
+ end
+end
+-- Fecho do horizonte por bosque em duas profundidades, nunca montanhas.
+local horizon=group("Bosque de horizonte")
+for i=0,25 do
+ local angle=i*2*PI/26
+ local x=math.cos(angle)*265
+ local z=-95+math.sin(angle)*330
+ if math.abs(x-riverX(z))>32 then branchTree(x,z,1.5+(i%4)*0.2,horizon,2) end
+end
+-- Limite fisico recuado da borda do Terrain, escondido pelo bosque distante.
+for _,edge in {{0,-464,640,2},{0,280,640,2},{-320,-92,2,744},{320,-92,2,744}} do
+ local barrier=part("Limite seguro do bosque",Vector3.new(edge[3],70,edge[4]),CFrame.new(edge[1],30,edge[2]),P.moss,Enum.Material.Grass,horizon)
+ barrier.Transparency=1; barrier.CastShadow=false
+ barrier:SetAttribute("CollisionRole","Boundary")
+end
+
 -- Asset curado: Synty Nature Pack, publicado por @Roblox (ID 6933438443).
 -- Licenca oficial para qualquer jogo Roblox (DevForum Roblox 10/06/2021).
 -- Inspecao isolada Open Cloud: 200 MeshParts, 11 Models, zero scripts.
@@ -378,10 +433,13 @@ local InsertService=game:GetService("InsertService")
 stage("LoadingSynty")
 -- Um asset externo nunca pode abortar o mundo inteiro, mesmo se carregar
 -- com sucesso e uma malha/modelo especifico falhar durante a configuracao.
+local sourcePack
 local syntyIntegrated,syntyError=xpcall(function()
-local okPack,sourcePack=pcall(function()
+local okPack
+okPack,sourcePack=pcall(function()
  return InsertService:LoadAsset(6933438443)
 end)
+world:SetAttribute("SyntyLoadSucceeded",okPack and sourcePack~=nil)
 if okPack and sourcePack then
  for _,asset in sourcePack:GetDescendants() do
   if asset:IsA("LuaSourceContainer") then asset:Destroy() end
@@ -490,9 +548,10 @@ if okPack and sourcePack then
    optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
    tree.Parent=curated
    trunkProxy(site.x,site.z,height*0.58,math.clamp(height*0.065,1.2,3.5),curated)
+   site.completed=true
    meshPlaced+=1
   else
-   branchTree(site.x,site.z,site.s,props)
+   site.completed=false
   end
  end
  print("[Dreamcore] Arvores com silhuetas oficiais:",meshPlaced)
@@ -501,7 +560,7 @@ if okPack and sourcePack then
 else
  -- Falha na rede/permissao: replanta todos os sitios reservados com vegetacao autoral.
  for _,site in meshTreeSites do
-  branchTree(site.x,site.z,site.s,props)
+  site.completed=false
  end
  warn("[Dreamcore] Pacote Synty indisponivel; mantendo vegetacao autoral.")
 end
@@ -511,9 +570,12 @@ if not syntyIntegrated then
  warn("[Dreamcore] Synty integracao falhou: "..tostring(syntyError))
  world:SetAttribute("SyntyIntegrationFailed",true)
  ReplicatedStorage:SetAttribute("ForestAssetWarning","Synty")
- -- A area principal, terreno, spawn e iluminacao continuam sendo gerados.
- -- Nao repetir clones no fallback: arvores autorais ja estao distribuidas.
+ curated:ClearAllChildren()
+ for _,site in meshTreeSites do site.completed=false end
 end
+
+if typeof(sourcePack)=="Instance" then sourcePack:Destroy() end
+world:SetAttribute("SyntyIntegrationSucceeded",syntyIntegrated)
 
 -- Forest Pack @Roblox (6432306802): folhas reais em planos com SurfaceAppearance.
 -- Baixa uma unica vez, remove todos os scripts, apenas clones curados de Models.
@@ -526,6 +588,7 @@ end)
 local forestCount=0
 local forestHeroBuilt=false
 local forestIntegrated,forestError=xpcall(function()
+world:SetAttribute("ForestPackLoadSucceeded",okForest and forestPack~=nil)
 if okForest and forestPack then
  for _,descendant in forestPack:GetDescendants() do
   if descendant:IsA("LuaSourceContainer") then descendant:Destroy() end
@@ -589,10 +652,10 @@ if okForest and forestPack then
   local template=candidates[preferred] or candidates["BeechwoodTree_Var03"]
   if template then
    local ok=pcall(plantForest,template,site,i)
-   if ok then forestCount+=1
-   else branchTree(site.x,site.z,site.s,props) end
+   if ok then forestCount+=1; site.completed=true
+   else site.completed=false end
   else
-   branchTree(site.x,site.z,site.s,props)
+   site.completed=false
   end
  end
  -- Arbustos e samambaias com recortes de folhas reais nos primeiros planos.
@@ -675,7 +738,7 @@ if okForest and forestPack then
  forestPack:Destroy()
 else
  for _,site in forestTreeSites do
-  branchTree(site.x,site.z,site.s,props)
+  site.completed=false
  end
  warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
 end
@@ -684,8 +747,22 @@ if not forestIntegrated then
  warn("[Dreamcore] Forest Pack integracao falhou: "..tostring(forestError))
  world:SetAttribute("ForestPackIntegrationFailed",true)
  ReplicatedStorage:SetAttribute("ForestAssetWarning","ForestPack")
- -- O monumento e a iluminacao seguem com o fallback integrado abaixo.
+ naturalForest:ClearAllChildren()
+ forestCount=0; forestHeroBuilt=false
+ for _,site in forestTreeSites do site.completed=false end
 end
+if typeof(forestPack)=="Instance" then forestPack:Destroy() end
+world:SetAttribute("ForestPackIntegrationSucceeded",forestIntegrated)
+local reservedCount,fulfilledCount=0,0
+for _,sites in {meshTreeSites,forestTreeSites} do
+ for _,site in sites do
+  reservedCount+=1
+  if not site.completed then branchTree(site.x,site.z,site.s,props) end
+  fulfilledCount+=1
+ end
+end
+world:SetAttribute("ReservedTreeSites",reservedCount)
+world:SetAttribute("FulfilledTreeSites",fulfilledCount)
 world:SetAttribute("ForestMeshTrees",forestCount)
 print("[Dreamcore] Floresta com SurfaceAppearance:",forestCount,"modelos")
 
@@ -701,28 +778,16 @@ if forestHeroBuilt then
  world:SetAttribute("HeroUsesMeshOnly",true)
 else
  world:SetAttribute("HeroUsesMeshOnly",false)
- local core=part("Cerne antigo",Vector3.new(11,58,11),
-  CFrame.new(center.X,29,center.Z),P.barkLight,Enum.Material.Wood,sacred)
- for i=1,8 do
-  local a=i*PI/4
-  local low=center+Vector3.new(math.cos(a)*9,1,math.sin(a)*9)
-  local high=center+Vector3.new(math.cos(a)*3,23,math.sin(a)*3)
-  between("Raiz colossal",low,high,3.7,P.bark,Enum.Material.Wood,sacred)
+ local hero=branchTree(center.X,center.Z,3.65,sacred,3)
+ hero.Name="Cerne antigo autoral"
+ hero:SetAttribute("Hero",true)
+ -- Raizes convergentes e galhos em arco dao uma silhueta exclusiva ao santuario.
+ for j=1,5 do
+  local angle=j*PI*2/5
+  local tip=center+Vector3.new(math.cos(angle)*24,42+j*3,math.sin(angle)*24)
+  woodSegment("Braco ancestral",center+Vector3.new(0,28,0),tip,1.7,sacred,false)
+  leafSpray(CFrame.new(tip)*CFrame.Angles(0,angle,0),14,24,P.canopyGold,sacred,true)
  end
- -- Fallback do marco central somente se a malha licenciada estiver indisponivel.
- for i=1,10 do
-  local a=i*PI*2/10
-  local start=Vector3.new(center.X,43,center.Z)
-  local tip=center+Vector3.new(math.cos(a)*rng:NextNumber(19,34),rng:NextNumber(53,75),
-   math.sin(a)*rng:NextNumber(19,34))
-  between("Braco da arvore",start,tip,3.8,P.bark,Enum.Material.Wood,sacred)
-  local leaves=orb("Dossel dourado",tip+Vector3.new(0,6,0),rng:NextNumber(24,36),
-   if i%3==0 then P.canopyGold else P.canopyMid,Enum.Material.Grass,sacred)
-  leaves.Size=Vector3.new(leaves.Size.X*1.18,leaves.Size.Y*0.66,leaves.Size.Z*1.12)
-  leaves.CanCollide=false
- end
- orb("Coroa do santuario",center+Vector3.new(0,crownY+17,0),42,
-  P.canopy,Enum.Material.Grass,sacred).CanCollide=false
 end
 
 -- Círculo de pedras cerimoniais, inteligível na aproximação.
@@ -917,7 +982,7 @@ stage("ConfiguringLighting")
 local moods={
  {
   name="Golden Nostalgia", clock=16.75, brightness=2.35,
-  ambient=Color3.fromRGB(72,95,118), outdoor=Color3.fromRGB(148,147,133),
+  ambient=Color3.fromRGB(54,75,87), outdoor=Color3.fromRGB(102,118,112),
   atm=Color3.fromRGB(235,212,178), decay=Color3.fromRGB(139,158,159),
   tint=Color3.fromRGB(255,248,235), exposure=-0.05,
    sunTint=Color3.fromRGB(59,39,17), shadeTint=Color3.fromRGB(9,23,28),
@@ -982,7 +1047,7 @@ clouds.Parent=terrain
 Lighting.GlobalShadows=true
 Lighting.ShadowSoftness=0.38
 Lighting.GeographicLatitude=35
-Lighting.EnvironmentDiffuseScale=0.45
+Lighting.EnvironmentDiffuseScale=0.35
 Lighting.EnvironmentSpecularScale=0.45
 -- Direcao de arte V28: realces ambar e sombras verde-azul discretas.
 -- ColorShift usa iluminacao global, sem criar PointLights por arvore.
@@ -1011,7 +1076,7 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",32)
+world:SetAttribute("WorldVersion",33)
 world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 stage("Finalizing")
@@ -1022,6 +1087,7 @@ ReplicatedStorage:SetAttribute("ForestState","Ready")
 stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
+world:SetAttribute("AuthoredTreeCount",authoredTrees)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
 print("[Dreamcore] Floresta das Memorias v32:",#world:GetDescendants(),"instancias")
 
