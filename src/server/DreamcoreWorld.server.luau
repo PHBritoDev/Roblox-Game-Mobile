@@ -389,6 +389,7 @@ if okForest and forestPack then
  end
  local candidates={}
  local names={
+  "BeechwoodTreeLarge_Var01",
   "BeechwoodTree_Var01",
   "BeechwoodTree_Var02",
   "BeechwoodTree_Var03",
@@ -437,6 +438,50 @@ if okForest and forestPack then
    branchTree(site.x,site.z,site.s,props)
   end
  end
+ -- Arbustos e samambaias com recortes de folhas reais nos primeiros planos.
+ -- Mantemos a maioria fora da trilha e evitamos emissor externo dos templates.
+ local undergrowthNames={"FernTallVar01","Fern_Var01","MountainLaurelBush_Var01","DyingFern01"}
+ local undergrowthTemplates={}
+ for _,item in forestPack:GetDescendants() do
+  if item:IsA("Model") then
+   for _,name in undergrowthNames do
+    if item.Name==name and not undergrowthTemplates[name] then
+     undergrowthTemplates[name]=item
+    end
+   end
+  end
+ end
+ local undergrowthPlaced=0
+ for i=1,58 do
+  local template=undergrowthTemplates[undergrowthNames[(i-1)%#undergrowthNames+1]]
+  if template then
+   local z=22-i*4.8
+   local side=if i%2==0 then 1 else -1
+   local x=pathX(z)+side*(12+(i%5)*4.1)
+   local foliage=template:Clone()
+   foliage.Name="Estrato baixo texturizado — "..i
+   for _,item in foliage:GetDescendants() do
+    if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then
+     item:Destroy()
+    elseif item:IsA("BasePart") then
+     item.Anchored=true
+     item.CanCollide=false
+     item.CastShadow=false
+    end
+   end
+   local okFoliage=pcall(function()
+    local extent=foliage:GetExtentsSize()
+    local sizeGoal=1.65+(i%5)*0.38
+    foliage:ScaleTo(foliage:GetScale()*sizeGoal/math.max(extent.Y,0.1))
+    local boundsCF,boundsSize=foliage:GetBoundingBox()
+    local desired=CFrame.new(x,boundsSize.Y*0.47,z)*CFrame.Angles(0,i*0.61,0)
+    foliage:PivotTo(desired*boundsCF:Inverse()*foliage:GetPivot())
+    foliage.Parent=naturalForest
+   end)
+   if okFoliage then undergrowthPlaced+=1 else foliage:Destroy() end
+  end
+ end
+ world:SetAttribute("ForestUndergrowthModels",undergrowthPlaced)
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
   local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-265,s=3.65},9001)
@@ -521,8 +566,8 @@ for i=1,6 do
   CFrame.new(111+(i-3.5)*4,2.2,-89)*CFrame.Angles(0,-0.19,0),
   P.bark,Enum.Material.Wood,landmarks)
 end
--- Gramíneas, flores e cogumelos: apenas elementos próximos a trilha e landmarks.
-for i=1,155 do
+-- Somente alguns detalhes de brilho autorais: o sub-bosque principal é MeshPart.
+for i=1,36 do
  local z=rng:NextNumber(-292,40)
  local side=if i%2==0 then 1 else -1
  local x=pathX(z)+side*rng:NextNumber(8,56)
@@ -775,9 +820,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",12)
+world:SetAttribute("WorldVersion",13)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v12:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v13:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
