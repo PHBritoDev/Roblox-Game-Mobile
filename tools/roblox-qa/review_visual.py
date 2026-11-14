@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Review 3 *synthetic Blender proxy* frames. Never calls them Roblox screenshots.
+
+Deterministic reviewer; checks render health and produces actionable warnings.
+It does NOT claim AI aesthetic judgement, mobile FPS, or Studio coverage.
+"""
+from __future__ import annotations
+import json
+import math
+from pathlib import Path
+from PIL import Image, ImageDraw, ImageFilter, ImageStat, ImageChops
+
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "artifacts/visual-preview"
+NAMES = ("spawn", "approach", "canopy")
+FRAMES = [OUT / f"preview_{name}.png" for name in NAMES]
+MIN_VARIANCE = 16
+MIN_BRIGHTNESS, MAX_BRIGHTNESS = 27, 228
+LIMIT_DISTINCT_RGB = 90
+
+report = {"kind": "blender_proxy_visual_review", "robloxScreenshot": False,
+          "automatedTechnicalReview": True, "artisticApproval": False,
+          "images": [], "errors": [], "warnings": [], "pass": False}
+screens = []
+for name, path in zip(NAMES, FRAMES):
+    if not path.exists():
+        report["errors"].append(f"Imagem {name} ausente")
+        continue
+    try:
+        im = Image.open(path).convert("RGB")
+    except Exception as exc:
+        report["errors"].append(f"Imagem {name} ilegivel: {type(exc).__name__}")
+        continue
+    small = im.resize((192, 108))
+    stat = ImageStat.Stat(small)
+    avg = sum(stat.mean) / 3
+    spread = sum(stat.stddev) / 3
+    colors = len(small.getcolors(192 * 108) or [])
+    if avg < MIN_BRIGHTNESS:
+        report["errors"].append(f"{name}: render quase escuro; rever camera/exposicao")
+    if avg > MAX_BRIGHTNESS:
+        report["errors"].append(f"{name}: render estourado; rever iluminacao")
+    if spread < MIN_VARIANCE or colors < LIMIT_DISTINCT_RGB:
+        report["errors"].append(f"{name}: imagem pouco variada; camera talvez vazia ou cena incompleta")
+    gray = small.convert("L")
+    edge = gray.filter(ImageFilter.FIND_EDGES)
+    edge_score = sum(ImageStat.Stat(edge).mean) / 1
+    report["images"].append({"name": name, "resolution": im.size,
+                             "brightness": round(avg, 2), "colorVariation": round(spread, 2),
+                             "distinctColors": colors, "edgeEnergy": round(edge_score, 2)})
+    screens.append((name, im))
+if len(screens) == 3:
+    # Distinct camera angles should not be identical images.
+    for a, b in ((0, 1), (1, 2)):
+        im_a = screens[a][1].resize((128, 72))
+        im_b = screens[b][1].resize((128, 72))
+        delta = ImageStat.Stat(ImageChops.difference(im_a, im_b))
+        if sum(delta.mean) / 3 < 4:
+            report["errors"].append("Cameras produziram frames quase identicos; revisar viewpoints")
+
+    # Contact sheet + labels for inspection. These are approximate views, not Roblox.
+    width, height = screens[0][1].size
+    sheet = Image.new("RGB", (width * 3, height + 50), (25, 28, 37))
+    draw = ImageDraw.Draw(sheet)
+    for index, (name, im) in enumerate(screens):
+        sheet.paste(im, (width * index, 50))
+        draw.text((width * index + 12, 13), f"BLENDER PROXY / {name.upper()} / NOT ROBLOX", fill="white")
+    sheet.save(OUT / "contato_3_angulos.png")
+
+scene_path = OUT / "scene.json"
+if scene_path.exists():
+    scene = json.loads(scene_path.read_text(encoding="utf-8"))
+    parts = scene.get("parts", [])
+    if not parts or scene.get("meta", {}).get("partsTotal") != len(parts):
+        report["errors"].append("Geometria exportada parcialmente; render nao confiavel")
+    by_name = {}
+    for item in parts:
+        by_name[item.get("n", "")] = by_name.get(item.get("n", ""), 0) + 1
+    if by_name.get("Copa em camadas", 0) > 250:
+        report["warnings"].append("Copas repetidas: possivel silhueta circular generica. Exige revisao artistica.")
+    if by_name.get("Arvore da Primeira Memoria", 0) == 0:
+        # The tree is a model, not a BasePart; verify its unique core instead.
+        if by_name.get("Cerne antigo", 0) < 1:
+            report["errors"].append("Landmark principal nao apareceu no snapshot.")
+    if by_name.get("Nenufar de memoria", 0) < 3:
+        report["warnings"].append("Lago do Reflexo possivelmente incompleto no snapshot.")
+    if by_name.get("Synty — Meshes/Pine_Tree_Pine_Large_01", 0) < 1:
+        report["warnings"].append("Mesh Synty nao presente no snapshot; revisar acesso a InsertService.")
+
+report["warnings"].append("Blender reconstrói caixas para MeshParts e usa Terrain proxy; qualidade final requer gameplay real.")
+report["warnings"].append("Sem agente Studio MCP conectado: nao avaliar sombra, material, agua, FPS ou audio como Roblox real.")
+report["pass"] = len(report["errors"]) == 0
+(OUT / "visual_review.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(json.dumps({"pass": report["pass"], "errors": report["errors"], "warnings": report["warnings"],
+                  "images": report["images"]}, ensure_ascii=False))
+if not report["pass"]:
+    raise SystemExit("QA visual proxy reprovou render; relatorio e contato no artifact")
