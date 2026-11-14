@@ -19,8 +19,9 @@ for _, instance in world:GetDescendants() do
   table.insert(all, instance)
  end
 end
--- Amostragem evita exceder limites de retorno da API. Landmark e spawn sempre entram.
-local stride = math.max(1, math.ceil(#all / 380))
+-- Exportar todas as partes para que galhos e copas nao aparecam soltos na previsualizacao.
+-- Caso o mundo cresca muito, pode ser necessario dividir snapshots em blocos.
+local stride = math.max(1, math.ceil(#all / 1600))
 for index, item in all do
  local important = item:IsA("SpawnLocation") or item:FindFirstAncestor("Arvore da Primeira Memoria") ~= nil
  if index % stride == 0 or important then
