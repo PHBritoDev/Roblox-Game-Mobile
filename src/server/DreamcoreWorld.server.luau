@@ -460,6 +460,17 @@ if okForest and forestPack then
   local delta=target*boundingCF:Inverse()
   tree:PivotTo(delta*tree:GetPivot())
   tree.Parent=naturalForest
+  -- Proxies fisicos leves: folhas e galhos continuam sem colisao.
+  local trunkRadius=math.clamp(desiredHeight*0.065,1.1,4.5)
+  local trunkHeight=math.clamp(desiredHeight*0.48,6,22)
+  local proxy=part("Colisao tronco floresta",Vector3.new(trunkRadius*2,trunkHeight,trunkRadius*2),
+   CFrame.new(site.x,groundY+trunkHeight*0.5,site.z),P.bark,Enum.Material.Wood,naturalForest)
+  proxy.Shape=Enum.PartType.Cylinder
+  proxy.Transparency=1
+  proxy.CanCollide=true
+  proxy.CanTouch=false
+  proxy.CanQuery=true
+  proxy.CastShadow=false
  end
  for i,site in forestTreeSites do
   local preferred=names[(i-1)%#names+1]
@@ -543,7 +554,7 @@ if okForest and forestPack then
  world:SetAttribute("ForestUndergrowthVariants",#undergrowthTemplates)
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
-  local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-265,s=3.65},9001)
+  local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245)+24,z=-265,s=3.65},9001)
   if okHero then
    forestHeroBuilt=true
    forestCount+=1
@@ -889,11 +900,12 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",28)
+world:SetAttribute("WorldVersion",29)
+world:SetAttribute("ForestTrunkCollision","Invisible anchored trunk proxies; foliage noncolliding")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v28:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v29:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
