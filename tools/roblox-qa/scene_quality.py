@@ -12,6 +12,8 @@ parts = scene["parts"]
 counts = Counter(p["n"] for p in parts)
 origins = Counter(p.get("origin", "Authored") for p in parts)
 forest_models = scene["meta"].get("forestModels", 0)
+undergrowth_models = scene["meta"].get("forestUndergrowthModels", 0)
+undergrowth_variants = scene["meta"].get("forestUndergrowthVariants", 0)
 
 def path_x(z):
     return math.sin((z+5)*0.027)*10 + math.sin(z*0.059)*2.5
@@ -43,6 +45,8 @@ report = {
     "totalGeneratedParts": scene["meta"]["partsTotal"],
     "treeTrunks": counts["Tronco musgoso"],
     "forestPackModels": forest_models,
+    "forestUndergrowthModels": undergrowth_models,
+    "forestUndergrowthVariants": undergrowth_variants,
     "forestPackParts": origins["ForestPack"],
     "syntyParts": origins["Synty"],
     "treeCanopySections": counts["Copa em camadas"]+counts["Coroa alta"],
@@ -51,6 +55,8 @@ report = {
     "forestMeshTrunksCloseToPath": forest_trunk_obstructions[:20],
     "pass": len(parts) == scene["meta"]["partsTotal"]
        and forest_models >= 25
+       and undergrowth_models >= 12
+       and undergrowth_variants >= 1
        and origins["ForestPack"] >= 35
        and counts["Tronco musgoso"] <= 45
        and len(trunk_obstructions) == 0
