@@ -17,6 +17,9 @@ bpy.ops.object.delete(use_global=False)
 scn = bpy.context.scene
 scn.render.engine = "CYCLES"
 scn.cycles.samples = 8
+# Ubuntu distribution Blender is built without Intel OpenImageDenoise.
+scn.cycles.use_denoising = False
+bpy.context.view_layer.cycles.use_denoising = False
 scn.render.resolution_x = 768
 scn.render.resolution_y = 432
 scn.render.resolution_percentage = 100
