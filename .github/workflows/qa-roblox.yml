@@ -1,0 +1,29 @@
+name: Agente de QA estrutural Roblox
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'default.project.json'
+      - 'tools/roblox-qa/**'
+      - '.github/workflows/qa-roblox.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Auditar scripts e documentar limites
+        run: python tools/roblox-qa/audit.py
+      - name: Publicar relatório verificável
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-qa-roblox
+          path: artifacts/qa/relatorio.json
+          if-no-files-found: warn
