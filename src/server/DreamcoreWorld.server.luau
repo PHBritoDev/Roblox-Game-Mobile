@@ -798,6 +798,7 @@ local moods={
   ambient=Color3.fromRGB(72,95,118), outdoor=Color3.fromRGB(148,147,133),
   atm=Color3.fromRGB(235,212,178), decay=Color3.fromRGB(139,158,159),
   tint=Color3.fromRGB(255,240,219), exposure=-0.08,
+   sunTint=Color3.fromRGB(255,207,151), shadeTint=Color3.fromRGB(67,103,120),
   cloud=Color3.fromRGB(245,214,192), stars=0, rays=0.065, glow=0.72,
  },
  {
@@ -805,6 +806,7 @@ local moods={
   ambient=Color3.fromRGB(62,75,121), outdoor=Color3.fromRGB(98,104,153),
   atm=Color3.fromRGB(155,154,207), decay=Color3.fromRGB(92,112,167),
   tint=Color3.fromRGB(208,211,255), exposure=-0.09,
+   sunTint=Color3.fromRGB(178,150,178), shadeTint=Color3.fromRGB(59,80,121),
   cloud=Color3.fromRGB(175,166,219), stars=1400, rays=0.05, glow=1.15,
  },
  {
@@ -812,6 +814,7 @@ local moods={
   ambient=Color3.fromRGB(38,49,98), outdoor=Color3.fromRGB(66,84,121),
   atm=Color3.fromRGB(88,117,175), decay=Color3.fromRGB(43,54,107),
   tint=Color3.fromRGB(185,201,255), exposure=-0.15,
+   sunTint=Color3.fromRGB(111,139,187), shadeTint=Color3.fromRGB(43,65,110),
   cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0, glow=1.75,
  }
 }
@@ -858,13 +861,17 @@ Lighting.GlobalShadows=true
 Lighting.ShadowSoftness=0.38
 Lighting.GeographicLatitude=35
 Lighting.EnvironmentDiffuseScale=0.45
-Lighting.EnvironmentSpecularScale=0.55
+Lighting.EnvironmentSpecularScale=0.45
+-- Direcao de arte V28: realces ambar e sombras verde-azul discretas.
+-- ColorShift usa iluminacao global, sem criar PointLights por arvore.
 
 local function applyMood(mood)
  Lighting.ClockTime=mood.clock
  Lighting.Brightness=mood.brightness
  Lighting.Ambient=mood.ambient
  Lighting.OutdoorAmbient=mood.outdoor
+ Lighting.ColorShift_Top=mood.sunTint
+ Lighting.ColorShift_Bottom=mood.shadeTint
  Lighting.ExposureCompensation=mood.exposure
  Lighting.FogColor=mood.atm
  Lighting.FogStart=225
@@ -882,10 +889,11 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",27)
+world:SetAttribute("WorldVersion",28)
+world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v27:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v28:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
@@ -910,6 +918,8 @@ task.spawn(function()
     Lighting.Brightness=start.brightness+(target.brightness-start.brightness)*smooth
     Lighting.Ambient=start.ambient:Lerp(target.ambient,smooth)
     Lighting.OutdoorAmbient=start.outdoor:Lerp(target.outdoor,smooth)
+    Lighting.ColorShift_Top=start.sunTint:Lerp(target.sunTint,smooth)
+    Lighting.ColorShift_Bottom=start.shadeTint:Lerp(target.shadeTint,smooth)
     Lighting.ExposureCompensation=start.exposure+(target.exposure-start.exposure)*smooth
     Lighting.FogColor=start.atm:Lerp(target.atm,smooth)
     atmosphere.Color=start.atm:Lerp(target.atm,smooth)
@@ -920,7 +930,7 @@ task.spawn(function()
     ancientGlow.Brightness=start.glow+(target.glow-start.glow)*smooth
     lakeGlow.Brightness=ancientGlow.Brightness*0.72
     if t>=1 then break end
-    -- 2 atualizacoes/s: reduz replicacao de 13 propriedades de Lighting,
+    -- 2 atualizacoes/s: limita replicacao das propriedades de Lighting,
     -- sem saltos perceptiveis em transicoes de 48 segundos.
     task.wait(0.5)
    end
