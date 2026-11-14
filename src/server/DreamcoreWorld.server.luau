@@ -119,7 +119,7 @@ local function branchTree(x,z,s,family)
  local trunk=part("Tronco musgoso",Vector3.new(2.7*s,h,2.7*s),
   CFrame.new(x,h/2,z),P.bark,Enum.Material.Wood,family)
  trunk.CFrame=trunk.CFrame*CFrame.Angles(rng:NextNumber(-0.04,0.04),0,rng:NextNumber(-0.04,0.04))
- local count=if s>1.2 then 4 else 3
+ local count=2
  local tint=if rng:NextNumber()<0.22 then P.canopyGold else
   if rng:NextNumber()<0.49 then P.canopyMid else P.canopy
  for j=1,count do
@@ -138,27 +138,43 @@ local function branchTree(x,z,s,family)
  upper.CanCollide=false
 end
 
--- Corredor central com duas linhas de copas: profundidade, contraste e silhuetas.
+-- Mistura de copas autorais com futuras arvores MeshPart oficiais.
+-- Reserva sitios antes de carregar os modelos: se falhar, usa a arvore original.
+local meshTreeSites={}
+local function plantOrReserve(x,z,s,useMesh)
+ if useMesh then
+  table.insert(meshTreeSites,{x=x,z=z,s=s})
+ else
+  branchTree(x,z,s,props)
+ end
+end
+
+-- Corredor principal: alternar silhuetas sem bloquear a trilha.
 for row=0,18 do
  local z=30-row*17
  for _,side in ipairs({-1,1}) do
   local width=rng:NextNumber(23,41)
   local x=pathX(z)+side*width
-  branchTree(x,z+rng:NextNumber(-6,6),rng:NextNumber(1.12,1.8),props)
+  local treeZ=z+rng:NextNumber(-6,6)
+  local scale=rng:NextNumber(1.12,1.8)
+  plantOrReserve(x,treeZ,scale,row%2==0 and side==1)
   if row%2==0 then
-   branchTree(x+side*rng:NextNumber(12,25),z+rng:NextNumber(-11,11),
-    rng:NextNumber(0.8,1.24),props)
+   local outerX=x+side*rng:NextNumber(12,25)
+   local outerZ=z+rng:NextNumber(-11,11)
+   local outerScale=rng:NextNumber(0.8,1.24)
+   plantOrReserve(outerX,outerZ,outerScale,row%4==0 and side==-1)
   end
  end
 end
--- Floresta exterior; mantém corredores de exploração amplos.
+
+-- Floresta exterior: reservas intercaladas, mantendo sites de vegetacao coerentes.
 for i=1,68 do
  local x=rng:NextNumber(-275,275)
  local z=rng:NextNumber(-345,175)
  local nearPath=math.abs(x-pathX(z))<19 and z > -300 and z < 35
  local nearRiver=math.abs(x-125-math.sin((115-z)/23*0.32)*24)<23
  if not nearPath and not nearRiver and (x*x+(z+110)*(z+110))>900 then
-  branchTree(x,z,rng:NextNumber(0.75,1.38),props)
+  plantOrReserve(x,z,rng:NextNumber(0.75,1.38),i%3==0)
  end
 end
 
@@ -255,10 +271,38 @@ if okPack and sourcePack then
    placed+=1
   end
  end
+ -- Substituicoes avaliadas pelo agente: reduzir repeticao de copas esfericas.
+ -- Tres arvores oficiais de silhuetas distintas, ancoradas e sem scripts.
+ local treeTypes={
+  "Meshes/Pine_Tree_Pine_Large_01",
+  "Meshes/PolygonNature_Tree_Round_04",
+  "Meshes/PolygonNature_Tree_PolyPine_03",
+ }
+ local meshPlaced=0
+ for i,site in meshTreeSites do
+  local template=lookup[treeTypes[(i-1)%#treeTypes+1]]
+  if template and template:IsA("MeshPart") then
+   local tree=template:Clone()
+   tree.Name="Synty — bosque alternado "..tostring(i)
+   local height=site.s*22
+   tree.Size=tree.Size*(height/math.max(tree.Size.Y,0.1))
+   tree.CFrame=CFrame.new(site.x,tree.Size.Y/2,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
+   tree.Anchored=true
+   tree.CanCollide=false
+   tree.Parent=curated
+   meshPlaced+=1
+  else
+   branchTree(site.x,site.z,site.s,props)
+  end
+ end
+ print("[Dreamcore] Arvores com silhuetas oficiais:",meshPlaced)
  print("[Dreamcore] Synty licenciado carregado:",placed,"instancias curadas")
  sourcePack:Destroy()
 else
- -- Falha na rede/permissao nao bloqueia a floresta original.
+ -- Falha na rede/permissao: replanta todos os sitios reservados com vegetacao autoral.
+ for _,site in meshTreeSites do
+  branchTree(site.x,site.z,site.s,props)
+ end
  warn("[Dreamcore] Pacote Synty indisponivel; mantendo vegetacao autoral.")
 end
 
@@ -553,9 +597,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",6)
+world:SetAttribute("WorldVersion",7)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v6:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v7:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
