@@ -11,6 +11,8 @@ local snapshot = {
   brightness = Lighting.Brightness,
   ambient = { Lighting.Ambient.R, Lighting.Ambient.G, Lighting.Ambient.B },
   descendantCount = #world:GetDescendants(),
+  forestModels = world:GetAttribute("ForestMeshTrees") or 0,
+  worldVersion = world:GetAttribute("WorldVersion") or 0,
  }
 }
 local all = {}
@@ -29,6 +31,7 @@ for index, item in all do
   local x,y,z,r00,r01,r02,r10,r11,r12,r20,r21,r22 = cf:GetComponents()
   table.insert(snapshot.parts, {
    n = item.Name,
+   origin = if item:FindFirstAncestor("Bosque premium — Forest Pack licenciado") then "ForestPack" else if item:FindFirstAncestor("Vegetacao licenciada Roblox — Synty Nature") then "Synty" else "Authored",
    shape = if item:IsA("Part") then item.Shape.Name else "MeshPart",
    p = {math.round(x*100)/100,math.round(y*100)/100,math.round(z*100)/100},
    s = {math.round(item.Size.X*100)/100,math.round(item.Size.Y*100)/100,math.round(item.Size.Z*100)/100},
