@@ -81,7 +81,7 @@ if scene_path.exists():
     # The landmark is either an authored fallback core or the licensed Forest Pack
     # hero mesh. Model names are not exported as BaseParts; validate mesh position
     # and scale instead of demanding the old cylinder after the V15 art upgrade.
-    hero_z = -265.0
+    hero_z = -281.0
     hero_x = math.sin((-245 + 5) * 0.027) * 10 + math.sin(-245 * 0.059) * 2.5
     hero_mesh = [
         item for item in parts

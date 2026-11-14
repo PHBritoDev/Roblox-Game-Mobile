@@ -589,7 +589,7 @@ if okForest and forestPack then
  world:SetAttribute("ForestUndergrowthVariants",#undergrowthTemplates)
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
-  local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-265,s=3.65},9001)
+  local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-281,s=3.65},9001)
   if okHero then
    forestHeroBuilt=true
    forestCount+=1
@@ -609,7 +609,7 @@ print("[Dreamcore] Floresta com SurfaceAppearance:",forestCount,"modelos")
 local sacred=Instance.new("Model")
 sacred.Name="Arvore da Primeira Memoria"
 sacred.Parent=landmarks
-local center=Vector3.new(pathX(-245),0,-265)
+local center=Vector3.new(pathX(-245),0,-281)
 local crownY=64
 if forestHeroBuilt then
  -- Sem cilindros, raízes geométricas ou tronco invisível sobre a malha hero.
