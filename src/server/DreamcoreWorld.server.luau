@@ -479,6 +479,11 @@ if okForest and forestPack then
    end
   end
  end
+ -- Ordem estável: a distribuição de espécies não muda com a ordem interna
+ -- dos descendentes do pack após uma atualização do asset.
+ table.sort(undergrowthTemplates,function(a,b)
+  return a:GetFullName()<b:GetFullName()
+ end)
  local undergrowthPlaced=0
  for i=1,58 do
   local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
@@ -850,9 +855,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",19)
+world:SetAttribute("WorldVersion",20)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v19:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v20:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
