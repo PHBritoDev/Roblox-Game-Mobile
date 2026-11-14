@@ -1,0 +1,5 @@
+AUTORIZADO PUBLICAR V31 NO PLACE DE TESTE 6947682498
+Hotfix da falha real reportada no Android apos V30: gerador entra em ForestState Failed.
+Fonte: ebefd38ff815937da99ed49044d0483ae0a31b1b + 8d97355a8d0be44eae7d941e89d45dd47297cb63
+Destino: Universe 2660433574 / Place de teste 6947682498
+Checks: Rojo 43641487412; QA estrutural 43641487395; headless/proxy 43641487402
