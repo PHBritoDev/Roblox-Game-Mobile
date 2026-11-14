@@ -44,3 +44,9 @@ Scripts são removidos antes de parentear clones. O snapshot registra dimensões
 ## Inspeção dos três previews
 
 Renders e reviewer técnico concluídos sem erros; as três câmeras permaneceram nas coordenadas predefinidas. No spawn, a trilha e a variação do solo agora aparecem no preview amostrado. O ângulo de aproximação permanece muito ocluído pelos volumes brancos usados para representar folhas/malhas; não é possível concluir como as folhas alfa realmente se comportam no Roblox. O ângulo alto identifica o landmark, mas também exagera massas de copa. **A arte não está aprovada por estas imagens.** O próximo ajuste visual deve partir de captura real, conforme issue #3.
+
+## Continuação e integração da main
+
+Revisão da alteração concorrente `f373bdd`: preservada a finalidade de colisão dos troncos, usando a geometria nativa já medida do Forest Pack e proxies Synty. Não duplicamos os proxies cilíndricos centrados na copa: o eixo longitudinal de Cylinder no Roblox é X, portanto aqueles volumes sem rotação não representavam troncos verticais. Mantida a posição ancestral em Z=-281, comprovada pelo QA de chegada. O atributo ForestTrunkCollision descreve a solução efetiva.
+
+O reviewer da main falhava ao procurar o landmark na posição antiga. A branch já contém a correção desse detector e os testes físicos, que serão novamente executados após a integração.

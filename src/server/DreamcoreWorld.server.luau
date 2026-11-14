@@ -943,6 +943,7 @@ end
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
 world:SetAttribute("WorldVersion",29)
+world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 world:SetAttribute("GenerationComplete",true)
 world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
