@@ -5,7 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 ReplicatedStorage:SetAttribute("ForestState","Generating")
-ReplicatedStorage:SetAttribute("ForestVersion",31)
+ReplicatedStorage:SetAttribute("ForestVersion",32)
 ReplicatedStorage:SetAttribute("ForestStage","Starting")
 ReplicatedStorage:SetAttribute("ForestErrorCode","")
 local function stage(value)
@@ -347,6 +347,9 @@ riverWillow(148,-268,1.36)
 local curated=group("Vegetacao licenciada Roblox — Synty Nature")
 local InsertService=game:GetService("InsertService")
 stage("LoadingSynty")
+-- Um asset externo nunca pode abortar o mundo inteiro, mesmo se carregar
+-- com sucesso e uma malha/modelo especifico falhar durante a configuracao.
+local syntyIntegrated,syntyError=xpcall(function()
 local okPack,sourcePack=pcall(function()
  return InsertService:LoadAsset(6933438443)
 end)
@@ -472,6 +475,15 @@ else
   branchTree(site.x,site.z,site.s,props)
  end
  warn("[Dreamcore] Pacote Synty indisponivel; mantendo vegetacao autoral.")
+end
+
+end,debug.traceback)
+if not syntyIntegrated then
+ warn("[Dreamcore] Synty integracao falhou: "..tostring(syntyError))
+ world:SetAttribute("SyntyIntegrationFailed",true)
+ ReplicatedStorage:SetAttribute("ForestAssetWarning","Synty")
+ -- A area principal, terreno, spawn e iluminacao continuam sendo gerados.
+ -- Nao repetir clones no fallback: arvores autorais ja estao distribuidas.
 end
 
 -- Forest Pack @Roblox (6432306802): folhas reais em planos com SurfaceAppearance.
@@ -962,7 +974,7 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",31)
+world:SetAttribute("WorldVersion",32)
 world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 stage("Finalizing")
@@ -974,7 +986,7 @@ stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v31:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v32:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
