@@ -1,0 +1,89 @@
+name: Publicar V29 no Roblox TESTE (autorizacao explicita)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy-requests/publicar-mundo1-v29.txt'
+permissions:
+  contents: read
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+jobs:
+  publicar:
+    name: Verificar versao e publicar V29 no Place de teste
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: roblox-teste
+    env:
+      UNIVERSE: '2660433574'
+      PLACE: '6947682498'
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exigir autorizacao V29, destino e codigo certo
+        run: |
+          set -euo pipefail
+          grep -Fxq 'AUTORIZADO PUBLICAR V29 NO PLACE DE TESTE 6947682498' deploy-requests/publicar-mundo1-v29.txt
+          [[ "$UNIVERSE" == '2660433574' && "$PLACE" == '6947682498' ]]
+          test -n "$ROBLOX_API_KEY"
+          grep -Fq 'WorldVersion",29' src/server/DreamcoreWorld.server.luau
+          test -f tools/roblox-qa/test_scene_quality.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Auditar fonte, colisao e testes de regressao
+        run: |
+          set -euo pipefail
+          python tools/roblox-qa/audit.py
+          python -m unittest discover -s tools/roblox-qa -p 'test_*.py'
+      - name: Reutilizar compilador Rojo
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/rojo
+          key: rojo-7.6.1-${{ runner.os }}-v1
+      - name: Instalar Rojo 7.6.1
+        run: |
+          if ! command -v rojo >/dev/null 2>&1; then cargo install rojo --version 7.6.1 --locked; fi
+      - name: Construir V29
+        run: |
+          set -euo pipefail
+          rojo build default.project.json -o DreamcoreV29.rbxlx
+          grep -Fq '<token name="LightingStyle">0</token>' DreamcoreV29.rbxlx
+          grep -Fq '<bool name="PrioritizeLightingQuality">true</bool>' DreamcoreV29.rbxlx
+          grep -Fq '<bool name="GlobalShadows">true</bool>' DreamcoreV29.rbxlx
+      - name: Publicar no Place de TESTE (Published)
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --retry 2 --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @DreamcoreV29.rbxlx \
+            --output roblox-result-v29.json --write-out '%{http_code}')
+          echo "Roblox HTTP: $status"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            python3 - <<'PY'
+          import json
+          try:
+              d=json.load(open('roblox-result-v29.json'))
+              print('Publicacao recusada:',str(d.get('errors',d.get('message','erro')))[:450])
+          except Exception:
+              print('Roblox recusou publicacao; resposta indisponivel')
+          PY
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          d=json.load(open('roblox-result-v29.json'))
+          version=d.get('versionNumber')
+          assert isinstance(version,int) and version>0, f'Roblox nao confirmou versao: {d}'
+          print('V29 publicada; versao Roblox:',version)
+          PY
+      - name: Guardar comprovante do Roblox
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-publicacao-v29
+          path: roblox-result-v29.json
+          if-no-files-found: warn
