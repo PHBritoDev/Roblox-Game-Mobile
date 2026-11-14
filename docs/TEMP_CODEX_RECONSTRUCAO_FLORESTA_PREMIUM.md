@@ -87,3 +87,8 @@ O criador reclamou repetidamente: **“mudou absolutamente nada”, “árvores 
 Genshin/Ori são referências de **composição, direção de luz, densidade visual, cor e legibilidade**, não autorização para copiar assets. Estudar documentação oficial Roblox e referências licenciadas; usar decisões originais. A ambição é um mundo melhor e memorável NO ROBLOX, não prometer equivalência tecnológica/visuais exatos entre engines.
 
 **ENTREGÁVEL:** primeiro mundo jogável, terreno plano, chão orgânico premium, floresta 3D atraente, iluminação cinematográfica, colisões, boa experiência Android, evidências de QA e publicação controlada quando apropriada. Não enviar só um plano.
+
+## 7. INSTRUÇÃO DO CRIADOR: ECONOMIA EXTREMA DE TOKENS E SILÊNCIO
+- **Economizar tokens ao extremo**: chamadas e contexto mínimos, consultar trechos específicos, agrupar operações, não repetir leitura de arquivos nem recontar análises. Não sacrificar testes, precisão ou qualidade para economizar tokens.
+- **Não mandar mensagens de progresso, explicações do que está fazendo, nem atualizações conversacionais**; executar as mudanças e validações diretamente. Não narrar cada ação.
+- **Ao terminar, não enviar resumo final no chat.** Deixar somente commits, PR, checks e evidências verificáveis no GitHub, sem mensagem descritiva ao usuário. Se uma intervenção obrigatória for tecnicamente necessária, comunicar apenas o mínimo indispensável.
