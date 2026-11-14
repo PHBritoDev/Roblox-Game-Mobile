@@ -27,6 +27,15 @@
       "StarterPlayerScripts": {
         "$path": "src/client"
       }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "LightingStyle": "Realistic",
+        "PrioritizeLightingQuality": true,
+        "GlobalShadows": true,
+        "ShadowSoftness": 0.3
+      }
     }
   }
 }
