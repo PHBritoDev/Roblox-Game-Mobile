@@ -5,7 +5,12 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 ReplicatedStorage:SetAttribute("ForestState","Generating")
-ReplicatedStorage:SetAttribute("ForestVersion",30)
+ReplicatedStorage:SetAttribute("ForestVersion",31)
+ReplicatedStorage:SetAttribute("ForestStage","Starting")
+ReplicatedStorage:SetAttribute("ForestErrorCode","")
+local function stage(value)
+ ReplicatedStorage:SetAttribute("ForestStage",value)
+end
 local terrain = Workspace.Terrain
 local rng = Random.new(67001)
 local PI = math.pi
@@ -18,6 +23,7 @@ if old then old:Destroy() end
 world = Instance.new("Folder")
 world.Name = "DreamcoreGenerated"
 world.Parent = Workspace
+stage("ClearingTerrain")
 terrain:Clear()
 -- Materiais e vento fazem parte da qualidade: grama se move mesmo sem VFX extra.
 -- Decoration e GrassLength sao propriedades NotScriptable na engine Roblox.
@@ -136,11 +142,14 @@ local function reservedSite(x,z,margin)
   or inWalkway(x,z,margin) or math.abs(x-riverX(z))<25+margin
   or ((x+84)^2+(z+151)^2)<(22+margin)^2
 end
+stage("BuildingGround")
 terrain:FillBlock(CFrame.new(0,-28,-92),Vector3.new(680,24,792),Enum.Material.Ground)
 local materials,occupancies={},{}
 for ix=1,170 do
  materials[ix]={}; occupancies[ix]={}
  for iy=1,4 do materials[ix][iy]={}; occupancies[ix][iy]={} end
+ -- Distribui trabalho volumetrico por frames, evitando timeout do script no servidor.
+ if ix%4==0 then task.wait() end
  for iz=1,198 do
   local x,z=-340+(ix-0.5)*4,-488+(iz-0.5)*4
   local waterDistance=math.min(math.abs(x-riverX(z))-14,math.sqrt((x+84)^2+(z+151)^2)-11)
@@ -160,6 +169,7 @@ for ix=1,170 do
   end
  end
 end
+stage("WritingTerrain")
 terrain:WriteVoxels(Region3.new(Vector3.new(-340,-16,-488),Vector3.new(340,0,304)),4,materials,occupancies)
 materials=nil; occupancies=nil
 -- WriteVoxels atualiza colisao assincronamente. Nao depender do tempo de LoadAsset.
@@ -185,6 +195,7 @@ if not floorReady then
  warn("[Dreamcore] Colisao do terreno ainda pendente; continuando a gerar arvores e spawn.")
 end
 
+stage("PlantingForest")
 -- Folhas originais achatadas nas bordas; sem colisao, sombras ou alpha cards extras.
 for i=1,90 do
  local z=24-i*3.05
@@ -335,6 +346,7 @@ riverWillow(148,-268,1.36)
 -- Nunca parentear o pacote original nem ativar scripts de terceiros.
 local curated=group("Vegetacao licenciada Roblox — Synty Nature")
 local InsertService=game:GetService("InsertService")
+stage("LoadingSynty")
 local okPack,sourcePack=pcall(function()
  return InsertService:LoadAsset(6933438443)
 end)
@@ -466,6 +478,7 @@ end
 -- Baixa uma unica vez, remove todos os scripts, apenas clones curados de Models.
 -- Se o pacote falhar, os sites recebem vegetacao original sem quebrar o jogo.
 local naturalForest=group("Bosque premium — Forest Pack licenciado")
+stage("LoadingForestPack")
 local okForest,forestPack=pcall(function()
  return InsertService:LoadAsset(6432306802)
 end)
@@ -850,6 +863,7 @@ for _,item in world:GetDescendants() do
  end
 end
 
+stage("ConfiguringLighting")
 -- Perfis calibrados para a direção de arte: quente, crepúsculo frio e noite azul.
 local moods={
  {
@@ -948,17 +962,19 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",30)
+world:SetAttribute("WorldVersion",31)
 world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
+stage("Finalizing")
 world:SetAttribute("GenerationComplete",true)
 world:SetAttribute("TerrainCollisionReadyAtBuild",floorReady)
 world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
 ReplicatedStorage:SetAttribute("ForestState","Ready")
+stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v30:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v31:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
@@ -1007,6 +1023,9 @@ end
 local generated, generationError=xpcall(generateWorld,debug.traceback)
 if not generated then
  ReplicatedStorage:SetAttribute("ForestState","Failed")
+ local failedStage=tostring(ReplicatedStorage:GetAttribute("ForestStage") or "Unknown")
+ ReplicatedStorage:SetAttribute("ForestErrorCode",failedStage)
+ warn("[Dreamcore] V31 falha etapa "..failedStage..": "..tostring(generationError))
  -- Apoio emergencial mesmo quando o gerador falha antes de criar o spawn.
  local safeSpawn=Workspace:FindFirstChild("Nascimento Dreamcore",true)
  if not safeSpawn then
@@ -1018,6 +1037,10 @@ if not generated then
   safeSpawn.Neutral=true
   safeSpawn.Parent=Workspace
  end
+ -- Um piso minimo navegavel torna o erro diagnosticavel sem cair no vazio.
+ pcall(function()
+  terrain:FillBlock(CFrame.new(0,-6,8),Vector3.new(72,12,72),Enum.Material.Grass)
+ end)
  warn("[Dreamcore] Falha de geracao; apoio de emergencia ativo")
  error(generationError)
 end
