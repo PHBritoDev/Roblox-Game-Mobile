@@ -67,10 +67,22 @@ for part in scene_data["parts"]:
     pos=rbpos(part["p"])
     size=rbscale(part["s"])
     color=part["c"]
-    if part["shape"]=="Ball":
+    is_forest = part.get("origin") == "ForestPack"
+    leaf_card = is_forest and ("Leaf" in name or "leaves" in name.lower())
+    trunk_mesh = is_forest and "Trunk" in name
+    if part["shape"]=="Ball" or leaf_card:
+        # ONLY A PROXY: leaf alpha cards are represented as coarse translucent-looking masses.
         bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=1,location=pos)
         obj=bpy.context.object
         obj.scale=tuple(v/2 for v in size)
+    elif trunk_mesh:
+        # Source mesh branch bounding box is much wider than the physical trunk.
+        # A cube of that size incorrectly blacks out cameras and blocks paths in previews.
+        bpy.ops.mesh.primitive_cone_add(vertices=10,
+            radius1=max(0.75,min(size[0],size[1])*0.17),
+            radius2=max(0.25,min(size[0],size[1])*0.10),
+            depth=size[2],location=pos)
+        obj=bpy.context.object
     else:
         obj=box(name,pos,size,material(color))
     obj.name=name
@@ -110,9 +122,45 @@ views=[
     ("approach", (-18,18,-155), (0,35,-266)),
     ("canopy", (76,64,-175), (0,34,-265)),
 ]
-for name, camera_pos, target in views:
+def camera_inside_proxy(camera_pos):
+    x,y,z = camera_pos
+    for item in scene_data["parts"]:
+        if item.get("t",0)>0.7:
+            continue
+        if item.get("origin")=="ForestPack" and "Leaf" in item["n"]:
+            # Transparent foliage card bounds are not reliable solid obstructions.
+            continue
+        px,py,pz=item["p"]
+        sx,sy,sz=item["s"]
+        if abs(x-px)<sx/2+1 and abs(y-py)<sy/2+1 and abs(z-pz)<sz/2+1:
+            return True
+    return False
+
+def find_camera_position(initial):
+    if not camera_inside_proxy(initial):
+        return initial
+    # Resolve an enclosed virtual camera deterministically, independent of playtesting.
+    options=[]
+    for dx in [0,-9,9,-18,18,-30,30,-48,48]:
+        for dy in [0,8,16,27,38]:
+            for dz in [0,13,-13,25,-25]:
+                candidate=(initial[0]+dx,initial[1]+dy,initial[2]+dz)
+                score=abs(dx)+0.6*dy+0.85*abs(dz)
+                options.append((score,candidate))
+    for _,pos in sorted(options,key=lambda item:item[0]):
+        if not camera_inside_proxy(pos):
+            return pos
+    raise RuntimeError("Nenhuma camera livre encontrada no proxy; reposicionar visada")
+
+camera_report=[]
+for name, original, target in views:
+    camera_pos=find_camera_position(original)
+    camera_report.append({"view":name,"originalRobloxCoords":original,
+                          "usedRobloxCoords":camera_pos,"adjusted":camera_pos!=original})
     point_camera(rbpos(camera_pos),rbpos(target))
     scn.render.filepath=str(OUT / ("preview_%s.png" % name))
     bpy.ops.render.render(write_still=True)
     bpy.data.objects.remove(scn.camera,do_unlink=True)
 print("3 views: synthetic proxy previews; NEVER call these screenshots of Roblox.")
+
+(OUT / "viewpoints.json").write_text(json.dumps(camera_report,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
