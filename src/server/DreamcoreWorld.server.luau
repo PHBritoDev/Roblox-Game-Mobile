@@ -359,6 +359,11 @@ if okPack and sourcePack then
   "Meshes/PolygonNature_Tree_Round_04",
   "Meshes/PolygonNature_Tree_PolyPine_03",
  }
+ -- Apenas Terrain: ignorar rochas e objetos decorativos no raycast.
+ local syntyTerrainRayParams=RaycastParams.new()
+ syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
+ syntyTerrainRayParams.FilterDescendantsInstances={terrain}
+ syntyTerrainRayParams.IgnoreWater=true
  local meshPlaced=0
  for i,site in meshTreeSites do
   local template=lookup[treeTypes[(i-1)%#treeTypes+1]]
@@ -367,7 +372,10 @@ if okPack and sourcePack then
    tree.Name="Synty — bosque alternado "..tostring(i)
    local height=site.s*22
    tree.Size=tree.Size*(height/math.max(tree.Size.Y,0.1))
-   tree.CFrame=CFrame.new(site.x,tree.Size.Y/2,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
+   -- Synty tambem precisa acompanhar o Terrain; antes ficava em Y=0 nas colinas.
+   local groundHit=Workspace:Raycast(Vector3.new(site.x,160,site.z),Vector3.new(0,-320,0),syntyTerrainRayParams)
+   local groundY=if groundHit then groundHit.Position.Y else 0
+   tree.CFrame=CFrame.new(site.x,groundY+tree.Size.Y*0.5-0.12,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
    optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
    tree.Parent=curated
    meshPlaced+=1
@@ -873,9 +881,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",22)
+world:SetAttribute("WorldVersion",23)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v22:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v23:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
