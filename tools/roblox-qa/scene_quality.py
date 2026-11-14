@@ -69,8 +69,10 @@ def evaluate(scene):
     meta = scene["meta"]
     navigation = scene.get("navigation", {})
     errors = navigation_failures(navigation)
-    if len(parts) != meta["partsTotal"]:
-        errors.append("Incomplete exported geometry")
+    if len(parts) != meta["partsExported"] or len(parts) > meta["partsTotal"]:
+        errors.append("Exported geometry metadata inconsistent")
+    if len(parts) < meta["partsTotal"] and not meta.get("geometrySampled", False):
+        errors.append("Incomplete exported geometry without sampling declaration")
     asset_warnings = []
     if meta.get("forestModels", 0) < 25:
         asset_warnings.append("Forest Pack degraded/unavailable; fallback needs visual review")
@@ -83,6 +85,7 @@ def evaluate(scene):
         "engineSpatialQueries": True,
         "sampledParts": len(parts),
         "totalGeneratedParts": meta["partsTotal"],
+        "geometrySampled": meta.get("geometrySampled", False),
         "treeTrunks": counts["Tronco musgoso"],
         "forestPackModels": meta.get("forestModels", 0),
         "forestUndergrowthModels": meta.get("forestUndergrowthModels", 0),
@@ -99,6 +102,7 @@ def evaluate(scene):
             "Does not measure client streaming, Android FPS or appearance",
             "Roblox Terrain, water, alpha cards, PBR and lighting are not reconstructed faithfully by Blender",
             "Passing navigation and asset counts do not approve artistic quality",
+            "Geometry preview may be sampled; navigation queries still inspect the full generated scene",
         ],
     }
 
