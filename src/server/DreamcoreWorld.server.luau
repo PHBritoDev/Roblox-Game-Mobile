@@ -340,6 +340,15 @@ if okPack and sourcePack then
  -- Tres arvores oficiais de silhuetas distintas, ancoradas e sem scripts.
  -- Vegetacao profissional curada por planos: samambaias e tufos de grama
  -- próximos ao jogador (não espalhar 200 clones pela cena).
+ -- Sondagem compartilhada: plantas pequenas nao devem flutuar em colinas.
+ local syntyTerrainRayParams=RaycastParams.new()
+ syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
+ syntyTerrainRayParams.FilterDescendantsInstances={terrain}
+ syntyTerrainRayParams.IgnoreWater=true
+ local function syntyGroundY(x,z)
+  local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),syntyTerrainRayParams)
+  return if hit then hit.Position.Y else 0
+ end
  local fernNames={
   "Meshes/Fern_Plant_Fern_Leaves_01",
   "Meshes/PolygonNature_Plant_Grass_05",
@@ -355,7 +364,7 @@ if okPack and sourcePack then
    leaf.Name="Synty — estrato de samambaias "..i
    local scale=2.3+rng:NextNumber(0.2,1.6)
    leaf.Size=leaf.Size*(scale/math.max(leaf.Size.Y,0.15))
-   leaf.CFrame=CFrame.new(x,leaf.Size.Y*0.49,z)*CFrame.Angles(0,i*1.81,0)
+   leaf.CFrame=CFrame.new(x,syntyGroundY(x,z)+leaf.Size.Y*0.49,z)*CFrame.Angles(0,i*1.81,0)
    optimizeDecorativeMesh(leaf,false)
    leaf.Parent=curated
   end
@@ -365,11 +374,6 @@ if okPack and sourcePack then
   "Meshes/PolygonNature_Tree_Round_04",
   "Meshes/PolygonNature_Tree_PolyPine_03",
  }
- -- Apenas Terrain: ignorar rochas e objetos decorativos no raycast.
- local syntyTerrainRayParams=RaycastParams.new()
- syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
- syntyTerrainRayParams.FilterDescendantsInstances={terrain}
- syntyTerrainRayParams.IgnoreWater=true
  local meshPlaced=0
  for i,site in meshTreeSites do
   local template=lookup[treeTypes[(i-1)%#treeTypes+1]]
@@ -379,8 +383,7 @@ if okPack and sourcePack then
    local height=site.s*22
    tree.Size=tree.Size*(height/math.max(tree.Size.Y,0.1))
    -- Synty tambem precisa acompanhar o Terrain; antes ficava em Y=0 nas colinas.
-   local groundHit=Workspace:Raycast(Vector3.new(site.x,160,site.z),Vector3.new(0,-320,0),syntyTerrainRayParams)
-   local groundY=if groundHit then groundHit.Position.Y else 0
+   local groundY=syntyGroundY(site.x,site.z)
    tree.CFrame=CFrame.new(site.x,groundY+tree.Size.Y*0.5-0.12,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
    optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
    tree.Parent=curated
@@ -887,9 +890,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",24)
+world:SetAttribute("WorldVersion",25)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v24:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v25:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
