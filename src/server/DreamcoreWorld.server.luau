@@ -314,15 +314,14 @@ if okPack and sourcePack then
     local scale=desiredHeight/math.max(asset.Size.Y,0.1)
     asset.Size=asset.Size*scale
     asset.CFrame=CFrame.new(entry[2],asset.Size.Y/2,entry[3])*CFrame.Angles(0,entry[5],0)
-    asset.Anchored=true
-    asset.CanCollide=false
+    optimizeDecorativeMesh(asset,math.abs(entry[2]-pathX(entry[3]))<76)
     asset.Parent=curated
    elseif asset:IsA("Model") then
     local extents=asset:GetExtentsSize()
     asset:ScaleTo(asset:GetScale()*desiredHeight/math.max(extents.Y,0.1))
     asset:PivotTo(CFrame.new(entry[2],desiredHeight/2,entry[3])*CFrame.Angles(0,entry[5],0))
     for _,p in asset:GetDescendants() do
-     if p:IsA("BasePart") then p.Anchored=true;p.CanCollide=false end
+     if p:IsA("BasePart") then optimizeDecorativeMesh(p,math.abs(entry[2]-pathX(entry[3]))<76) end
     end
     asset.Parent=curated
    end
@@ -349,9 +348,7 @@ if okPack and sourcePack then
    local scale=2.3+rng:NextNumber(0.2,1.6)
    leaf.Size=leaf.Size*(scale/math.max(leaf.Size.Y,0.15))
    leaf.CFrame=CFrame.new(x,leaf.Size.Y*0.49,z)*CFrame.Angles(0,i*1.81,0)
-   leaf.Anchored=true
-   leaf.CanCollide=false
-   leaf.CastShadow=false
+   optimizeDecorativeMesh(leaf,false)
    leaf.Parent=curated
   end
  end
@@ -369,8 +366,7 @@ if okPack and sourcePack then
    local height=site.s*22
    tree.Size=tree.Size*(height/math.max(tree.Size.Y,0.1))
    tree.CFrame=CFrame.new(site.x,tree.Size.Y/2,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
-   tree.Anchored=true
-   tree.CanCollide=false
+   optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
    tree.Parent=curated
    meshPlaced+=1
   else
@@ -427,7 +423,12 @@ if okForest and forestPack then
   for _,item in tree:GetDescendants() do
    if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then item:Destroy()
    elseif item:IsA("BasePart") then
-    optimizeDecorativeMesh(item,true)
+    -- Sombras detalhadas apenas no corredor visível; árvores distantes
+    -- preservam silhueta e textura sem gerar dezenas de shadow casters.
+    local nearTrail=math.abs(site.x-pathX(site.z))<76
+    local nearHero=(site.x-pathX(-245))^2+(site.z+265)^2<110*110
+    local keepShadow=(nearTrail and site.z>-315 and site.z<55) or nearHero
+    optimizeDecorativeMesh(item,keepShadow)
    end
   end
   local desiredHeight=site.s*(if template.Name=="RedwoodTree-Var01" then 29 else 23)
@@ -847,9 +848,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",17)
+world:SetAttribute("WorldVersion",18)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v17:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v18:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
