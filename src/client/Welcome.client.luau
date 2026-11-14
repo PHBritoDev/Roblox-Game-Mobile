@@ -1,31 +1,44 @@
--- UI discreta de orientação para o primeiro protótipo.
+-- Mundo 1: vinheta de chegada sutil, legivel no celular.
 local Players=game:GetService("Players")
+local TweenService=game:GetService("TweenService")
 local player=Players.LocalPlayer
 local gui=Instance.new("ScreenGui")
-gui.Name="DreamcoreWelcome"
+gui.Name="ForestArrival"
 gui.ResetOnSpawn=false
+gui.IgnoreGuiInset=true
+gui.DisplayOrder=10
 gui.Parent=player:WaitForChild("PlayerGui")
-local title=Instance.new("TextLabel")
-title.Name="WorldTitle"
-title.AnchorPoint=Vector2.new(0.5,0)
-title.Position=UDim2.fromScale(0.5,0.04)
-title.Size=UDim2.fromScale(0.88,0.09)
-title.BackgroundTransparency=1
-title.Text="MUNDO DE TESTE  •  DREAMCORE"
-title.TextColor3=Color3.fromRGB(255,240,255)
-title.TextStrokeColor3=Color3.fromRGB(90,64,123)
-title.TextStrokeTransparency=0.4
-title.TextScaled=true
+local function label(name,y,height,size,content)
+ local t=Instance.new("TextLabel")
+ t.Name=name
+ t.AnchorPoint=Vector2.new(0.5,0)
+ t.Position=UDim2.fromScale(0.5,y)
+ t.Size=UDim2.fromScale(0.91,height)
+ t.BackgroundTransparency=1
+ t.Text=content
+ t.Font=Enum.Font.Gotham
+ t.TextSize=size
+ t.TextScaled=false
+ t.TextWrapped=true
+ t.TextColor3=Color3.fromRGB(255,234,209)
+ t.TextStrokeColor3=Color3.fromRGB(36,42,58)
+ t.TextStrokeTransparency=0.25
+ t.TextTransparency=1
+ t.Parent=gui
+ return t
+end
+local title=label("WorldTitle",0.095,0.07,28,"FLORESTA DAS MEMÓRIAS")
 title.Font=Enum.Font.GothamBold
-title.Parent=gui
-local hint=Instance.new("TextLabel")
-hint.Name="ExploreHint"
-hint.AnchorPoint=Vector2.new(0.5,0)
-hint.Position=UDim2.fromScale(0.5,0.14)
-hint.Size=UDim2.fromScale(0.82,0.05)
-hint.BackgroundTransparency=1
-hint.Text="Explore a porta impossível à frente"
-hint.TextColor3=Color3.fromRGB(255,245,255)
-hint.TextScaled=true
-hint.Font=Enum.Font.Gotham
-hint.Parent=gui
+local subtitle=label("WorldSubtitle",0.167,0.06,15,"Mundo I  ·  Onde a luz recorda")
+local hint=label("WorldHint",0.835,0.05,14,"Siga a trilha até a árvore ancestral")
+for _,t in ipairs({title,subtitle,hint}) do
+ TweenService:Create(t,TweenInfo.new(1.6,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
+end
+task.delay(10,function()
+ if not gui.Parent then return end
+ for _,t in ipairs({title,subtitle,hint}) do
+  TweenService:Create(t,TweenInfo.new(2,Enum.EasingStyle.Sine,Enum.EasingDirection.In),{TextTransparency=1}):Play()
+ end
+ task.wait(2.3)
+ gui:Destroy()
+end)
