@@ -7,6 +7,13 @@ import bpy
 import json
 import math
 from mathutils import Vector, Matrix
+
+# Roblox uses Y-up. Blender uses Z-up. Rotate the complete basis, including parts/cameras.
+BASIS = Matrix(((1,0,0),(0,0,-1),(0,1,0)))
+def rbpos(p):
+    return (p[0], -p[2], p[1])
+def rbscale(s):
+    return (s[0], s[2], s[1])
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,8 +64,8 @@ for part in scene_data["parts"]:
     name=part["n"]
     if part.get("t",0)>0.7:
         continue
-    pos=part["p"]
-    size=part["s"]
+    pos=rbpos(part["p"])
+    size=rbscale(part["s"])
     color=part["c"]
     if part["shape"]=="Ball":
         bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=1,location=pos)
@@ -67,18 +74,17 @@ for part in scene_data["parts"]:
     else:
         obj=box(name,pos,size,material(color))
     obj.name=name
-    if name not in ("Tronco musgoso","Copa em camadas","Coroa alta"):
-        rot=part.get("rot")
-        if rot and len(rot)==9:
-            matrix=Matrix([rot[0:3],rot[3:6],rot[6:9]])
-            obj.rotation_euler=matrix.to_euler()
+    rot=part.get("rot")
+    if rot and len(rot)==9:
+        matrix=Matrix([rot[0:3],rot[3:6],rot[6:9]])
+        obj.rotation_euler=(BASIS @ matrix @ BASIS.transposed()).to_euler()
     if len(obj.data.materials)==0:
         obj.data.materials.append(material(color))
 
 # Landscape approximation: Roblox Terrain is not included in the geometry export.
-ground=box("Terrain PROXY — not official Roblox", (0,-1,-95),(650,2,780),material((0.25,0.37,0.25)))
+ground=box("Terrain PROXY — not official Roblox", rbpos((0,-1,-95)),rbscale((650,2,780)),material((0.25,0.37,0.25)))
 # A secondary ribbon hints at the watercourse; not original terrain geometry.
-water=box("Rio PROXY", (129,0,-91),(32,0.35,385),material((0.20,0.38,0.46),0.15))
+water=box("Rio PROXY", rbpos((129,0,-91)),rbscale((32,0.35,385)),material((0.20,0.38,0.46),0.15))
 sun_data=bpy.data.lights.new(name="Sun proxy",type="SUN")
 sun_data.energy=2.35
 sun_data.angle=math.radians(9)
@@ -105,7 +111,7 @@ views=[
     ("canopy", (76,64,-175), (0,34,-265)),
 ]
 for name, camera_pos, target in views:
-    point_camera(camera_pos,target)
+    point_camera(rbpos(camera_pos),rbpos(target))
     scn.render.filepath=str(OUT / ("preview_%s.png" % name))
     bpy.ops.render.render(write_still=True)
     bpy.data.objects.remove(scn.camera,do_unlink=True)
