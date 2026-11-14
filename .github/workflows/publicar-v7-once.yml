@@ -1,0 +1,69 @@
+name: Publicar Mundo 1 V7 — acionamento unico
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy-requests/publicar-mundo1-v7.txt'
+permissions:
+  contents: read
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+jobs:
+  publicar-v7:
+    name: Publicar V7 no Place de testes existente
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: roblox-teste
+    env:
+      UNIVERSE: '2660433574'
+      PLACE: '6947682498'
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Proteger destino e verificar pedido V7
+        run: |
+          set -euo pipefail
+          test -n "$ROBLOX_API_KEY" || { echo 'Chave ausente'; exit 1; }
+          test "$UNIVERSE" = 2660433574 && test "$PLACE" = 6947682498
+          grep -Fxq 'PUBLICAR MUNDO1 V7 EM PLACE DE TESTES 6947682498' deploy-requests/publicar-mundo1-v7.txt
+          grep -Fq 'world:SetAttribute("WorldVersion",7)' src/server/DreamcoreWorld.server.luau
+      - name: Instalar Rojo
+        run: cargo install rojo --version 7.6.1 --locked
+      - name: Gerar Place com codigo aprovado da branch main
+        run: rojo build default.project.json -o DreamcoreV7.rbxlx
+      - name: Publicar versao V7
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error -X POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=Published" \
+            -H "x-api-key: ${ROBLOX_API_KEY}" \
+            -H "Content-Type: application/xml" \
+            --data-binary @DreamcoreV7.rbxlx \
+            -o resultado-v7.json -w '%{http_code}')
+          echo "Roblox HTTP: $status"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              d=json.loads(Path("resultado-v7.json").read_text())
+              print("Erro Roblox:",str(d.get("message",d.get("errors","sem detalhe")))[:450])
+          except Exception:
+              print("Resposta de erro não JSON")
+          PY
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("resultado-v7.json").read_text())
+          print("Versao Roblox publicada:",d.get("versionNumber"))
+          PY
+      - name: Arquivar comprovante
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publicacao-world1-v7
+          path: resultado-v7.json
+          if-no-files-found: warn
