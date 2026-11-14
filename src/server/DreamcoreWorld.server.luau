@@ -419,6 +419,15 @@ if okForest and forestPack then
    end
   end
  end
+ -- Sondagem unica de Terrain para arvores e plantas importadas.
+ local terrainRayParams=RaycastParams.new()
+ terrainRayParams.FilterType=Enum.RaycastFilterType.Include
+ terrainRayParams.FilterDescendantsInstances={terrain}
+ terrainRayParams.IgnoreWater=true
+ local function terrainHeightAt(x,z)
+  local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),terrainRayParams)
+  return if hit then hit.Position.Y else 0
+ end
  local function plantForest(template,site,index)
   local tree=template:Clone()
   tree.Name="Bosque de folhas texturizadas — "..index
@@ -437,7 +446,8 @@ if okForest and forestPack then
   local initialBounds=tree:GetExtentsSize()
   tree:ScaleTo(tree:GetScale()*desiredHeight/math.max(initialBounds.Y,0.1))
   local boundingCF,boundingSize=tree:GetBoundingBox()
-  local target=CFrame.new(site.x,boundingSize.Y*0.48,site.z)*CFrame.Angles(0,index*1.78,0)
+  local groundY=terrainHeightAt(site.x,site.z)
+  local target=CFrame.new(site.x,groundY+boundingSize.Y*0.5-0.12,site.z)*CFrame.Angles(0,index*1.78,0)
   local delta=target*boundingCF:Inverse()
   tree:PivotTo(delta*tree:GetPivot())
   tree.Parent=naturalForest
@@ -489,10 +499,6 @@ if okForest and forestPack then
  while #undergrowthTemplates>16 do
   table.remove(undergrowthTemplates)
  end
- local terrainRayParams=RaycastParams.new()
- terrainRayParams.FilterType=Enum.RaycastFilterType.Include
- terrainRayParams.FilterDescendantsInstances={terrain}
- terrainRayParams.IgnoreWater=true
  local undergrowthPlaced=0
  for i=1,58 do
   local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
@@ -516,8 +522,7 @@ if okForest and forestPack then
     local boundsCF,boundsSize=foliage:GetBoundingBox()
     -- Assentar cada planta no relevo real, sem flutuar nem atravessar
     -- o solo inclinado. Raycast inclui apenas Terrain (nao outros props).
-    local groundHit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),terrainRayParams)
-    local groundY=if groundHit then groundHit.Position.Y else 0
+    local groundY=terrainHeightAt(x,z)
     local desired=CFrame.new(x,groundY+boundsSize.Y*0.5-0.08,z)*CFrame.Angles(0,i*0.61,0)
     foliage:PivotTo(desired*boundsCF:Inverse()*foliage:GetPivot())
     foliage.Parent=naturalForest
@@ -868,9 +873,9 @@ end
 -- Pôr do sol para primeira impressão; transições suaves entre os três climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",21)
+world:SetAttribute("WorldVersion",22)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v21:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v22:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 12 minutos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
