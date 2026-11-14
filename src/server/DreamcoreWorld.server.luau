@@ -494,7 +494,7 @@ if okForest and forestPack then
     local nearHero=(site.x-pathX(-245))^2+(site.z+265)^2<110*110
     local keepShadow=(nearTrail and site.z>-315 and site.z<55) or nearHero
     optimizeDecorativeMesh(item,keepShadow)
-    if index~=9001 and string.find(string.lower(item.Name),"trunk",1,true) then solidMesh(item) end
+    if string.find(string.lower(item.Name),"trunk",1,true) then solidMesh(item) end
    end
   end
   local desiredHeight=site.s*(if template.Name=="RedwoodTree-Var01" then 29 else 23)
@@ -506,7 +506,6 @@ if okForest and forestPack then
   local delta=target*boundingCF:Inverse()
   tree:PivotTo(delta*tree:GetPivot())
   tree.Parent=naturalForest
-  if index==9001 then trunkProxy(site.x,site.z,26,7,tree) end
  end
  for i,site in forestTreeSites do
   local preferred=names[(i-1)%#names+1]
@@ -669,7 +668,7 @@ for i=1,8 do
 end
 -- Travessia perpendicular ao rio: tabuleiro firme ate as duas margens planas.
 local bridge=part("Ponte de madeira antiga",Vector3.new(12,1.2,64),
- CFrame.new(132,-0.2,-89)*CFrame.Angles(0,PI/2,0),P.barkLight,Enum.Material.WoodPlanks,landmarks)
+ CFrame.new(132,-0.35,-89)*CFrame.Angles(0,PI/2,0),P.barkLight,Enum.Material.WoodPlanks,landmarks)
 bridge:SetAttribute("CollisionRole","Bridge")
 for _,side in ipairs({-1,1}) do
  part("Corrimao da ponte",Vector3.new(64,0.65,0.65),

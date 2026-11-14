@@ -63,6 +63,16 @@ local clearanceParams = OverlapParams.new()
 clearanceParams.FilterType = Enum.RaycastFilterType.Include
 clearanceParams.FilterDescendantsInstances = {world}
 clearanceParams.RespectCanCollide = true
+-- Temporary query volume outside the generated world: never exported or published.
+local clearanceProbe = Instance.new("Part")
+clearanceProbe.Name = "QA standing clearance probe"
+clearanceProbe.Anchored = true
+clearanceProbe.CanCollide = false
+clearanceProbe.CanTouch = false
+clearanceProbe.CanQuery = false
+clearanceProbe.Transparency = 1
+clearanceProbe.Size = Vector3.new(2,4.8,2)
+clearanceProbe.Parent = Workspace
 local navigation = {routes = {}, spawn = {}, proxyCount = 0, invalidProxies = {}, activeScripts = {}}
 local function sampleFooting(position)
  local hit = Workspace:Raycast(Vector3.new(position.X,12,position.Z),Vector3.new(0,-24,0),supportParams)
@@ -71,11 +81,14 @@ local function sampleFooting(position)
   sample.y = hit.Position.Y
   sample.normalY = hit.Normal.Y
   sample.support = hit.Instance.Name
-  -- Standing body clearance, feet + 0.35 through + 5.15 studs. Bounding boxes
-  -- conservatively reject solid obstacles; this is not a Humanoid playtest.
-  local blockers = Workspace:GetPartBoundsInBox(CFrame.new(position.X,hit.Position.Y+2.75,position.Z),Vector3.new(2,4.8,2),clearanceParams)
-  for _,blocker in blockers do
-   if blocker ~= hit.Instance then table.insert(sample.blockers,blocker.Name) end
+  -- Standing body, feet +0.35 through +5.15. Broad-phase bounds only find
+  -- candidates; narrow phase tests actual collision geometry, including trunks.
+  clearanceProbe.CFrame = CFrame.new(position.X,hit.Position.Y+2.75,position.Z)
+  local candidates = Workspace:GetPartBoundsInBox(clearanceProbe.CFrame,clearanceProbe.Size,clearanceParams)
+  if #candidates > 0 then
+   for _,blocker in Workspace:GetPartsInPart(clearanceProbe,clearanceParams) do
+    if blocker ~= hit.Instance then table.insert(sample.blockers,blocker.Name) end
+   end
   end
  end
  return sample
@@ -137,6 +150,7 @@ for _,item in world:GetDescendants() do
   end
  end
 end
+clearanceProbe:Destroy()
 snapshot.navigation = navigation
 -- Surface grid from actual Terrain raycasts: coarse geometry/material evidence,
 -- not engine rendering. Water is included rather than replaced with a fake ribbon.

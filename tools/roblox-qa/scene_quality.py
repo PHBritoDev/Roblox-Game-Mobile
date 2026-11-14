@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Engine navigation measurements plus proxy completeness; never visual approval."""
+import argparse
 import json
 import math
 from collections import Counter
@@ -94,7 +95,7 @@ def evaluate(scene):
         "assetWarnings": asset_warnings,
         "pass": not errors,
         "limitations": [
-            "Engine support raycasts and conservative solid-part overlap boxes are not a Humanoid playtest",
+            "Engine support raycasts and standing-body collision geometry queries are not a Humanoid playtest",
             "Does not measure client streaming, Android FPS or appearance",
             "Roblox Terrain, water, alpha cards, PBR and lighting are not reconstructed faithfully by Blender",
             "Passing navigation and asset counts do not approve artistic quality",
@@ -103,7 +104,9 @@ def evaluate(scene):
 
 
 def main():
-    folder = Path(__file__).resolve().parents[2] / "artifacts/visual-preview"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--folder", type=Path, default=Path(__file__).resolve().parents[2] / "artifacts/visual-preview")
+    folder = parser.parse_args().folder
     report = evaluate(json.loads((folder / "scene.json").read_text(encoding="utf-8")))
     (folder / "scene_qa.json").write_text(json.dumps(report, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False))
