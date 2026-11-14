@@ -38,11 +38,9 @@ jobs:
       - name: Instalar Blender para renderizar offline (sem Studio)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq blender ffmpeg
+          sudo apt-get install -y -qq blender ffmpeg python3-pil
       - name: Renderizar 3 perspectivas de floresta
         run: blender --background --threads 2 --python tools/roblox-qa/render_scene.py
-      - name: Preparar agente revisor de imagens
-        run: python3 -m pip install --user --disable-pip-version-check pillow
       - name: Revisar imagens, detectar falhas e produzir contato visual
         run: python3 tools/roblox-qa/review_visual.py
       - name: Montar clipe MP4 com as tres perspectivas estaticas
