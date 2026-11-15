@@ -36,6 +36,11 @@
         "GlobalShadows": true,
         "ShadowSoftness": 0.3
       }
+    },
+    "ServerStorage": {
+      "ForestLibrary": {
+        "$path": "assets/ForestLibrary.rbxmx"
+      }
     }
   }
 }
