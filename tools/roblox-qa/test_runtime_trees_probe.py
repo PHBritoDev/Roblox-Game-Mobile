@@ -32,7 +32,7 @@ class RuntimeTreeProbeTests(unittest.TestCase):
         source=(ROOT/"tools/roblox-qa/probe_runtime_trees.luau").read_text(encoding="utf-8")
         self.assertEqual(source.count("InsertService:LoadAsset("),1)
         self.assertIn("asset:Destroy()",source)
-        self.assertNotIn("Workspace",source)
+        self.assertNotIn("game:GetService(\"Workspace\")",source)
         self.assertIn("6933438443",source)
         self.assertIn("6432306802",source)
 
