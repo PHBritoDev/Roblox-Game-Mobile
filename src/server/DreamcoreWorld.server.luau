@@ -448,6 +448,14 @@ if okPack and sourcePack then
  for _,asset in sourcePack:GetDescendants() do
   if asset:IsA("LuaSourceContainer") then asset:Destroy() end
  end
+ local syntyTerrainRayParams=RaycastParams.new()
+ syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
+ syntyTerrainRayParams.FilterDescendantsInstances={terrain}
+ syntyTerrainRayParams.IgnoreWater=true
+ local function syntyGroundY(x,z)
+  local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),syntyTerrainRayParams)
+  return if hit then hit.Position.Y else 0
+ end
  -- Modelos escolhidos, posicionados para manter enquadramento da trilha.
  local selection={
   {"Meshes/Pine_Tree_Pine_Large_01",-70,36,31,0.2},
@@ -505,14 +513,6 @@ if okPack and sourcePack then
  -- Vegetacao profissional curada por planos: samambaias e tufos de grama
  -- próximos ao jogador (não espalhar 200 clones pela cena).
  -- Sondagem compartilhada: plantas pequenas nao devem flutuar em colinas.
- local syntyTerrainRayParams=RaycastParams.new()
- syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
- syntyTerrainRayParams.FilterDescendantsInstances={terrain}
- syntyTerrainRayParams.IgnoreWater=true
- local function syntyGroundY(x,z)
-  local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),syntyTerrainRayParams)
-  return if hit then hit.Position.Y else 0
- end
  local fernNames={
   "Meshes/Fern_Plant_Fern_Leaves_01",
   "Meshes/PolygonNature_Plant_Grass_05",
