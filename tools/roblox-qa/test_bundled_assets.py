@@ -41,6 +41,12 @@ class BundledAssetTests(unittest.TestCase):
         self.assertIn('local spawn=initialSpawn',server)
         self.assertIn('LoadingForestPack',stages)
 
+    def test_arrival_overlay_dismisses_on_terminal_failure(self):
+        client=(ROOT/'src/client/Welcome.client.luau').read_text()
+        self.assertIn('if current=="Ready" or current=="Failed" then break end',client)
+        self.assertIn('while gui.Parent do',client)
+        self.assertIn('task.wait(10)',client)
+
     def test_script_or_empty_mesh_is_rejected(self):
         for mutation in ['script','empty_mesh']:
             root=ET.parse(ROOT/'assets/ForestLibrary.rbxmx').getroot()
