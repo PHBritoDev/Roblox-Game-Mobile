@@ -134,7 +134,21 @@ def main():
         executed_source = source_with_integration_failure(executed_source)
     # Source and probe share one execution chunk; source file is never modified.
     fixture = "" if args.without_assets else bundled_fixture()
-    code = PREAMBLE + fixture + executed_source + "\n" + probe
+    # A V33 publica o spawn antes de iniciar a floresta completa numa task.
+    # O probe headless precisa aguardar Ready/Failed, sem aceitar cena parcial.
+    await_generation = """
+local snapshotReplicated=game:GetService("ReplicatedStorage")
+local snapshotDeadline=os.clock()+180
+while snapshotReplicated:GetAttribute("ForestState")=="Generating"
+    and os.clock()<snapshotDeadline do
+ task.wait(0.5)
+end
+local snapshotStatus=snapshotReplicated:GetAttribute("ForestState")
+assert(snapshotStatus=="Ready",
+    "Headless V33 not ready: "..tostring(snapshotStatus)..", stage="..
+    tostring(snapshotReplicated:GetAttribute("ForestStage")))
+"""
+    code = PREAMBLE + fixture + executed_source + "\\n" + await_generation + "\\n" + probe
     task = request(base + "/luau-execution-session-tasks", key, {"script": code})
     path = task.get("path", "")
     if not path.startswith(base + "/"):
