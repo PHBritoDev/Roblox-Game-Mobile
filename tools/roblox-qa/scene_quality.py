@@ -76,6 +76,24 @@ def evaluate(scene):
         errors.append("Exported geometry metadata inconsistent")
     if len(parts) < meta["partsTotal"] and not meta.get("geometrySampled", False):
         errors.append("Incomplete exported geometry without sampling declaration")
+    if len(parts) != meta["partsTotal"]:
+        errors.append("Incomplete exported geometry")
+    assets = scene.get("assets", {})
+    if meta.get("worldVersion",0)>=33:
+        if not meta.get("generationComplete"):
+            errors.append("World not ready")
+        if not assets or assets.get("reserved",0)<1 or assets.get("fulfilled")!=assets.get("reserved"):
+            errors.append("Reserved tree sites lost during asset integration")
+        if assets.get("foliageBalls",0)>0:
+            errors.append("Spherical placeholder foliage reintroduced")
+        if assets.get("emptyMeshIds",0)>0:
+            errors.append("Imported mesh has empty MeshId")
+        if meta["partsTotal"]>6500:
+            errors.append("Mobile part budget exceeded")
+    if meta.get("forcedIntegrationFailure") and (assets.get("syntyIntegration") is not False or assets.get("forestIntegration") is not False):
+        errors.append("Integration failure injection did not exercise both rollback paths")
+    if meta.get("bakedEquivalentFixture") and assets.get("source")!="Bundled":
+        errors.append("Bundled library was not used")
     asset_warnings = []
     if meta.get("forestModels", 0) < 25:
         asset_warnings.append("Forest Pack degraded/unavailable; fallback needs visual review")
@@ -99,6 +117,7 @@ def evaluate(scene):
         "collisionProxyCount": navigation.get("proxyCount", 0),
         "navigationFailures": errors,
         "assetWarnings": asset_warnings,
+        "assetDiagnostics": assets,
         "pass": not errors,
         "limitations": [
             "Engine support raycasts and standing-body collision geometry queries are not a Humanoid playtest",

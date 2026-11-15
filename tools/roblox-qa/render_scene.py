@@ -4,8 +4,10 @@ Uses geometry exported from the Roblox *headless* engine.
 Run: blender -b -t 2 --python tools/roblox-qa/render_scene.py
 """
 import bpy
+import bmesh
 import json
 import math
+import os
 from mathutils import Vector, Matrix
 
 # Roblox uses Y-up. Blender uses Z-up. Rotate the complete basis, including parts/cameras.
@@ -17,7 +19,7 @@ def rbscale(s):
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "artifacts/visual-preview"
+OUT = Path(os.environ.get("PREVIEW_FOLDER", ROOT / "artifacts/visual-preview"))
 scene_data = json.loads((OUT / "scene.json").read_text(encoding="utf-8"))
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
@@ -55,14 +57,33 @@ def material(rgb, roughness=0.83):
     materials[key] = mat
     return mat
 
-def box(name, xyz, scale, mat):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=xyz)
-    obj=bpy.context.object
-    obj.name=name
-    obj.dimensions=scale
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    obj.data.materials.append(mat)
+def mesh_object(name, vertices, faces, pos, mat=None):
+    mesh=bpy.data.meshes.new(name)
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj=bpy.data.objects.new(name,mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.location=pos
+    if mat: mesh.materials.append(mat)
     return obj
+
+
+def box(name, xyz, scale, mat):
+    vertices=[(x*scale[0]/2,y*scale[1]/2,z*scale[2]/2)
+              for x,y,z in [(-1,-1,-1),(1,-1,-1),(1,1,-1),(-1,1,-1),
+                            (-1,-1,1),(1,-1,1),(1,1,1),(-1,1,1)]]
+    return mesh_object(name,vertices,[(0,3,2,1),(4,5,6,7),(0,1,5,4),
+                                     (1,2,6,5),(2,3,7,6),(3,0,4,7)],xyz,mat)
+
+
+def cone_object(name, pos, radius1, radius2, depth):
+    vertices=[]
+    for z,radius in [(-depth/2,radius1),(depth/2,radius2)]:
+        vertices.extend([(math.cos(i*math.tau/12)*radius,math.sin(i*math.tau/12)*radius,z) for i in range(12)])
+    faces=[tuple(reversed(range(12))),tuple(range(12,24))]
+    faces.extend([(i,(i+1)%12,(i+1)%12+12,i+12) for i in range(12)])
+    return mesh_object(name,vertices,faces,pos)
+
 
 for part in scene_data["parts"]:
     name=part["n"]
@@ -76,17 +97,38 @@ for part in scene_data["parts"]:
     trunk_mesh = is_forest and "Trunk" in name
     if part["shape"]=="Ball" or leaf_card:
         # ONLY A PROXY: leaf alpha cards are represented as coarse translucent-looking masses.
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=1,location=pos)
-        obj=bpy.context.object
+        mesh=bpy.data.meshes.new(name)
+        bm=bmesh.new()
+        bmesh.ops.create_uvsphere(bm,u_segments=12,v_segments=8,radius=1)
+        bm.to_mesh(mesh);bm.free()
+        obj=bpy.data.objects.new(name,mesh)
+        bpy.context.collection.objects.link(obj)
+        obj.location=pos
         obj.scale=tuple(v/2 for v in size)
+    elif part["shape"] == "Wedge":
+        # Roblox WedgePart: +Z face is high; -Z edge is low. Native geometry,
+        # unlike the deliberately approximate MeshPart representation below.
+        sx,sy,sz=part["s"]
+        verts=[rbpos((x*sx/2,y*sy/2,z*sz/2)) for x,y,z in
+               [(-1,-1,-1),(1,-1,-1),(-1,-1,1),(1,-1,1),(-1,1,1),(1,1,1)]]
+        mesh=bpy.data.meshes.new(name)
+        mesh.from_pydata(verts,[],[(0,2,3,1),(2,4,5,3),(0,1,5,4),(0,4,2),(1,3,5)])
+        mesh.update()
+        obj=bpy.data.objects.new(name,mesh)
+        bpy.context.collection.objects.link(obj)
+        obj.location=pos
+    elif part["shape"] == "Cylinder":
+        sx,sy,sz=part["s"]
+        obj=cone_object(name,pos,1,1,2)
+        # Apply native X-axis cylinder before the instance CFrame is applied.
+        for v in obj.data.vertices:
+            x,y,z=v.co
+            v.co=Vector((z*sx/2,-y*sz/2,x*sy/2))
     elif trunk_mesh:
         # Source mesh branch bounding box is much wider than the physical trunk.
         # A cube of that size incorrectly blacks out cameras and blocks paths in previews.
-        bpy.ops.mesh.primitive_cone_add(vertices=10,
-            radius1=max(0.75,min(size[0],size[1])*0.17),
-            radius2=max(0.25,min(size[0],size[1])*0.10),
-            depth=size[2],location=pos)
-        obj=bpy.context.object
+        obj=cone_object(name,pos,max(0.75,min(size[0],size[1])*0.17),
+                        max(0.25,min(size[0],size[1])*0.10),size[2])
     else:
         obj=box(name,pos,size,material(color))
     obj.name=name

@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'src/server/DreamcoreWorld.server.luau'
+      - 'assets/**'
+      - 'default.project.json'
       - 'tools/roblox-qa/snapshot_scene.py'
       - 'tools/roblox-qa/export_scene.luau'
       - 'tools/roblox-qa/render_scene.py'
@@ -23,6 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
       ROBLOX_UNIVERSE_ID: '2660433574'
       ROBLOX_PLACE_ID: '6947682498'
@@ -39,14 +42,24 @@ jobs:
         run: |
           python3 tools/roblox-qa/snapshot_scene.py --without-assets
           python3 tools/roblox-qa/scene_quality.py --folder artifacts/visual-preview/fallback
+      - name: Validar rollback apos erro durante integracao
+        run: |
+          python3 tools/roblox-qa/snapshot_scene.py --integration-failure
+          python3 tools/roblox-qa/scene_quality.py --folder artifacts/visual-preview/integration-failure
       - name: Instalar Blender para renderizar offline (sem Studio)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq blender ffmpeg python3-pil
+          sudo apt-get install -y -qq blender ffmpeg python3-pil libegl1 libgl1-mesa-dri xvfb xauth
       - name: Renderizar 3 perspectivas de floresta
-        run: blender --background --threads 2 --python tools/roblox-qa/render_scene.py
+        run: xvfb-run -a blender --background --threads 2 --python tools/roblox-qa/render_scene.py
       - name: Revisar imagens, detectar falhas e produzir contato visual
         run: python3 tools/roblox-qa/review_visual.py
+      - name: Renderizar e revisar fallback realmente usado sem assets
+        env:
+          PREVIEW_FOLDER: artifacts/visual-preview/fallback
+        run: |
+          xvfb-run -a blender --background --threads 2 --python tools/roblox-qa/render_scene.py
+          python3 tools/roblox-qa/review_visual.py
       - name: Montar clipe MP4 com as tres perspectivas estaticas
         run: |
           ffmpeg -hide_banner -loglevel error -y -loop 1 -t 3 -i artifacts/visual-preview/preview_spawn.png \

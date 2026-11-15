@@ -20,6 +20,27 @@ local snapshot = {
   worldVersion = world:GetAttribute("WorldVersion") or 0,
  }
 }
+snapshot.assets = {
+ source=world:GetAttribute("AssetSource"),
+ syntyLoad=world:GetAttribute("SyntyLoadSucceeded"),
+ forestLoad=world:GetAttribute("ForestPackLoadSucceeded"),
+ syntyIntegration=world:GetAttribute("SyntyIntegrationSucceeded"),
+ forestIntegration=world:GetAttribute("ForestPackIntegrationSucceeded"),
+ reserved=world:GetAttribute("ReservedTreeSites"), fulfilled=world:GetAttribute("FulfilledTreeSites"),
+ authoredTrees=world:GetAttribute("AuthoredTreeCount"),
+ foliageBalls=0, meshes=0, emptyMeshIds=0, surfaces=0,
+}
+for _,item in world:GetDescendants() do
+ if item:IsA("SurfaceAppearance") then snapshot.assets.surfaces+=1 end
+ if item:IsA("MeshPart") then
+  snapshot.assets.meshes+=1
+  if item.MeshId=="" then snapshot.assets.emptyMeshIds+=1 end
+ end
+ if item:IsA("Part") and item.Shape==Enum.PartType.Ball
+  and (item:FindFirstAncestor("Bosque profundo — arvores") or item:FindFirstAncestor("Arvore da Primeira Memoria") or item:FindFirstAncestor("Salgueiros da margem — copa pendente")) then
+  snapshot.assets.foliageBalls+=1
+ end
+end
 local all = {}
 for _, instance in world:GetDescendants() do
  if instance:IsA("BasePart") then
@@ -28,7 +49,8 @@ for _, instance in world:GetDescendants() do
 end
 -- Exportar todas as partes para que galhos e copas nao aparecam soltos na previsualizacao.
 -- Caso o mundo cresca muito, pode ser necessario dividir snapshots em blocos.
-local stride = math.max(1, math.ceil(#all / 1600))
+assert(#all<=6500,"Orcamento de 6500 partes excedido; revisar densidade antes de exportar")
+local stride = 1
 for index, item in all do
  local important = item:IsA("SpawnLocation") or item:FindFirstAncestor("Arvore da Primeira Memoria") ~= nil
  if index % stride == 0 or important then
@@ -37,7 +59,9 @@ for index, item in all do
   table.insert(snapshot.parts, {
    n = item.Name,
    origin = if item:FindFirstAncestor("Bosque premium — Forest Pack licenciado") then "ForestPack" else if item:FindFirstAncestor("Vegetacao licenciada Roblox — Synty Nature") then "Synty" else "Authored",
-   shape = if item:IsA("Part") then item.Shape.Name else "MeshPart",
+   shape = if item:IsA("WedgePart") then "Wedge" else if item:IsA("Part") then item.Shape.Name else "MeshPart",
+   meshId = if item:IsA("MeshPart") then item.MeshId else nil,
+   textureId = if item:IsA("MeshPart") then item.TextureID else nil,
    p = {math.round(x*100)/100,math.round(y*100)/100,math.round(z*100)/100},
    s = {math.round(item.Size.X*100)/100,math.round(item.Size.Y*100)/100,math.round(item.Size.Z*100)/100},
    c = {math.round(item.Color.R*1000)/1000,math.round(item.Color.G*1000)/1000,math.round(item.Color.B*1000)/1000},

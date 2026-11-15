@@ -52,25 +52,51 @@ if state=="Ready" then
  -- Streaming pode falhar por rede; nao transformar isto em erro de geracao.
  task.spawn(function()
   pcall(function() player:RequestStreamAroundAsync(Vector3.new(0,4,8),10) end)
+  -- Diagnostico local, separado do Ready do servidor e sem prometer renderizacao.
+  -- Apenas IDs de meshes visiveis neste cliente; streaming posterior fica fora da amostra.
+  local ids,seen={},{}
+  local generated=workspace:FindFirstChild("DreamcoreGenerated")
+  if generated then
+   for _,item in generated:GetDescendants() do
+    if item:IsA("MeshPart") and item.MeshId~="" and not seen[item.MeshId] then
+     seen[item.MeshId]=true; table.insert(ids,item.MeshId)
+    end
+   end
+  end
+  player:SetAttribute("ForestMeshPreloadComplete",false)
+  local failures=0
+  local ok=pcall(function()
+   game:GetService("ContentProvider"):PreloadAsync(ids,function(_,status)
+    if status~=Enum.AssetFetchStatus.Success then failures+=1 end
+   end)
+  end)
+  player:SetAttribute("ForestMeshFetchFailures",failures)
+  player:SetAttribute("ForestMeshFetchSample",#ids)
+  player:SetAttribute("ForestMeshPreloadComplete",ok)
+  if failures>0 or not ok then warn("[Dreamcore client] Falha de conteudo de malha; diagnostico local disponivel") end
  end)
 elseif state=="Failed" then
  local code=tostring(ReplicatedStorage:GetAttribute("ForestErrorCode") or "Unknown")
- hint.Text="Erro ao criar floresta ("..code.."). Servidor em recuperacao."
+ hint.Text="Erro ao criar floresta ("..code.."). Tente entrar em outro servidor."
 else
  hint.Text="O mundo ainda está carregando. Explore quando aparecer."
  -- Nao afirmar que a geracao falhou: pode apenas estar atrasada no servidor.
  task.spawn(function()
-  while gui.Parent and ReplicatedStorage:GetAttribute("ForestState")~="Ready" do
+  while gui.Parent do
+   local current=ReplicatedStorage:GetAttribute("ForestState")
+   if current=="Ready" then hint.Text="Siga a trilha até a árvore ancestral"; break end
+   if current=="Failed" then hint.Text="Não foi possível criar a floresta. Tente outro servidor."; break end
    task.wait(2)
   end
-  if gui.Parent then hint.Text="Siga a trilha até a árvore ancestral" end
  end)
 end
 subtitle.Text=string.format("Mundo I · V%s · Roblox %s",tostring(ReplicatedStorage:GetAttribute("ForestVersion") or "?"),tostring(game.PlaceVersion))
 for _,t in ipairs({title,subtitle,hint}) do
  TweenService:Create(t,TweenInfo.new(1.6,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
 end
-task.delay(10,function()
+task.spawn(function()
+ while gui.Parent and ReplicatedStorage:GetAttribute("ForestState")~="Ready" do task.wait(1) end
+ task.wait(10)
  if not gui.Parent then return end
  for _,t in ipairs({title,subtitle,hint}) do
   TweenService:Create(t,TweenInfo.new(2,Enum.EasingStyle.Sine,Enum.EasingDirection.In),{TextTransparency=1}):Play()
