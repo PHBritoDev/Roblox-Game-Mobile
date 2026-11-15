@@ -34,7 +34,7 @@ class BundledAssetTests(unittest.TestCase):
         server=(ROOT/'src/server/DreamcoreWorld.server.luau').read_text()
         client=(ROOT/'src/client/Welcome.client.luau').read_text()
         import re
-        stages=set(re.findall(r'stage\\("([^"]+)"\\)',server))
+        stages=set(re.findall(r'stage\("([^"]+)"\)',server))
         hints=set(re.findall(r'^ ([A-Za-z]+)="',client,re.M))
         self.assertFalse(stages-hints, f"Stages missing from Android UI: {stages-hints}")
         self.assertIn('hint.Text=if state=="Generating" then progressHint()',client)
