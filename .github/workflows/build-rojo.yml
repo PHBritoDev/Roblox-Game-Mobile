@@ -33,6 +33,10 @@ jobs:
           fi
       - name: Gerar arquivo do prototipo
         run: rojo build default.project.json -o DreamcorePrototype.rbxlx
+      - name: Verificar bootstrap leve e preservar variante com biblioteca integral
+        run: |
+          rojo build bundled.project.json -o DreamcoreBundled.rbxlx
+          python3 tools/roblox-qa/verify_bootstrap.py DreamcorePrototype.rbxlx DreamcoreBundled.rbxlx
       - name: Provar que o Place tem iluminacao Realistic
         run: |
           grep -Fq '<token name="LightingStyle">0</token>' DreamcorePrototype.rbxlx
@@ -45,5 +49,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DreamcorePrototype
-          path: DreamcorePrototype.rbxlx
+          path: |
+            DreamcorePrototype.rbxlx
+            DreamcoreBundled.rbxlx
           if-no-files-found: error

@@ -14,12 +14,17 @@ class BundledAssetTests(unittest.TestCase):
         result=describe(ROOT/'assets/ForestLibrary.rbxmx')
         self.assertEqual(sum(len(p['templates']) for p in result['packages'].values()),24)
 
-    def test_v33_preserves_all_assets_and_spawns_before_generation(self):
-        """No feature loss: the full licensed library stays in the published Place."""
+    def test_recovery_defers_mesh_deserialization_but_keeps_all_assets(self):
+        """Keep MeshParts out of startup while retaining the complete build."""
         import json
         project=json.loads((ROOT/'default.project.json').read_text())
-        self.assertEqual(project['tree']['ServerStorage']['ForestLibrary']['$path'],
+        self.assertNotIn('ServerStorage',project['tree'])
+        bundled=json.loads((ROOT/'bundled.project.json').read_text())
+        self.assertEqual(bundled['tree']['ServerStorage']['ForestLibrary']['$path'],
                          'assets/ForestLibrary.rbxmx')
+        expected=copy.deepcopy(bundled)
+        del expected['tree']['ServerStorage']
+        self.assertEqual(project,expected)
         source=(ROOT/'src/server/DreamcoreWorld.server.luau').read_text()
         self.assertNotIn('allowRemoteAssetsAtStartup=false',source)
         self.assertIn('InsertService:LoadAsset(6933438443)',source)
