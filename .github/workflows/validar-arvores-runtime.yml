@@ -2,6 +2,7 @@ name: Validar colocacao real das arvores 3D
 on:
   pull_request:
     paths:
+      - 'src/server/DreamcoreWorld.server.luau'
       - 'tools/roblox-qa/snapshot_scene.py'
       - 'tools/roblox-qa/test_live_tree_placement.py'
       - '.github/workflows/validar-arvores-runtime.yml'
