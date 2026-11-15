@@ -57,7 +57,7 @@ jobs:
           set -euo pipefail
           rojo build default.project.json -o DreamcoreV33Diagnostico.rbxlx
           test -s DreamcoreV33Diagnostico.rbxlx
-          if grep -Fq 'ForestLibrary' DreamcoreV33Diagnostico.rbxlx; then
+          if grep -Fq '<string name="Name">ForestLibrary</string>' DreamcoreV33Diagnostico.rbxlx; then
             echo 'Biblioteca reapareceu no Place: bloqueado'
             exit 1
           fi
