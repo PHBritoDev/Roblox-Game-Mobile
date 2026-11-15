@@ -601,6 +601,8 @@ if okForest and forestPack then
   local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),terrainRayParams)
   return if hit then hit.Position.Y else 0
  end
+ local placementFailures=0
+ local firstPlacementError=nil
  local function plantForest(template,site,index)
   local tree=template:Clone()
   tree.Name="Bosque de folhas texturizadas — "..index
@@ -631,12 +633,22 @@ if okForest and forestPack then
   local preferred=names[(i-1)%#names+1]
   local template=candidates[preferred] or candidates["BeechwoodTree_Var03"]
   if template then
-   local ok=pcall(plantForest,template,site,i)
+   local ok,err=pcall(plantForest,template,site,i)
    if ok then forestCount+=1; site.completed=true
-   else site.completed=false end
+   else
+    site.completed=false
+    placementFailures+=1
+    if not firstPlacementError then firstPlacementError=tostring(err) end
+   end
   else
    site.completed=false
+   placementFailures+=1
+   if not firstPlacementError then firstPlacementError="Modelo de arvore licenciado ausente" end
   end
+ end
+ world:SetAttribute("ForestTreePlacementFailures",placementFailures)
+ if placementFailures>0 then
+  warn("[Dreamcore] Falhas no plantio Forest Pack:",placementFailures,"primeira causa:",firstPlacementError)
  end
  -- Arbustos e samambaias de folhas texturizadas organizados em camadas.
  -- Mantemos a maioria fora da trilha e evitamos emissor externo dos templates.
