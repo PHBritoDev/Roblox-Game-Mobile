@@ -486,13 +486,13 @@ if okPack and sourcePack then
    if asset:IsA("MeshPart") then
     local scale=desiredHeight/math.max(asset.Size.Y,0.1)
     asset.Size=asset.Size*scale
-    asset.CFrame=CFrame.new(entry[2],asset.Size.Y/2,entry[3])*CFrame.Angles(0,entry[5],0)
+    asset.CFrame=CFrame.new(entry[2],syntyGroundY(entry[2],entry[3])+asset.Size.Y/2-0.12,entry[3])*CFrame.Angles(0,entry[5],0)
     optimizeDecorativeMesh(asset,math.abs(entry[2]-pathX(entry[3]))<76)
     asset.Parent=curated
    elseif asset:IsA("Model") then
     local extents=asset:GetExtentsSize()
     asset:ScaleTo(asset:GetScale()*desiredHeight/math.max(extents.Y,0.1))
-    asset:PivotTo(CFrame.new(entry[2],desiredHeight/2,entry[3])*CFrame.Angles(0,entry[5],0))
+    asset:PivotTo(CFrame.new(entry[2],syntyGroundY(entry[2],entry[3])+desiredHeight/2-0.12,entry[3])*CFrame.Angles(0,entry[5],0))
     for _,p in asset:GetDescendants() do
      if p:IsA("BasePart") then optimizeDecorativeMesh(p,math.abs(entry[2]-pathX(entry[3]))<76) end
     end
