@@ -41,6 +41,14 @@ class BundledAssetTests(unittest.TestCase):
         self.assertIn('local spawn=initialSpawn',server)
         self.assertIn('LoadingForestPack',stages)
 
+    def test_android_mesh_preload_is_local_and_bounded(self):
+        client=(ROOT/'src/client/Welcome.client.luau').read_text()
+        self.assertIn('local maxSample=64',client)
+        self.assertIn('if #ids>=maxSample then break end',client)
+        self.assertIn('(item.Position-origin).Magnitude<=160',client)
+        self.assertIn('not seen[item.MeshId]',client)
+        self.assertIn('ForestMeshFetchSample',client)
+
     def test_arrival_overlay_dismisses_on_terminal_failure(self):
         client=(ROOT/'src/client/Welcome.client.luau').read_text()
         self.assertIn('if current=="Ready" or current=="Failed" then break end',client)
