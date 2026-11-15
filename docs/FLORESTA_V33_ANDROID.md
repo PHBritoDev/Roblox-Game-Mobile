@@ -33,3 +33,13 @@ V33 não foi publicada automaticamente. Autorizações antigas V29–V32 não fo
 ## Continuação da integração
 
 As correções concorrentes da main (metadados de exportação e rotas duplicadas) foram integradas. Mantida exportação completa da V33. Cycles abortava durante construção de BVH; Workbench foi preservado como proxy exclusivamente geométrico. O teste seguinte revelou libEGL ausente no runner (exit 134): adicionados Mesa/EGL, Xvfb e renderização por software, sem requerer GPU paga. Workbench não avalia os perfis de iluminação Roblox.
+
+## Evidência final da branch
+
+Commit de código/CI `b0ef157306965fc2b75144ceddfc2ef180f3e5d0`: [Rojo](https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43664260447), [auditoria e 23 testes](https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43664262962), [headless e seis previews](https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43664258191), todos aprovados. Artefato `PREVIEW-PROXY-nao-e-screenshot-roblox` inspecionado, incluindo ambos os contatos e relatórios.
+
+Cada cenário aprovou 825 amostras físicas: Bundled equivalente com 2.338 partes, 304 meshes e 92/92 sites; sem assets com 4.059 partes e 92/92 sites; erro após clone com 4.058 partes e 92/92 sites. Nenhuma copa autoral esférica, MeshId vazio ou falha de navegação. O cenário com erro comprova ambos os rollbacks, sem meshes residuais. A variação de uma parte decorativa entre modos não afeta as rotas.
+
+Inspeção dos seis previews: no fallback, trilha legível, troncos ramificados, raízes e vegetação baixa presentes; copas ainda têm linguagem geométrica/angulosa, sem aprovação premium. No modo com assets, volumes cinza aproximados das folhas bloqueiam a leitura do ângulo de aproximação; isso não comprova oclusão real das folhas alfa. Workbench não demonstra luz dourada, noite ou materiais reais. O horizonte fora da grade amostrada pode parecer sem piso no proxy; não é evidência de buraco no Terrain real.
+
+Snapshot confirmou Place armazenado na versão Roblox **9 / mundo V32** antes de executar V33 em memória. Nenhum salvamento/publicação foi realizado. Limites remanescentes estão na [issue #3](https://github.com/PHBritoDev/Roblox-Game-Mobile/issues/3); integração e checks pós-merge na [PR #4](https://github.com/PHBritoDev/Roblox-Game-Mobile/pull/4).
