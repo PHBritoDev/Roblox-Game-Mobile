@@ -698,16 +698,18 @@ if okForest and forestPack then
    local z=22-i*3.35
    local side=if i%2==0 then 1 else -1
    local x=pathX(z)+side*(13+(i%7)*3.7)
-   local foliage=template:Clone()
-   foliage.Name="Estrato baixo texturizado — "..i
-   for _,item in foliage:GetDescendants() do
-    if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then
-     item:Destroy()
-    elseif item:IsA("BasePart") then
-     optimizeDecorativeMesh(item,false)
-    end
-   end
+   -- Isolar clonagem e saneamento de cada planta: assets externos podem falhar.
+   local foliage=nil
    local okFoliage=pcall(function()
+    foliage=template:Clone()
+    foliage.Name="Estrato baixo texturizado — "..i
+    for _,item in foliage:GetDescendants() do
+     if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then
+      item:Destroy()
+     elseif item:IsA("BasePart") then
+      optimizeDecorativeMesh(item,false)
+     end
+    end
     local extent=foliage:GetExtentsSize()
     local sizeGoal=1.65+(i%5)*0.38
     foliage:ScaleTo(foliage:GetScale()*sizeGoal/math.max(extent.Y,0.1))
@@ -719,7 +721,7 @@ if okForest and forestPack then
     foliage:PivotTo(desired*boundsCF:Inverse()*foliage:GetPivot())
     foliage.Parent=naturalForest
    end)
-   if okFoliage then undergrowthPlaced+=1 else foliage:Destroy() end
+   if okFoliage then undergrowthPlaced+=1 elseif foliage then foliage:Destroy() end
   end
  end
  world:SetAttribute("ForestUndergrowthModels",undergrowthPlaced)
