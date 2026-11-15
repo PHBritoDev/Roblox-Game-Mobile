@@ -14,6 +14,16 @@ class BundledAssetTests(unittest.TestCase):
         result=describe(ROOT/'assets/ForestLibrary.rbxmx')
         self.assertEqual(sum(len(p['templates']) for p in result['packages'].values()),24)
 
+    def test_android_diagnostic_place_has_no_startup_mesh_bundle_or_remote_fetch(self):
+        """Published diagnostic V33 must test join without preload-heavy asset paths."""
+        import json
+        project=json.loads((ROOT/'default.project.json').read_text())
+        self.assertNotIn('ServerStorage',project['tree'])
+        source=(ROOT/'src/server/DreamcoreWorld.server.luau').read_text()
+        self.assertIn('local allowRemoteAssetsAtStartup=false',source)
+        self.assertEqual(source.count('if not allowRemoteAssetsAtStartup then return nil end'),2)
+        self.assertIn('SetAttribute("ForestVersion",33)',source)
+
     def test_script_or_empty_mesh_is_rejected(self):
         for mutation in ['script','empty_mesh']:
             root=ET.parse(ROOT/'assets/ForestLibrary.rbxmx').getroot()
