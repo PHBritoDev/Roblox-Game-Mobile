@@ -1,0 +1,36 @@
+name: Diagnosticar arvore 3D real no InsertService
+on:
+  pull_request:
+    paths:
+      - 'tools/roblox-qa/probe_runtime_trees.luau'
+      - 'tools/roblox-qa/run_runtime_trees_probe.py'
+      - 'tools/roblox-qa/test_runtime_trees_probe.py'
+      - '.github/workflows/probe-runtime-trees.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: runtime-trees-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validar estrutura local de diagnostico
+        run: python3 -m unittest discover -s tools/roblox-qa -p 'test_runtime_trees_probe.py'
+      - name: Testar os dois assets pelo InsertService da Roblox
+        run: python3 tools/roblox-qa/run_runtime_trees_probe.py
+      - name: Arquivar resultado, inclusive em caso de erro
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-insertservice-arvores-v35
+          path: artifacts/assets/runtime_tree_probe.json
+          if-no-files-found: warn
