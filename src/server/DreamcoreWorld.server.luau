@@ -431,6 +431,9 @@ end
 local curated=group("Vegetacao licenciada Roblox — Synty Nature")
 local InsertService=game:GetService("InsertService")
 local bundled=game:GetService("ServerStorage"):FindFirstChild("ForestLibrary")
+-- Rollout de diagnostico Android: sem biblioteca embarcada ou downloads no boot.
+-- Deixar os IDs originais para reativacao somente apos teste de entrada real.
+local allowRemoteAssetsAtStartup=false
 world:SetAttribute("AssetSource",if bundled then "Bundled" else "InsertService")
 stage("LoadingSynty")
 -- Um asset externo nunca pode abortar o mundo inteiro, mesmo se carregar
@@ -440,6 +443,7 @@ local syntyIntegrated,syntyError=xpcall(function()
 local okPack
 okPack,sourcePack=pcall(function()
  if bundled and bundled:FindFirstChild("Synty") then return bundled.Synty:Clone() end
+ if not allowRemoteAssetsAtStartup then return nil end
  return InsertService:LoadAsset(6933438443)
 end)
 world:SetAttribute("SyntyLoadSucceeded",okPack and sourcePack~=nil)
@@ -588,6 +592,7 @@ local naturalForest=group("Bosque premium — Forest Pack licenciado")
 stage("LoadingForestPack")
 local okForest,forestPack=pcall(function()
  if bundled and bundled:FindFirstChild("ForestPack") then return bundled.ForestPack:Clone() end
+ if not allowRemoteAssetsAtStartup then return nil end
  return InsertService:LoadAsset(6432306802)
 end)
 local forestCount=0
