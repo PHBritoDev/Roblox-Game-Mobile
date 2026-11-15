@@ -114,7 +114,12 @@ for _,t in ipairs({title,subtitle,hint}) do
  TweenService:Create(t,TweenInfo.new(1.6,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
 end
 task.spawn(function()
- while gui.Parent and ReplicatedStorage:GetAttribute("ForestState")~="Ready" do task.wait(1) end
+ while gui.Parent do
+  local current=ReplicatedStorage:GetAttribute("ForestState")
+  if current=="Ready" or current=="Failed" then break end
+  task.wait(1)
+ end
+ -- Erros definitivos tambem liberam a tela; progresso lento continua visivel.
  task.wait(10)
  if not gui.Parent then return end
  for _,t in ipairs({title,subtitle,hint}) do
