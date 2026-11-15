@@ -171,7 +171,7 @@ assert(snapshotStatus=="Ready",
             "note": "Roblox Open Cloud headless task; not an engine screenshot",
         }
         (out / "headless_failure.json").write_text(
-            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8"
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         raise SystemExit(
             f"Auditoria headless incompleta: {diagnostic['state']}; "
