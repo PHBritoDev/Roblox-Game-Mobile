@@ -608,6 +608,8 @@ if okForest and forestPack then
  local firstPlacementError=nil
  local function plantForest(template,site,index)
   local tree=template:Clone()
+  -- Falha durante ScaleTo/PivotTo nao pode deixar clone parcial no mundo.
+  local okPlacement,placementError=pcall(function()
   tree.Name="Bosque de folhas texturizadas — "..index
   for _,item in tree:GetDescendants() do
    if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then item:Destroy()
@@ -630,6 +632,11 @@ if okForest and forestPack then
   local delta=target*boundingCF:Inverse()
   tree:PivotTo(delta*tree:GetPivot())
   tree.Parent=naturalForest
+  end)
+  if not okPlacement then
+   tree:Destroy()
+   error(placementError,0)
+  end
  end
  for i,site in forestTreeSites do
   if i%6==0 then task.wait() end
