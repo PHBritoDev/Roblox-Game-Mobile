@@ -20,6 +20,8 @@ jobs:
       ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Validar autorizacao e alvo de TESTE
         shell: bash
         run: |
