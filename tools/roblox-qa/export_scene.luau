@@ -76,6 +76,7 @@ for index, item in all do
 end
 snapshot.meta.partsTotal = #all
 snapshot.meta.partsExported = #snapshot.parts
+snapshot.meta.geometrySampled = #snapshot.parts < #all
 -- Physical checks run against the actual generated scene, never Blender bounds.
 -- RespectCanCollide includes collision proxies even when visual meshes are query-disabled.
 local supportParams = RaycastParams.new()

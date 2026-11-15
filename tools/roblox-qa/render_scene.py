@@ -24,11 +24,15 @@ scene_data = json.loads((OUT / "scene.json").read_text(encoding="utf-8"))
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
 scn = bpy.context.scene
-scn.render.engine = "CYCLES"
-scn.cycles.samples = 8
-# Ubuntu distribution Blender is built without Intel OpenImageDenoise.
-scn.cycles.use_denoising = False
-bpy.context.view_layer.cycles.use_denoising = False
+# Cycles segfaulted while building BVH on GitHub runner (exit 139).
+# Workbench is intentionally a geometry-only proxy; never use as Roblox visual proof.
+# It avoids ray tracing thousands of individual procedural leaves on CI CPU.
+scn.render.engine = "BLENDER_WORKBENCH"
+scn.display.shading.light = "STUDIO"
+scn.display.shading.color_type = "MATERIAL"
+scn.display.shading.show_shadows = True
+scn.display.shading.show_cavity = True
+scn.display.shading.cavity_type = "BOTH"
 scn.render.resolution_x = 768
 scn.render.resolution_y = 432
 scn.render.resolution_percentage = 100

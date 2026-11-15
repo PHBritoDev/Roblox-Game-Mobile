@@ -15,8 +15,11 @@ def navigation_failures(navigation):
         ("main", (-4, 0, 4)), ("bridge", (-3, 0, 3)),
         ("lake", (-3, 0, 3)), ("river", (-3, 0, 3))) for offset in offsets}
     routes = navigation.get("routes", [])
-    if {route["name"] for route in routes} != expected:
+    route_names = [route.get("name") for route in routes]
+    if set(route_names) != expected:
         errors.append("Missing or unexpected navigation routes")
+    if len(route_names) != len(set(route_names)):
+        errors.append("Duplicate navigation routes; one route may hide an untested corridor")
     for route in routes:
         samples = route.get("samples", [])
         if len(samples) < (140 if route["name"].startswith("main:") else 10):
@@ -69,6 +72,10 @@ def evaluate(scene):
     meta = scene["meta"]
     navigation = scene.get("navigation", {})
     errors = navigation_failures(navigation)
+    if len(parts) != meta["partsExported"] or len(parts) > meta["partsTotal"]:
+        errors.append("Exported geometry metadata inconsistent")
+    if len(parts) < meta["partsTotal"] and not meta.get("geometrySampled", False):
+        errors.append("Incomplete exported geometry without sampling declaration")
     if len(parts) != meta["partsTotal"]:
         errors.append("Incomplete exported geometry")
     assets = scene.get("assets", {})
@@ -99,6 +106,7 @@ def evaluate(scene):
         "engineSpatialQueries": True,
         "sampledParts": len(parts),
         "totalGeneratedParts": meta["partsTotal"],
+        "geometrySampled": meta.get("geometrySampled", False),
         "treeTrunks": counts["Tronco musgoso"],
         "forestPackModels": meta.get("forestModels", 0),
         "forestUndergrowthModels": meta.get("forestUndergrowthModels", 0),
@@ -116,6 +124,7 @@ def evaluate(scene):
             "Does not measure client streaming, Android FPS or appearance",
             "Roblox Terrain, water, alpha cards, PBR and lighting are not reconstructed faithfully by Blender",
             "Passing navigation and asset counts do not approve artistic quality",
+            "Geometry preview may be sampled; navigation queries still inspect the full generated scene",
         ],
     }
 

@@ -13,7 +13,7 @@ def flat_scene():
             routes.append({"name": f"{name}:{offset}", "samples": [
                 {"x": offset, "z": 24-index*2, "y": 0, "normalY": 1,
                  "supported": True, "blockers": []} for index in range(140)]})
-    return {"parts": [], "meta": {"partsTotal": 0, "forestModels": 80,
+    return {"parts": [], "meta": {"partsTotal": 0, "partsExported": 0, "forestModels": 80,
             "forestUndergrowthModels": 60}, "navigation": {
         "routes": routes, "spawn": {"present": True, "anchored": True,
         "collidable": True, "footing": {"supported": True, "blockers": [], "y": 0}},
@@ -25,6 +25,10 @@ class NavigationRegressionTests(unittest.TestCase):
         self.scene = flat_scene()
 
     def test_flat_supported_routes_pass(self):
+        self.assertTrue(evaluate(self.scene)["pass"])
+
+    def test_export_metadata_matches_fixture(self):
+        self.assertEqual(self.scene["meta"]["partsExported"], len(self.scene["parts"]))
         self.assertTrue(evaluate(self.scene)["pass"])
 
     def test_hole_fails_even_with_many_premium_meshes(self):
@@ -70,6 +74,13 @@ class NavigationRegressionTests(unittest.TestCase):
         self.scene = flat_scene()
         self.scene["navigation"]["routes"][0]["samples"][20]["z"] -= 8
         self.assertFalse(evaluate(self.scene)["pass"])
+
+    def test_duplicate_route_is_rejected_even_when_all_expected_names_exist(self):
+        duplicate = copy.deepcopy(self.scene["navigation"]["routes"][0])
+        self.scene["navigation"]["routes"].append(duplicate)
+        report = evaluate(self.scene)
+        self.assertFalse(report["pass"])
+        self.assertTrue(any("Duplicate navigation routes" in e for e in report["navigationFailures"]))
 
     def test_nan_measurement_is_rejected(self):
         self.scene["navigation"]["routes"][0]["samples"][1]["y"] = float("nan")
