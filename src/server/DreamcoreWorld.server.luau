@@ -297,8 +297,8 @@ local function branchTree(x,z,s,family,species)
  return tree
 end
 
--- Mistura de copas autorais com futuras arvores MeshPart oficiais.
--- Reserva sitios antes de carregar os modelos: se falhar, usa a arvore original.
+-- Reservar toda arvore visivel para MeshParts texturizadas Forest Pack.
+-- A alternativa organica so aparece quando a Roblox recusa o asset.
 local meshTreeSites={}
 local forestTreeSites={}
 local function plantOrReserve(x,z,s,useMesh)
@@ -407,7 +407,7 @@ for i=1,48 do
   end
  end
 end
--- Fecho do horizonte por bosque em duas profundidades, nunca montanhas.
+-- Horizonte em camadas com arvores premium, nunca placas quadradas.
 local horizon=group("Bosque de horizonte")
 for i=0,25 do
  local angle=i*2*PI/26
@@ -500,8 +500,6 @@ if okPack and sourcePack then
    placed+=1
   end
  end
- -- Substituicoes avaliadas pelo agente: reduzir repeticao de copas esfericas.
- -- Tres arvores oficiais de silhuetas distintas, ancoradas e sem scripts.
  -- Vegetacao profissional curada por planos: samambaias e tufos de grama
  -- próximos ao jogador (não espalhar 200 clones pela cena).
  -- Sondagem compartilhada: plantas pequenas nao devem flutuar em colinas.
@@ -533,9 +531,8 @@ if okPack and sourcePack then
    leaf.Parent=curated
   end
  end
- -- Sem arvores Synty de silhueta geometricamente simples na cena principal.
- local meshPlaced=0
- print("[Dreamcore] Arvores com silhuetas oficiais:",meshPlaced)
+ -- As copas facetadas Synty deixam de ocupar a cena principal.
+ print("[Dreamcore] Sitios reservados para Forest Pack premium:",#forestTreeSites)
  print("[Dreamcore] Synty licenciado carregado:",placed,"instancias curadas")
  sourcePack:Destroy()
 else
@@ -641,7 +638,7 @@ if okForest and forestPack then
    site.completed=false
   end
  end
- -- Arbustos e samambaias com recortes de folhas reais nos primeiros planos.
+ -- Arbustos e samambaias de folhas texturizadas organizados em camadas.
  -- Mantemos a maioria fora da trilha e evitamos emissor externo dos templates.
  local undergrowthTemplates={}
  -- O pack muda nomes entre variantes; descobrir pela geometria, não por 4 strings rígidas.
@@ -678,12 +675,13 @@ if okForest and forestPack then
   table.remove(undergrowthTemplates)
  end
  local undergrowthPlaced=0
- for i=1,58 do
+ for i=1,84 do
   local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
   if template then
-   local z=22-i*4.8
+   -- Densidade lateral, evitando a faixa caminhavel da trilha em S.
+   local z=22-i*3.35
    local side=if i%2==0 then 1 else -1
-   local x=pathX(z)+side*(12+(i%5)*4.1)
+   local x=pathX(z)+side*(13+(i%7)*3.7)
    local foliage=template:Clone()
    foliage.Name="Estrato baixo texturizado — "..i
    for _,item in foliage:GetDescendants() do
@@ -766,12 +764,14 @@ else
  local hero=branchTree(center.X,center.Z,3.65,sacred,3)
  hero.Name="Cerne antigo autoral"
  hero:SetAttribute("Hero",true)
- -- Raizes convergentes e galhos em arco dao uma silhueta exclusiva ao santuario.
+ -- Somente no modo emergencia: copa ancestral oval, sem placas quadradas.
  for j=1,5 do
   local angle=j*PI*2/5
   local tip=center+Vector3.new(math.cos(angle)*24,42+j*3,math.sin(angle)*24)
   woodSegment("Braco ancestral",center+Vector3.new(0,28,0),tip,1.7,sacred,false)
-  leafSpray(CFrame.new(tip)*CFrame.Angles(0,angle,0),14,24,P.canopyGold,sacred,true)
+  local canopy=orb("Copa dourada ancestral reserva",tip,1,P.canopyGold,Enum.Material.Grass,sacred)
+  canopy.Size=Vector3.new(23,13,20)
+  optimizeDecorativeMesh(canopy,j%2==0)
  end
 end
 
