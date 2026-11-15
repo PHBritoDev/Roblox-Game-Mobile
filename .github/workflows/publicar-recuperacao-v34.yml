@@ -1,0 +1,85 @@
+name: Publicar recuperação leve V34 com modelos preservados
+on:
+  push:
+    branches: [main]
+    paths: ['deploy-requests/recuperar-bootstrap-v34.txt']
+permissions:
+  contents: read
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: roblox-teste
+    env:
+      UNIVERSE: '2660433574'
+      PLACE: '6947682498'
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Conferir autorização, código e destino imutável
+        run: |
+          set -euo pipefail
+          grep -Fxq 'AUTORIZADO RECUPERAR ENTRADA V34 NO PLACE 6947682498' deploy-requests/recuperar-bootstrap-v34.txt
+          grep -Fxq 'BASE_CORRIGIDA=8a129363c1bef16d592ecd36ac82014a482d86f1' deploy-requests/recuperar-bootstrap-v34.txt
+          git merge-base --is-ancestor 8a129363c1bef16d592ecd36ac82014a482d86f1 HEAD
+          test -n "$ROBLOX_API_KEY"
+          test -s assets/ForestLibrary.rbxmx
+          test -f bundled.project.json
+          python3 - <<'PY'
+          import json
+          light=json.load(open('default.project.json'))
+          full=json.load(open('bundled.project.json'))
+          assert 'ServerStorage' not in light['tree']
+          assert full['tree']['ServerStorage']['ForestLibrary']['$path']=='assets/ForestLibrary.rbxmx'
+          del full['tree']['ServerStorage']
+          assert light==full
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: QA obrigatória antes da publicação
+        run: |
+          set -euo pipefail
+          python3 tools/roblox-qa/audit.py
+          python3 tools/roblox-qa/audit_bundled_assets.py
+          python3 -m unittest discover -s tools/roblox-qa -p 'test_*.py'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/rojo
+          key: rojo-7.6.1-${{ runner.os }}-v1
+      - name: Preparar Rojo
+        run: |
+          if ! command -v rojo >/dev/null 2>&1; then cargo install rojo --version 7.6.1 --locked; fi
+      - name: Conferir ambos os Places e biblioteca integral
+        run: |
+          set -euo pipefail
+          rojo build default.project.json -o DreamcoreRecuperacaoV34.rbxlx
+          rojo build bundled.project.json -o DreamcoreV34IntegralPreservada.rbxlx
+          python3 tools/roblox-qa/verify_bootstrap.py DreamcoreRecuperacaoV34.rbxlx DreamcoreV34IntegralPreservada.rbxlx
+      - name: Publicar Place leve, preservando versão 13 para rollback
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --retry 2 --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @DreamcoreRecuperacaoV34.rbxlx \
+            --output resultado-recuperacao-v34.json --write-out '%{http_code}')
+          echo "Roblox HTTP: $status"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            python3 -c 'import json; d=json.load(open("resultado-recuperacao-v34.json")); print(str(d.get("errors",d.get("message","Erro Roblox")))[:450])'
+            exit 1
+          fi
+          python3 -c 'import json; d=json.load(open("resultado-recuperacao-v34.json")); v=d.get("versionNumber"); assert isinstance(v,int) and v>13,d; print("VERSAO DE RECUPERACAO PUBLICADA:",v,"(V13 integral preservada em historico)")'
+      - name: Guardar comprovante da publicação
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprovante-publicacao-recuperacao-v34
+          path: resultado-recuperacao-v34.json
+          if-no-files-found: warn
