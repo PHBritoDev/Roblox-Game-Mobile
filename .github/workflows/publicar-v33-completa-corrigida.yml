@@ -1,0 +1,85 @@
+name: Publicar V33 completa restaurada no Roblox TESTE
+on:
+  push:
+    branches: [main]
+    paths:
+      - deploy-requests/publicar-v33-completa-corrigida.txt
+permissions:
+  contents: read
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+jobs:
+  publicar:
+    environment: roblox-teste
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UNIVERSE: '2660433574'
+      PLACE: '6947682498'
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verificar pedido explicito e invariantes da V33 integral
+        run: |
+          set -euo pipefail
+          grep -Fxq 'AUTORIZADO PUBLICAR V33 INTEGRAL NO PLACE TESTE 6947682498' deploy-requests/publicar-v33-completa-corrigida.txt
+          grep -Fxq 'BASE_CORRIGIDA=31b7adb20744c7eece6de7853d51ed7a4a72c6c0' deploy-requests/publicar-v33-completa-corrigida.txt
+          git merge-base --is-ancestor 31b7adb20744c7eece6de7853d51ed7a4a72c6c0 HEAD
+          test -n "$ROBLOX_API_KEY"
+          grep -Fq 'SetAttribute("ForestVersion",33)' src/server/DreamcoreWorld.server.luau
+          grep -Fq 'local spawn=initialSpawn' src/server/DreamcoreWorld.server.luau
+          grep -Fq 'return InsertService:LoadAsset(6933438443)' src/server/DreamcoreWorld.server.luau
+          grep -Fq 'return InsertService:LoadAsset(6432306802)' src/server/DreamcoreWorld.server.luau
+          python3 - <<'PY'
+          import json
+          project=json.load(open('default.project.json'))
+          assert project['tree']['ServerStorage']['ForestLibrary']['$path']=='assets/ForestLibrary.rbxmx'
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Auditar fontes, 24 modelos e testes
+        run: |
+          set -euo pipefail
+          python tools/roblox-qa/audit.py
+          python tools/roblox-qa/audit_bundled_assets.py
+          python -m unittest discover -s tools/roblox-qa -p 'test_*.py'
+      - name: Reutilizar compilador
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/rojo
+          key: rojo-7.6.1-${{ runner.os }}-v1
+      - name: Instalar Rojo
+        run: |
+          if ! command -v rojo >/dev/null 2>&1; then cargo install rojo --version 7.6.1 --locked; fi
+      - name: Compilar place com biblioteca integral
+        run: |
+          set -euo pipefail
+          rojo build default.project.json -o DreamcoreV33Completa.rbxlx
+          test -s DreamcoreV33Completa.rbxlx
+          grep -Fq 'ForestLibrary' DreamcoreV33Completa.rbxlx
+      - name: Publicar V33 completa no Roblox
+        run: |
+          set -euo pipefail
+          http=$(curl --silent --show-error --retry 2 --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @DreamcoreV33Completa.rbxlx \
+            --output resultado-v33-completa.json --write-out '%{http_code}')
+          echo "Roblox HTTP: $http"
+          if [[ "$http" -lt 200 || "$http" -ge 300 ]]; then
+            python3 -c 'import json; d=json.load(open("resultado-v33-completa.json")); print("Recusado:",str(d.get("errors",d.get("message","erro")))[:450])'
+            exit 1
+          fi
+          python3 -c 'import json; d=json.load(open("resultado-v33-completa.json")); v=d.get("versionNumber"); assert isinstance(v,int) and v>0,d; print("PUBLICACAO V33 INTEGRAL CONFIRMADA:",v)'
+      - name: Comprovante Roblox
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-v33-completa
+          path: resultado-v33-completa.json
+          if-no-files-found: warn
