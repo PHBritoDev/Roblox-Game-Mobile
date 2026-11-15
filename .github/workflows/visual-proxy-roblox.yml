@@ -18,9 +18,11 @@ on:
       - '.github/workflows/visual-proxy-roblox.yml'
 permissions:
   contents: read
+# Keep independent main/PR runs and their evidence; a merge must not cancel
+# an ongoing PR diagnostic before it produces a report.
 concurrency:
-  group: preview-proxy-world1
-  cancel-in-progress: true
+  group: preview-proxy-world1-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   preview:
     name: Exportar geometria da engine e renderizar proxy 3D
