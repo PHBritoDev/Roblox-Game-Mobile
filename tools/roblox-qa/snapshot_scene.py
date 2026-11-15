@@ -11,6 +11,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 ENDPOINT = "https://apis.roblox.com/cloud/v2/"
+# Roblox permits Luau Execution tasks to run for five minutes. Include
+# session startup / scheduling overhead before treating PROCESSING as failure.
+TASK_POLL_TIMEOUT_SECONDS = 330
 PREAMBLE = """
 local storedGenerator=game:GetService("ServerScriptService"):FindFirstChild("DreamcoreWorld",true)
 local storedWorldVersion=nil
@@ -153,14 +156,27 @@ assert(snapshotStatus=="Ready",
     path = task.get("path", "")
     if not path.startswith(base + "/"):
         raise SystemExit("API Roblox nao retornou um identificador de tarefa valido.")
-    end = time.monotonic() + 240
-    while time.monotonic() < end:
+    deadline = time.monotonic() + TASK_POLL_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
         task = request(path, key)
         if task.get("state") != "PROCESSING":
             break
-        time.sleep(5)
+        time.sleep(min(5, max(0, deadline - time.monotonic())))
     if task.get("state") != "COMPLETE":
-        raise SystemExit(f"Auditoria headless incompleta: {task.get('state')}; {str(task.get('error'))[:300]}")
+        # Preserve a redacted, actionable diagnostic even if CI fails.
+        diagnostic = {
+            "taskPath": path, "state": task.get("state"),
+            "error": str(task.get("error"))[:300],
+            "limitSeconds": TASK_POLL_TIMEOUT_SECONDS,
+            "note": "Roblox Open Cloud headless task; not an engine screenshot",
+        }
+        (out / "headless_failure.json").write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8"
+        )
+        raise SystemExit(
+            f"Auditoria headless incompleta: {diagnostic['state']}; "
+            f"{diagnostic['error']}. Consulte headless_failure.json"
+        )
     results = task.get("output", {}).get("results", [])
     scene = next((item for item in results if isinstance(item, dict) and item.get("kind") == "roblox_headless_geometry_snapshot"), None)
     if not scene:
