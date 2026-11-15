@@ -1,5 +1,7 @@
 name: Laboratorio visual proxy (geometria Roblox)
 on:
+  pull_request:
+
   workflow_dispatch:
   push:
     branches: [main]
