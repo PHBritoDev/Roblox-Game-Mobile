@@ -36,6 +36,24 @@ local hint=label("WorldHint",0.835,0.05,14,"Siga a trilha até a árvore ancestr
 -- O cliente observa explicitamente Ready/Failed e apresenta estado de progresso.
 hint.Text="Preparando a floresta…"
 hint.TextTransparency=0
+-- Mensagens de progresso reais, derivadas da etapa replicada pelo servidor.
+-- Evita mostrar "gerando solo" durante downloads ou finalizacao no Android.
+local stageHints={
+ Starting="Iniciando a floresta…",
+ ClearingTerrain="Preparando o terreno…",
+ BuildingGround="Modelando o chão e as trilhas…",
+ WritingTerrain="Aplicando materiais ao terreno…",
+ PlantingForest="Plantando a floresta…",
+ LoadingSynty="Posicionando detalhes da floresta…",
+ LoadingForestPack="Preparando árvores e vegetação…",
+ ConfiguringLighting="Ajustando a luz da floresta…",
+ Finalizing="Finalizando caminhos e colisões…",
+ Ready="Siga a trilha até a árvore ancestral",
+}
+local function progressHint()
+ local stage=tostring(ReplicatedStorage:GetAttribute("ForestStage") or "Starting")
+ return stageHints[stage] or "Preparando a floresta…"
+end
 local world=workspace:FindFirstChild("DreamcoreGenerated")
 local deadline=time()+120
 local state=ReplicatedStorage:GetAttribute("ForestState")
@@ -44,7 +62,7 @@ while state~="Ready" and state~="Failed" and time()<deadline do
  state=ReplicatedStorage:GetAttribute("ForestState")
  world=workspace:FindFirstChild("DreamcoreGenerated")
  if state~="Failed" then
-  hint.Text=if state=="Generating" then "Gerando solo e árvores da floresta…" else "Conectando ao mundo…"
+  hint.Text=if state=="Generating" then progressHint() else "Conectando ao mundo…"
  end
 end
 if state=="Ready" then
@@ -79,12 +97,13 @@ elseif state=="Failed" then
  local code=tostring(ReplicatedStorage:GetAttribute("ForestErrorCode") or "Unknown")
  hint.Text="Erro ao criar floresta ("..code.."). Tente entrar em outro servidor."
 else
- hint.Text="O mundo ainda está carregando. Explore quando aparecer."
+ hint.Text="A floresta continua carregando. Você já pode explorar o caminho."
  -- Nao afirmar que a geracao falhou: pode apenas estar atrasada no servidor.
  task.spawn(function()
   while gui.Parent do
    local current=ReplicatedStorage:GetAttribute("ForestState")
    if current=="Ready" then hint.Text="Siga a trilha até a árvore ancestral"; break end
+   if current=="Generating" then hint.Text=progressHint() end
    if current=="Failed" then hint.Text="Não foi possível criar a floresta. Tente outro servidor."; break end
    task.wait(2)
   end
