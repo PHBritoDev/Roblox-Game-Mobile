@@ -89,11 +89,11 @@ def disable_headless_mood_cycle(source):
     Runtime source remains byte-for-byte unchanged. The snapshot already captures
     the initial light mood and validates the actual generated world.
     """
-    marker = " local hold=145\\n local transition=48\\n while world.Parent do"
+    marker = " local hold=145\n local transition=48\n while world.Parent do"
     if source.count(marker) != 1:
         raise ValueError("Expected exactly one perpetual lighting cycle")
     return source.replace(
-        marker, " local hold=145\\n local transition=48\\n while false do", 1
+        marker, " local hold=145\n local transition=48\n while false do", 1
     )
 
 
