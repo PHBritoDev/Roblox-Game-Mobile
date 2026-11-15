@@ -568,6 +568,7 @@ local forestCount=0
 local forestHeroBuilt=false
 -- Publicar zero antes da tentativa: falha de carga nao pode parecer sucesso.
 world:SetAttribute("ForestTreePlacementFailures",0)
+world:SetAttribute("ForestTreeFirstPlacementError","")
 local forestIntegrated,forestError=xpcall(function()
 world:SetAttribute("ForestPackLoadSucceeded",okForest and forestPack~=nil)
 if okForest and forestPack then
@@ -649,6 +650,7 @@ if okForest and forestPack then
   end
  end
  world:SetAttribute("ForestTreePlacementFailures",placementFailures)
+ world:SetAttribute("ForestTreeFirstPlacementError",string.sub(firstPlacementError or "",1,400))
  if placementFailures>0 then
   warn("[Dreamcore] Falhas no plantio Forest Pack:",placementFailures,"primeira causa:",firstPlacementError)
  end
@@ -731,12 +733,14 @@ if okForest and forestPack then
   else
    placementFailures+=1
    world:SetAttribute("ForestTreePlacementFailures",placementFailures)
+ world:SetAttribute("ForestTreeFirstPlacementError",string.sub(firstPlacementError or tostring(heroError),1,400))
    warn("[Dreamcore] Falha ao posicionar arvore principal Forest Pack; fallback ativado:",tostring(heroError))
   end
  else
   -- A arvore heroica tambem precisa de fallback quando a variante nao existe.
   placementFailures+=1
   world:SetAttribute("ForestTreePlacementFailures",placementFailures)
+ world:SetAttribute("ForestTreeFirstPlacementError",string.sub(firstPlacementError or "Arvore principal Forest Pack ausente",1,400))
   warn("[Dreamcore] Arvore principal Forest Pack ausente; fallback ativado.")
  end
  forestPack:Destroy()
@@ -745,6 +749,7 @@ else
   site.completed=false
  end
  world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)
+ world:SetAttribute("ForestTreeFirstPlacementError","Forest Pack indisponivel")
  warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
 end
 end,debug.traceback)
@@ -752,6 +757,7 @@ if not forestIntegrated then
  warn("[Dreamcore] Forest Pack integracao falhou: "..tostring(forestError))
  world:SetAttribute("ForestPackIntegrationFailed",true)
  world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)
+ world:SetAttribute("ForestTreeFirstPlacementError",string.sub(tostring(forestError),1,400))
  ReplicatedStorage:SetAttribute("ForestAssetWarning","ForestPack")
  naturalForest:ClearAllChildren()
  forestCount=0; forestHeroBuilt=false
