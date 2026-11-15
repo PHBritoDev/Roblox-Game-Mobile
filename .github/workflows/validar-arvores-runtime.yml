@@ -1,0 +1,39 @@
+name: Validar colocacao real das arvores 3D
+on:
+  pull_request:
+    paths:
+      - 'tools/roblox-qa/snapshot_scene.py'
+      - 'tools/roblox-qa/test_live_tree_placement.py'
+      - '.github/workflows/validar-arvores-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: live-tree-placement-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+      ROBLOX_UNIVERSE_ID: '2660433574'
+      ROBLOX_PLACE_ID: '6947682498'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Testar guardas do modo InsertService real
+        run: python3 -m unittest discover -s tools/roblox-qa -p 'test_live_tree_placement.py'
+      - name: Executar gerador do mundo com modelos Roblox em memoria
+        run: python3 tools/roblox-qa/snapshot_scene.py --live-insertservice
+      - name: Analisar geometria real de arvore e navegacao
+        run: python3 tools/roblox-qa/scene_quality.py --folder artifacts/visual-preview/live-insertservice
+      - name: Salvar relatorio mesmo em caso de falha
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arvores-reais-insertservice-headless-nao-e-playtest
+          path: artifacts/visual-preview/live-insertservice/
+          if-no-files-found: warn

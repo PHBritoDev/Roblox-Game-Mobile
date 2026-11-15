@@ -132,10 +132,16 @@ def main():
     parser.add_argument("--without-assets", action="store_true",
                         help="Force both licensed asset loads to fail in memory and validate fallback")
     parser.add_argument("--integration-failure", action="store_true")
+    parser.add_argument("--live-insertservice", action="store_true",
+                        help="Execute authored generator against actual Roblox tree packages")
     args = parser.parse_args()
+    if args.live_insertservice and (args.without_assets or args.integration_failure):
+        parser.error("live InsertService may not be combined with fault injection")
     out = ROOT / "artifacts" / "visual-preview"
     if args.without_assets:
         out /= "fallback"
+    if args.live_insertservice:
+        out /= "live-insertservice"
     if args.integration_failure:
         out /= "integration-failure"
     out.mkdir(parents=True, exist_ok=True)
@@ -154,7 +160,7 @@ def main():
     # The game source and first applied mood are unchanged.
     executed_source = disable_headless_mood_cycle(executed_source)
     # Source and probe share one execution chunk; source file is never modified.
-    fixture = "" if args.without_assets else bundled_fixture()
+    fixture = "" if args.without_assets or args.live_insertservice else bundled_fixture()
     # A V33 publica o spawn antes de iniciar a floresta completa numa task.
     # O probe headless precisa aguardar Ready/Failed, sem aceitar cena parcial.
     await_generation = """
@@ -207,11 +213,23 @@ assert(snapshotStatus=="Ready",
     scene["meta"]["executedScriptSha256"] = hashlib.sha256(code.encode()).hexdigest()
     scene["meta"]["forcedAssetFailure"] = args.without_assets
     scene["meta"]["forcedIntegrationFailure"] = args.integration_failure
-    scene["meta"]["bakedEquivalentFixture"] = not args.without_assets
+    scene["meta"]["bakedEquivalentFixture"] = not (args.without_assets or args.live_insertservice)
+    scene["meta"]["testedLiveInsertService"] = args.live_insertservice
     scene["meta"]["taskPath"] = path
     scene["meta"]["source"] = "Luau Execution Roblox; geometria da engine, sem viewport renderizado"
     scene["meta"]["renderWarning"] = "Blender aproxima geometria/material/sol; nao reproduz shaders nem terrain Roblox"
     (out / "scene.json").write_text(json.dumps(scene, ensure_ascii=False) + "\n", encoding="utf-8")
+    if args.live_insertservice:
+        assets = scene.get("assets", {})
+        meta = scene.get("meta", {})
+        if not (assets.get("source") == "InsertService"
+                and assets.get("syntyLoad") is True
+                and assets.get("forestLoad") is True
+                and assets.get("syntyIntegration") is True
+                and assets.get("forestIntegration") is True
+                and assets.get("meshes", 0) >= 30
+                and meta.get("forestModels", 0) >= 5):
+            raise SystemExit("Live InsertService trees unavailable or not placed; inspect scene.json")
     print(f"Snapshot: {scene['meta']['partsExported']}/{scene['meta']['partsTotal']} partes; fallback={args.without_assets}; nao e screenshot real.")
 
 
