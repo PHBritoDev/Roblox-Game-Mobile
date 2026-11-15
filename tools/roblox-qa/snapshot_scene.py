@@ -148,7 +148,7 @@ assert(snapshotStatus=="Ready",
     "Headless V33 not ready: "..tostring(snapshotStatus)..", stage="..
     tostring(snapshotReplicated:GetAttribute("ForestStage")))
 """
-    code = PREAMBLE + fixture + executed_source + "\\n" + await_generation + "\\n" + probe
+    code = PREAMBLE + fixture + executed_source + "\n" + await_generation + "\n" + probe
     task = request(base + "/luau-execution-session-tasks", key, {"script": code})
     path = task.get("path", "")
     if not path.startswith(base + "/"):
