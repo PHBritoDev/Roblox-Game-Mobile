@@ -103,9 +103,9 @@ local function solidMesh(item)
  item.CanTouch=false
  item:SetAttribute("CollisionRole","Trunk")
 end
-local function trunkProxy(x,z,height,diameter,parent)
+local function trunkProxy(x,z,height,diameter,parent,groundY)
  local proxy=part("Colisao de tronco",Vector3.new(diameter,height,diameter),
-  CFrame.new(x,height*0.5,z),P.bark,Enum.Material.Wood,parent)
+  CFrame.new(x,(groundY or 0)+height*0.5,z),P.bark,Enum.Material.Wood,parent)
  proxy.Transparency=1
  proxy.CastShadow=false
  proxy:SetAttribute("CollisionRole","Trunk")
@@ -491,7 +491,7 @@ if okPack and sourcePack then
     asset.Parent=curated
    end
    if string.find(entry[1],"Tree",1,true) then
-    trunkProxy(entry[2],entry[3],desiredHeight*0.55,desiredHeight*0.065,curated)
+    trunkProxy(entry[2],entry[3],desiredHeight*0.55,desiredHeight*0.065,curated,syntyGroundY(entry[2],entry[3]))
    elseif string.find(entry[1],"Rock",1,true) then
     if asset:IsA("BasePart") then
      solidMesh(asset); asset:SetAttribute("CollisionRole","Rock")
@@ -552,7 +552,7 @@ if okPack and sourcePack then
    tree.CFrame=CFrame.new(site.x,groundY+tree.Size.Y*0.5-0.12,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
    optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
    tree.Parent=curated
-   trunkProxy(site.x,site.z,height*0.58,math.clamp(height*0.065,1.2,3.5),curated)
+   trunkProxy(site.x,site.z,height*0.58,math.clamp(height*0.065,1.2,3.5),curated,groundY)
    site.completed=true
    meshPlaced+=1
   else
