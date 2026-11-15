@@ -1,0 +1,86 @@
+name: Publicar V33 diagnostico sem assets no Place de teste
+on:
+  push:
+    branches: [main]
+    paths: ['deploy-requests/publicar-v33-diagnostico.txt']
+permissions:
+  contents: read
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: roblox-teste
+    env:
+      UNIVERSE: '2660433574'
+      PLACE: '6947682498'
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Guardas de versao e destino
+        run: |
+          set -euo pipefail
+          grep -Fxq 'AUTORIZADO V33 DIAGNOSTICO NO PLACE DE TESTE 6947682498' deploy-requests/publicar-v33-diagnostico.txt
+          grep -Fxq 'MIN_SOURCE_SHA=fbdcb5e66ec4c114ff08b571499f180b79abf768' deploy-requests/publicar-v33-diagnostico.txt
+          git merge-base --is-ancestor fbdcb5e66ec4c114ff08b571499f180b79abf768 HEAD
+          test -n "$ROBLOX_API_KEY"
+          grep -Fq 'SetAttribute("ForestVersion",33)' src/server/DreamcoreWorld.server.luau
+          grep -Fq 'local allowRemoteAssetsAtStartup=false' src/server/DreamcoreWorld.server.luau
+          python3 - <<'PY'
+          import json
+          p=json.load(open('default.project.json'))
+          assert 'ServerStorage' not in p['tree'], 'Bundled library not allowed in diagnostic publish'
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: QA estrutural e testes V33
+        run: |
+          set -euo pipefail
+          python tools/roblox-qa/audit.py
+          python tools/roblox-qa/audit_bundled_assets.py
+          python -m unittest discover -s tools/roblox-qa -p 'test_*.py'
+      - name: Compilador Rojo
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/rojo
+          key: rojo-7.6.1-${{ runner.os }}-v1
+      - name: Instalar Rojo se necessario
+        run: |
+          if ! command -v rojo >/dev/null 2>&1; then cargo install rojo --version 7.6.1 --locked; fi
+      - name: Compilar e conferir place leve
+        run: |
+          set -euo pipefail
+          rojo build default.project.json -o DreamcoreV33Diagnostico.rbxlx
+          test -s DreamcoreV33Diagnostico.rbxlx
+          if grep -Fq 'ForestLibrary' DreamcoreV33Diagnostico.rbxlx; then
+            echo 'Biblioteca reapareceu no Place: bloqueado'
+            exit 1
+          fi
+          echo 'Place V33 de diagnostico sem biblioteca embutida'
+      - name: Publicar V33 leve no Place de teste
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --retry 2 --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @DreamcoreV33Diagnostico.rbxlx \
+            --output result-v33-diagnostico.json --write-out '%{http_code}')
+          echo "Roblox HTTP: $status"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            python3 -c 'import json; d=json.load(open("result-v33-diagnostico.json")); print("Erro Roblox:",str(d.get("errors",d.get("message","sem detalhes")))[:500])'
+            exit 1
+          fi
+          python3 -c 'import json; d=json.load(open("result-v33-diagnostico.json")); v=d.get("versionNumber"); assert isinstance(v,int) and v>0, d; print("PUBLICACAO CONFIRMADA V33 DIAGNOSTICO, versao:",v)'
+      - name: Guardar comprovante
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-v33-diagnostico
+          path: result-v33-diagnostico.json
+          if-no-files-found: warn
