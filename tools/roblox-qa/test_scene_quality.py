@@ -75,6 +75,13 @@ class NavigationRegressionTests(unittest.TestCase):
         self.scene["navigation"]["routes"][0]["samples"][20]["z"] -= 8
         self.assertFalse(evaluate(self.scene)["pass"])
 
+    def test_duplicate_route_is_rejected_even_when_all_expected_names_exist(self):
+        duplicate = copy.deepcopy(self.scene["navigation"]["routes"][0])
+        self.scene["navigation"]["routes"].append(duplicate)
+        report = evaluate(self.scene)
+        self.assertFalse(report["pass"])
+        self.assertTrue(any("Duplicate navigation routes" in e for e in report["navigationFailures"]))
+
     def test_nan_measurement_is_rejected(self):
         self.scene["navigation"]["routes"][0]["samples"][1]["y"] = float("nan")
         self.assertFalse(evaluate(self.scene)["pass"])
