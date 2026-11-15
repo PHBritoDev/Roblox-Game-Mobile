@@ -937,6 +937,8 @@ local fireflies=part("Vagalumes na clareira",Vector3.new(1,1,1),
  CFrame.new(center+Vector3.new(0,7,34)),P.firefly,Enum.Material.SmoothPlastic,effects)
 fireflies.Transparency=1
 fireflies.CanCollide=false
+fireflies.CanQuery=false
+fireflies.CastShadow=false
 local emitter=Instance.new("ParticleEmitter")
 emitter.Name="Luzes suspensas"
 emitter.Texture="rbxasset://textures/particles/sparkles_main.dds"
@@ -952,9 +954,14 @@ emitter.Transparency=NumberSequence.new({
  NumberSequenceKeypoint.new(0.85,0.45),
  NumberSequenceKeypoint.new(1,1),
 })
-emitter.Rate=14
+-- Pontos de luz lentos e ascendentes: custo baixo de overdraw no Android.
+-- Emissao luminosa sem luz dinamica extra por particula.
+emitter.Rate=8
 emitter.Lifetime=NumberRange.new(4,9)
-emitter.Speed=NumberRange.new(0.3,1.5)
+emitter.Speed=NumberRange.new(0.3,1.1)
+emitter.Acceleration=Vector3.new(0,0.22,0)
+emitter.Drag=0.35
+emitter.LightEmission=0.5
 emitter.SpreadAngle=Vector2.new(180,180)
 emitter.Parent=fireflies
 
