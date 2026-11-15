@@ -8,6 +8,14 @@ on:
       - 'default.project.json'
       - 'tools/roblox-qa/**'
       - '.github/workflows/qa-roblox.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'default.project.json'
+      - 'tools/roblox-qa/**'
+      - '.github/workflows/qa-roblox.yml'
   workflow_dispatch:
 permissions:
   contents: read
