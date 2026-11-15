@@ -82,6 +82,21 @@ fixture.Parent=storage
 """ % encoded
 
 
+
+def disable_headless_mood_cycle(source):
+    """Do not keep the perpetual day/night coroutine running during geometry QA.
+
+    Runtime source remains byte-for-byte unchanged. The snapshot already captures
+    the initial light mood and validates the actual generated world.
+    """
+    marker = " local hold=145\\n local transition=48\\n while world.Parent do"
+    if source.count(marker) != 1:
+        raise ValueError("Expected exactly one perpetual lighting cycle")
+    return source.replace(
+        marker, " local hold=145\\n local transition=48\\n while false do", 1
+    )
+
+
 def source_with_integration_failure(source):
     """Fail after a successful clone, not merely when the network is unavailable."""
     for marker in ("   site.completed=true", "   if ok then forestCount+=1; site.completed=true"):
@@ -135,6 +150,9 @@ def main():
     executed_source = source_without_assets(source) if args.without_assets else source
     if args.integration_failure:
         executed_source = source_with_integration_failure(executed_source)
+    # Skip only the perpetual background lighting cycle in headless memory.
+    # The game source and first applied mood are unchanged.
+    executed_source = disable_headless_mood_cycle(executed_source)
     # Source and probe share one execution chunk; source file is never modified.
     fixture = "" if args.without_assets else bundled_fixture()
     # A V33 publica o spawn antes de iniciar a floresta completa numa task.
