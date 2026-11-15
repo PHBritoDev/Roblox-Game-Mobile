@@ -724,15 +724,20 @@ if okForest and forestPack then
  world:SetAttribute("ForestUndergrowthVariants",#undergrowthTemplates)
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
-  local okHero=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-281,s=3.65},9001)
+  local okHero,heroError=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-281,s=3.65},9001)
   if okHero then
    forestHeroBuilt=true
    forestCount+=1
   else
    placementFailures+=1
    world:SetAttribute("ForestTreePlacementFailures",placementFailures)
-   warn("[Dreamcore] Falha ao posicionar arvore principal Forest Pack; fallback ativado.")
+   warn("[Dreamcore] Falha ao posicionar arvore principal Forest Pack; fallback ativado:",tostring(heroError))
   end
+ else
+  -- A arvore heroica tambem precisa de fallback quando a variante nao existe.
+  placementFailures+=1
+  world:SetAttribute("ForestTreePlacementFailures",placementFailures)
+  warn("[Dreamcore] Arvore principal Forest Pack ausente; fallback ativado.")
  end
  forestPack:Destroy()
 else
