@@ -103,9 +103,9 @@ local function solidMesh(item)
  item.CanTouch=false
  item:SetAttribute("CollisionRole","Trunk")
 end
-local function trunkProxy(x,z,height,diameter,parent)
+local function trunkProxy(x,z,height,diameter,parent,groundY)
  local proxy=part("Colisao de tronco",Vector3.new(diameter,height,diameter),
-  CFrame.new(x,height*0.5,z),P.bark,Enum.Material.Wood,parent)
+  CFrame.new(x,(groundY or 0)+height*0.5,z),P.bark,Enum.Material.Wood,parent)
  proxy.Transparency=1
  proxy.CastShadow=false
  proxy:SetAttribute("CollisionRole","Trunk")
@@ -454,6 +454,14 @@ if okPack and sourcePack then
  for _,asset in sourcePack:GetDescendants() do
   if asset:IsA("LuaSourceContainer") then asset:Destroy() end
  end
+ local syntyTerrainRayParams=RaycastParams.new()
+ syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
+ syntyTerrainRayParams.FilterDescendantsInstances={terrain}
+ syntyTerrainRayParams.IgnoreWater=true
+ local function syntyGroundY(x,z)
+  local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),syntyTerrainRayParams)
+  return if hit then hit.Position.Y else 0
+ end
  -- Modelos escolhidos, posicionados para manter enquadramento da trilha.
  local selection={
   {"Meshes/PolygonNature_Rock_Cluster_Large_05",44,-104,8,0.2},
@@ -491,7 +499,7 @@ if okPack and sourcePack then
     asset.Parent=curated
    end
    if string.find(entry[1],"Tree",1,true) then
-    trunkProxy(entry[2],entry[3],desiredHeight*0.55,desiredHeight*0.065,curated)
+    trunkProxy(entry[2],entry[3],desiredHeight*0.55,desiredHeight*0.065,curated,syntyGroundY(entry[2],entry[3]))
    elseif string.find(entry[1],"Rock",1,true) then
     if asset:IsA("BasePart") then
      solidMesh(asset); asset:SetAttribute("CollisionRole","Rock")
@@ -503,14 +511,6 @@ if okPack and sourcePack then
  -- Vegetacao profissional curada por planos: samambaias e tufos de grama
  -- próximos ao jogador (não espalhar 200 clones pela cena).
  -- Sondagem compartilhada: plantas pequenas nao devem flutuar em colinas.
- local syntyTerrainRayParams=RaycastParams.new()
- syntyTerrainRayParams.FilterType=Enum.RaycastFilterType.Include
- syntyTerrainRayParams.FilterDescendantsInstances={terrain}
- syntyTerrainRayParams.IgnoreWater=true
- local function syntyGroundY(x,z)
-  local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),syntyTerrainRayParams)
-  return if hit then hit.Position.Y else 0
- end
  local fernNames={
   "Meshes/Fern_Plant_Fern_Leaves_01",
   "Meshes/PolygonNature_Plant_Grass_05",
