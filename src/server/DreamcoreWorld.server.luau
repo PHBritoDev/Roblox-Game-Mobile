@@ -1130,7 +1130,12 @@ task.spawn(function()
     -- Contagem de estrelas evolui gradualmente, evitando o surgimento abrupto
     -- de milhares de pontos luminosos no meio do crepusculo.
     local starBlend=math.clamp((smooth-0.22)/0.62,0,1)
-    sky.StarCount=math.floor(start.stars+(target.stars-start.stars)*starBlend+0.5)
+    -- Evitar replicar centenas de mudancas quase invisiveis de estrelas no Android.
+    -- A ultima amostra sempre aplica o valor exato do proximo perfil.
+    local stars=math.floor(start.stars+(target.stars-start.stars)*starBlend+0.5)
+    if t>=1 or math.abs(stars-sky.StarCount)>=120 then
+     sky.StarCount=stars
+    end
     Lighting.Brightness=start.brightness+(target.brightness-start.brightness)*smooth
     Lighting.Ambient=start.ambient:Lerp(target.ambient,smooth)
     Lighting.OutdoorAmbient=start.outdoor:Lerp(target.outdoor,smooth)
