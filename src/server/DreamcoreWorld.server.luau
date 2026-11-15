@@ -1088,9 +1088,19 @@ task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a c
 stage("Finalizing")
 world:SetAttribute("TerrainCollisionReadyAtBuild",floorReady)
 world:SetAttribute("RobloxPlaceVersion",game.PlaceVersion)
+-- O Terrain pode atrasar a colisao em servidores publicos. O spawn solido
+-- continua valido; nao abortar toda a floresta apos o timeout tolerado acima.
+local finalTerrainReady=true
 for _,point in {Vector3.new(0,12,24),Vector3.new(0,12,-254),Vector3.new(90,12,-89),Vector3.new(-54,12,-151)} do
  local hit=Workspace:Raycast(point,Vector3.new(0,-24,0),readiness)
- assert(hit and math.abs(hit.Position.Y)<0.45,"Apoio do Terrain indisponivel ao finalizar")
+ if not hit or math.abs(hit.Position.Y)>0.45 then
+  finalTerrainReady=false
+  break
+ end
+end
+world:SetAttribute("TerrainCollisionReadyAtBuild",finalTerrainReady)
+if not finalTerrainReady then
+ warn("[Dreamcore] Terrain sem colisao completa na finalizacao; spawn de apoio mantido")
 end
 world:SetAttribute("GenerationComplete",true)
 ReplicatedStorage:SetAttribute("ForestState","Ready")
@@ -1150,7 +1160,7 @@ if not generated then
  ReplicatedStorage:SetAttribute("ForestState","Failed")
  local failedStage=tostring(ReplicatedStorage:GetAttribute("ForestStage") or "Unknown")
  ReplicatedStorage:SetAttribute("ForestErrorCode",failedStage)
- warn("[Dreamcore] V31 falha etapa "..failedStage..": "..tostring(generationError))
+ warn("[Dreamcore] V33 falha etapa "..failedStage..": "..tostring(generationError))
  -- Apoio emergencial mesmo quando o gerador falha antes de criar o spawn.
  local safeSpawn=Workspace:FindFirstChild("Nascimento Dreamcore",true)
  if not safeSpawn then
