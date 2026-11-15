@@ -28,6 +28,18 @@ class PremiumTreeVisualTests(unittest.TestCase):
         self.assertIn('orb("Cume organico reserva"', fallback)
         self.assertIn('orb("Copa dourada ancestral reserva"', SOURCE)
 
+    def test_emergency_crowns_only_allowed_during_forced_asset_failure(self):
+        from scene_quality import evaluate
+        from test_scene_quality import flat_scene
+        source = flat_scene()
+        source["meta"].update(worldVersion=33, generationComplete=True)
+        source["assets"] = {"reserved": 1, "fulfilled": 1, "foliageBalls": 3}
+        self.assertFalse(evaluate(source)["pass"])
+        source["meta"]["forcedAssetFailure"] = True
+        result = evaluate(source)
+        self.assertTrue(result["pass"])
+        self.assertTrue(any("emergency" in message.lower() for message in result["assetWarnings"]))
+
     def test_premium_library_keeps_its_loading_paths_and_world_states(self):
         self.assertIn("return InsertService:LoadAsset(6933438443)", SOURCE)
         self.assertIn("return InsertService:LoadAsset(6432306802)", SOURCE)
