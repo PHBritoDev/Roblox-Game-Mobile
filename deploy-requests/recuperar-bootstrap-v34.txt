@@ -1,3 +1,5 @@
 AUTORIZADO RECUPERAR ENTRADA V34 NO PLACE 6947682498
 BASE_CORRIGIDA=8a129363c1bef16d592ecd36ac82014a482d86f1
 MOTIVO=Diagnosticar inicializacao infinita de servidor mantendo assets, codigo e rollback V13.
+VISUAL_V36=Substituir árvores low-poly por Forest Pack texturizado em toda a floresta, preservando bootstrap leve.
+ORIGEM_PR=20
