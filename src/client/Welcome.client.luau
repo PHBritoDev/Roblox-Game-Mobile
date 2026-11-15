@@ -83,8 +83,11 @@ if state=="Ready" then
   local generated=workspace:FindFirstChild("DreamcoreGenerated")
   local maxSample=64
   if generated then
-   for _,item in generated:GetDescendants() do
+   -- Evitar pico em um unico frame Android ao inspecionar milhares de objetos.
+   -- O diagnostico roda em task separada; ceder a cada lote preserva a UI.
+   for index,item in generated:GetDescendants() do
     if #ids>=maxSample then break end
+    if index%256==0 then task.wait() end
     if item:IsA("MeshPart") and item.MeshId~=""
       and (item.Position-origin).Magnitude<=160 and not seen[item.MeshId] then
      seen[item.MeshId]=true
