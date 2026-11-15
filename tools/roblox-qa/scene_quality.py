@@ -15,8 +15,11 @@ def navigation_failures(navigation):
         ("main", (-4, 0, 4)), ("bridge", (-3, 0, 3)),
         ("lake", (-3, 0, 3)), ("river", (-3, 0, 3))) for offset in offsets}
     routes = navigation.get("routes", [])
-    if {route["name"] for route in routes} != expected:
+    route_names = [route.get("name") for route in routes]
+    if set(route_names) != expected:
         errors.append("Missing or unexpected navigation routes")
+    if len(route_names) != len(set(route_names)):
+        errors.append("Duplicate navigation routes; one route may hide an untested corridor")
     for route in routes:
         samples = route.get("samples", [])
         if len(samples) < (140 if route["name"].startswith("main:") else 10):
