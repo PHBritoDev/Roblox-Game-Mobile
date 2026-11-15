@@ -16,7 +16,7 @@ class ForestFailureCoverage(unittest.TestCase):
 
     def test_hero_failure_is_counted(self):
         self.assertIn('if okHero then', SOURCE)
-        self.assertIn('warn("[Dreamcore] Falha ao posicionar arvore principal Forest Pack; fallback ativado.")', SOURCE)
+        self.assertIn('warn("[Dreamcore] Falha ao posicionar arvore principal Forest Pack; fallback ativado:",tostring(heroError))', SOURCE)
 
 if __name__ == "__main__":
     unittest.main()
