@@ -1,0 +1,76 @@
+name: Recuperar entrada no Roblox TESTE - rollback V32
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy-requests/recuperar-entrada-v32.txt'
+permissions:
+  contents: read
+concurrency:
+  group: roblox-deploy-teste
+  cancel-in-progress: false
+jobs:
+  recuperar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: roblox-teste
+    env:
+      UNIVERSE: '2660433574'
+      PLACE: '6947682498'
+      PINNED_V32_SHA: '5b72ed10a93eab2597d51d7410330344db5cd8f2'
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verificar solicitação de recuperação
+        run: |
+          set -euo pipefail
+          grep -Fxq 'AUTORIZADO ROLLBACK DE EMERGENCIA V32 NO PLACE DE TESTE 6947682498' deploy-requests/recuperar-entrada-v32.txt
+          grep -Fxq 'SOURCE_SHA=5b72ed10a93eab2597d51d7410330344db5cd8f2' deploy-requests/recuperar-entrada-v32.txt
+          git cat-file -e "${PINNED_V32_SHA}^{commit}"
+          test -n "$ROBLOX_API_KEY"
+      - name: Recuperar fonte exata da V32 anteriormente publicada
+        run: |
+          git checkout --detach "$PINNED_V32_SHA"
+          test "$(git rev-parse HEAD)" = "$PINNED_V32_SHA"
+          grep -Fq 'SetAttribute("ForestVersion",32)' src/server/DreamcoreWorld.server.luau
+          test ! -e assets/ForestLibrary.rbxmx
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Revalidar V32 antes de publicar
+        run: |
+          set -euo pipefail
+          python tools/roblox-qa/audit.py
+          python -m unittest discover -s tools/roblox-qa -p 'test_*.py'
+      - name: Instalar Rojo
+        run: |
+          if ! command -v rojo >/dev/null 2>&1; then cargo install rojo --version 7.6.1 --locked; fi
+      - name: Construir versão comprovada da V32
+        run: |
+          set -euo pipefail
+          rojo build default.project.json -o DreamcoreRecuperacaoV32.rbxlx
+          test -s DreamcoreRecuperacaoV32.rbxlx
+      - name: Publicar rollback no jogo de teste
+        run: |
+          set -euo pipefail
+          http=$(curl --silent --show-error --retry 2 --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE}/places/${PLACE}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary @DreamcoreRecuperacaoV32.rbxlx \
+            -o roblox-rollback-result.json -w '%{http_code}')
+          echo "Roblox HTTP: $http"
+          if [[ "$http" -lt 200 || "$http" -ge 300 ]]; then
+            python3 -c 'import json; d=json.load(open("roblox-rollback-result.json")); print("Recusado:",str(d.get("errors",d.get("message","Erro Roblox")))[:400])'
+            exit 1
+          fi
+          python3 -c 'import json; d=json.load(open("roblox-rollback-result.json")); v=d.get("versionNumber"); assert isinstance(v,int) and v>0, d; print("ROLLBACK PUBLICADO, versao Roblox:", v)'
+      - name: Comprovante e fonte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recuperacao-entrada-v32
+          path: roblox-rollback-result.json
+          if-no-files-found: warn
