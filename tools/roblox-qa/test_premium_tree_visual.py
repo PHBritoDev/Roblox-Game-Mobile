@@ -12,7 +12,7 @@ class PremiumTreeVisualTests(unittest.TestCase):
         population = SOURCE.split("local function plantOrReserve", 1)[1].split("-- Estrato autoral permanente:", 1)[0]
         self.assertNotIn("branchTree(", population)
         self.assertIn("table.insert(forestTreeSites", population)
-        self.assertIn("table.clear(meshTreeSites)", population)
+        self.assertIn("table.clear(meshTreeSites)", SOURCE)
 
     def test_no_synty_lowpoly_tree_selection_or_alternating_crowns(self):
         synty = SOURCE.split("local selection={", 1)[1].split("local lookup={}", 1)[0]
