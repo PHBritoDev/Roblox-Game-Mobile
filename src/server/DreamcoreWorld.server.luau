@@ -744,14 +744,14 @@ else
  for _,site in forestTreeSites do
   site.completed=false
  end
- world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites)
+ world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)
  warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
 end
 end,debug.traceback)
 if not forestIntegrated then
  warn("[Dreamcore] Forest Pack integracao falhou: "..tostring(forestError))
  world:SetAttribute("ForestPackIntegrationFailed",true)
- world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites)
+ world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)
  ReplicatedStorage:SetAttribute("ForestAssetWarning","ForestPack")
  naturalForest:ClearAllChildren()
  forestCount=0; forestHeroBuilt=false
