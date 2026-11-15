@@ -566,6 +566,8 @@ local okForest,forestPack=pcall(function()
 end)
 local forestCount=0
 local forestHeroBuilt=false
+-- Publicar zero antes da tentativa: falha de carga nao pode parecer sucesso.
+world:SetAttribute("ForestTreePlacementFailures",0)
 local forestIntegrated,forestError=xpcall(function()
 world:SetAttribute("ForestPackLoadSucceeded",okForest and forestPack~=nil)
 if okForest and forestPack then
@@ -726,6 +728,10 @@ if okForest and forestPack then
   if okHero then
    forestHeroBuilt=true
    forestCount+=1
+  else
+   placementFailures+=1
+   world:SetAttribute("ForestTreePlacementFailures",placementFailures)
+   warn("[Dreamcore] Falha ao posicionar arvore principal Forest Pack; fallback ativado.")
   end
  end
  forestPack:Destroy()
@@ -733,12 +739,14 @@ else
  for _,site in forestTreeSites do
   site.completed=false
  end
+ world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites)
  warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
 end
 end,debug.traceback)
 if not forestIntegrated then
  warn("[Dreamcore] Forest Pack integracao falhou: "..tostring(forestError))
  world:SetAttribute("ForestPackIntegrationFailed",true)
+ world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites)
  ReplicatedStorage:SetAttribute("ForestAssetWarning","ForestPack")
  naturalForest:ClearAllChildren()
  forestCount=0; forestHeroBuilt=false
