@@ -278,11 +278,20 @@ local function branchTree(x,z,s,family,species)
   for lobe=1,2 do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
    local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
-   leafSpray(CFrame.new(center)*CFrame.Angles(0,angle+lobe*0.45,random:NextNumber(-0.13,0.13)),
-    (if species==2 then 4 else 6)*s,(if species==2 then 8 else 10)*s,color,tree,math.abs(x-pathX(z))<65)
+   -- Emergencia somente: massas ovais organicas, nunca placas quadradas.
+   -- As arvores de cena principal devem vir do Forest Pack licenciado.
+   for layer=1,2 do
+    local drift=Vector3.new(random:NextNumber(-1.6,1.6)*s,(layer-1)*2.2*s,random:NextNumber(-1.6,1.6)*s)
+    local crown=orb("Copa organica reserva",center+drift,1,color,Enum.Material.Grass,tree)
+    local radius=(if species==2 then 4 else 5.6)*s
+    crown.Size=Vector3.new(radius*1.6,radius*(if layer==1 then 0.95 else 1.15),radius*1.35)
+    optimizeDecorativeMesh(crown,math.abs(x-pathX(z))<65 and layer==1)
+   end
   end
  end
- leafSpray(CFrame.new(top)*CFrame.Angles(0,0.6,0),5*s,9*s,P.canopyMid,tree,true)
+ local apex=orb("Cume organico reserva",top,1,P.canopyMid,Enum.Material.Grass,tree)
+ apex.Size=Vector3.new(7*s,6*s,7*s)
+ optimizeDecorativeMesh(apex,true)
  authoredTrees+=1
  if authoredTrees%8==0 then task.wait() end
  return tree
@@ -302,7 +311,9 @@ local function plantOrReserve(x,z,s,useMesh)
    x=pathX(z)+(if offset>=0 then 1 else -1)*32
   end
   table.insert(meshTreeSites,{x=x,z=z,s=s})
- elseif math.abs(x-pathX(z))<73 or rng:NextNumber()<0.56 then
+ else
+  -- Todas as arvores visiveis sao reservadas para MeshParts texturizadas.
+  -- Nada de arvores low-poly no horizonte nem nas clareiras.
   -- Arvores detalhadas enquadram o corredor, mas troncos nao invadem a trilha.
   local path=pathX(z)
   local offset=x-path
@@ -310,9 +321,6 @@ local function plantOrReserve(x,z,s,useMesh)
    x=path+(if offset>=0 then 1 else -1)*(32+rng:NextNumber(0,14))
   end
   table.insert(forestTreeSites,{x=x,z=z,s=s})
- else
-  -- Poucas arvores de silhueta simples apenas no fundo.
-  branchTree(x,z,s,props)
  end
 end
 
@@ -345,26 +353,15 @@ for i=1,68 do
  end
 end
 
--- Arvores ribeirinhas: silhueta pendente, diferente das copas redondas do bosque.
--- Colocadas manualmente fora da trilha para criar contraste e enquadrar o rio.
-local willow=group("Salgueiros da margem — copa pendente")
-local function riverWillow(x,z,scale)
- local tree=branchTree(x,z,scale,willow,1)
- -- Folhas pendentes em seis fios opacos; sem overdraw de planos transparentes.
- for j=1,6 do
-  local angle=j*PI/3
-  local cf=CFrame.new(x+math.cos(angle)*7*scale,15*scale,z+math.sin(angle)*7*scale)
-   *CFrame.Angles(0,angle,math.rad(62))
-  leafSpray(cf,1.5*scale,9*scale,P.canopy,tree,false)
- end
+-- Paisagem ribeirinha com modelos florestais premium, nada de galhos/placas low-poly.
+-- As margens mantem espaco de seguranca junto a agua e a ponte.
+local riverTrees={
+ {84,64,1.4},{97,18,1.1},{78,-25,1.35},{90,-75,1.17},
+ {83,-144,1.42},{103,-203,1.23},{148,-268,1.36},
+}
+for _,entry in riverTrees do
+ table.insert(forestTreeSites,{x=entry[1],z=entry[2],s=entry[3],river=true})
 end
-riverWillow(84,64,1.4)
-riverWillow(97,18,1.1)
-riverWillow(78,-25,1.35)
-riverWillow(90,-75,1.17)
-riverWillow(83,-144,1.42)
-riverWillow(103,-203,1.23)
-riverWillow(148,-268,1.36)
 
 -- Estrato autoral permanente: samambaias e capins agrupados nas bordas secas.
 local understory=group("Sub-bosque autoral permanente")
@@ -416,7 +413,9 @@ for i=0,25 do
  local angle=i*2*PI/26
  local x=math.cos(angle)*265
  local z=-95+math.sin(angle)*330
- if math.abs(x-riverX(z))>32 then branchTree(x,z,1.5+(i%4)*0.2,horizon,2) end
+ if math.abs(x-riverX(z))>32 then
+  table.insert(forestTreeSites,{x=x,z=z,s=1.5+(i%4)*0.2,horizon=true})
+ end
 end
 -- Limite fisico recuado da borda do Terrain, escondido pelo bosque distante.
 for _,edge in {{0,-464,640,2},{0,280,640,2},{-320,-92,2,744},{320,-92,2,744}} do
@@ -424,6 +423,13 @@ for _,edge in {{0,-464,640,2},{0,280,640,2},{-320,-92,2,744},{320,-92,2,744}} do
  barrier.Transparency=1; barrier.CastShadow=false
  barrier:SetAttribute("CollisionRole","Boundary")
 end
+
+-- O bosque inteiro usa arvores de folhas com SurfaceAppearance do Forest Pack.
+-- Synty fica apenas para pedras, grama e detalhes secundários.
+for _,site in meshTreeSites do
+ table.insert(forestTreeSites,site)
+end
+table.clear(meshTreeSites)
 
 -- Asset curado: Synty Nature Pack, publicado por @Roblox (ID 6933438443).
 -- Licenca oficial para qualquer jogo Roblox (DevForum Roblox 10/06/2021).
@@ -450,12 +456,6 @@ if okPack and sourcePack then
  end
  -- Modelos escolhidos, posicionados para manter enquadramento da trilha.
  local selection={
-  {"Meshes/Pine_Tree_Pine_Large_01",-70,36,31,0.2},
-  {"Meshes/Pine_Tree_Pine_Large_02",65,-24,30,-0.1},
-  {"Meshes/PolygonNature_Tree_Round_04",-75,-87,21,0.5},
-  {"Meshes/Pine_Tree_Pine_02",68,-137,24,0.1},
-  {"Meshes/PolygonNature_Tree_PolyPine_03",-82,-181,31,0.3},
-  {"Meshes/Pine_Tree_Pine_01",78,-221,26,-0.4},
   {"Meshes/PolygonNature_Rock_Cluster_Large_05",44,-104,8,0.2},
   {"Meshes/PolygonNature_Rock_Pile_01",-53,-221,6,0.7},
   {"Meshes/PolygonNature_Plant_Grass_05",-18,-58,3,0.1},
@@ -533,32 +533,8 @@ if okPack and sourcePack then
    leaf.Parent=curated
   end
  end
- local treeTypes={
-  "Meshes/Pine_Tree_Pine_Large_01",
-  "Meshes/PolygonNature_Tree_Round_04",
-  "Meshes/PolygonNature_Tree_PolyPine_03",
- }
+ -- Sem arvores Synty de silhueta geometricamente simples na cena principal.
  local meshPlaced=0
- for i,site in meshTreeSites do
-  if i%6==0 then task.wait() end
-  local template=lookup[treeTypes[(i-1)%#treeTypes+1]]
-  if template and template:IsA("MeshPart") then
-   local tree=template:Clone()
-   tree.Name="Synty — bosque alternado "..tostring(i)
-   local height=site.s*22
-   tree.Size=tree.Size*(height/math.max(tree.Size.Y,0.1))
-   -- Synty tambem precisa acompanhar o Terrain; antes ficava em Y=0 nas colinas.
-   local groundY=syntyGroundY(site.x,site.z)
-   tree.CFrame=CFrame.new(site.x,groundY+tree.Size.Y*0.5-0.12,site.z)*CFrame.Angles(0,(i*1.73)%PI,0)
-   optimizeDecorativeMesh(tree,math.abs(site.x-pathX(site.z))<76)
-   tree.Parent=curated
-   trunkProxy(site.x,site.z,height*0.58,math.clamp(height*0.065,1.2,3.5),curated)
-   site.completed=true
-   meshPlaced+=1
-  else
-   site.completed=false
-  end
- end
  print("[Dreamcore] Arvores com silhuetas oficiais:",meshPlaced)
  print("[Dreamcore] Synty licenciado carregado:",placed,"instancias curadas")
  sourcePack:Destroy()
@@ -771,6 +747,8 @@ end
 world:SetAttribute("ReservedTreeSites",reservedCount)
 world:SetAttribute("FulfilledTreeSites",fulfilledCount)
 world:SetAttribute("ForestMeshTrees",forestCount)
+world:SetAttribute("VisualTreePolicy","Premium Forest Pack; organic fallback only if assets fail")
+world:SetAttribute("PremiumTreeSites",#forestTreeSites)
 print("[Dreamcore] Floresta com SurfaceAppearance:",forestCount,"modelos")
 
 -- Landmark: a Arvore da Primeira Memoria, dominante na silhueta.
