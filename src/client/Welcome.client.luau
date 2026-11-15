@@ -72,12 +72,21 @@ if state=="Ready" then
   pcall(function() player:RequestStreamAroundAsync(Vector3.new(0,4,8),10) end)
   -- Diagnostico local, separado do Ready do servidor e sem prometer renderizacao.
   -- Apenas IDs de meshes visiveis neste cliente; streaming posterior fica fora da amostra.
+  -- Android: diagnosticar somente malhas proximas do spawn, sem forcar
+  -- o download de toda a floresta antes de o jogador caminhar ate ela.
   local ids,seen={},{}
   local generated=workspace:FindFirstChild("DreamcoreGenerated")
+  local character=player.Character
+  local root=character and character:FindFirstChild("HumanoidRootPart")
+  local origin=root and root.Position or Vector3.new(0,4,8)
+  local maxSample=64
   if generated then
    for _,item in generated:GetDescendants() do
-    if item:IsA("MeshPart") and item.MeshId~="" and not seen[item.MeshId] then
-     seen[item.MeshId]=true; table.insert(ids,item.MeshId)
+    if #ids>=maxSample then break end
+    if item:IsA("MeshPart") and item.MeshId~=""
+      and (item.Position-origin).Magnitude<=160 and not seen[item.MeshId] then
+     seen[item.MeshId]=true
+     table.insert(ids,item.MeshId)
     end
    end
   end
