@@ -84,8 +84,10 @@ def evaluate(scene):
             errors.append("World not ready")
         if not assets or assets.get("reserved",0)<1 or assets.get("fulfilled")!=assets.get("reserved"):
             errors.append("Reserved tree sites lost during asset integration")
-        if assets.get("foliageBalls",0)>0:
-            errors.append("Spherical placeholder foliage reintroduced")
+        if assets.get("foliageBalls",0)>0 and not (
+                meta.get("forcedAssetFailure") or meta.get("forcedIntegrationFailure")
+        ):
+            errors.append("Spherical placeholder foliage reintroduced outside isolated fault test")
         if assets.get("emptyMeshIds",0)>0:
             errors.append("Imported mesh has empty MeshId")
         if meta["partsTotal"]>6500:
@@ -95,6 +97,11 @@ def evaluate(scene):
     if meta.get("bakedEquivalentFixture") and assets.get("source")!="Bundled":
         errors.append("Bundled library was not used")
     asset_warnings = []
+    if assets.get("foliageBalls",0)>0:
+        asset_warnings.append(
+            "Organic emergency tree crowns used in asset-failure simulation; "
+            "appearance NOT validated and must not replace premium trees"
+        )
     if meta.get("forestModels", 0) < 25:
         asset_warnings.append("Forest Pack degraded/unavailable; fallback needs visual review")
     if meta.get("forestUndergrowthModels", 0) < 12:

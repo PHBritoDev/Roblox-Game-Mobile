@@ -99,7 +99,7 @@ def disable_headless_mood_cycle(source):
 
 def source_with_integration_failure(source):
     """Fail after a successful clone, not merely when the network is unavailable."""
-    for marker in ("   site.completed=true", "   if ok then forestCount+=1; site.completed=true"):
+    for marker in ("   placed+=1", "   if ok then forestCount+=1; site.completed=true"):
         if source.count(marker) != 1:
             raise ValueError("Integration fault marker missing/duplicated")
         source = source.replace(marker, '   error("QA forced integration failure")\n'+marker, 1)
