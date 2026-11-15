@@ -210,7 +210,7 @@ for i=1,90 do
 end
 
 -- Spawn discreto, integrado no caminho, sem plataforma brilhante artificial.
-local spawn=Instance.new("SpawnLocation")
+local spawn=initialSpawn
 spawn.Name="Nascimento Dreamcore"
 spawn.Size=Vector3.new(13,1,13)
 spawn.CFrame=CFrame.new(pathX(8),-0.45,8)
@@ -431,9 +431,6 @@ end
 local curated=group("Vegetacao licenciada Roblox — Synty Nature")
 local InsertService=game:GetService("InsertService")
 local bundled=game:GetService("ServerStorage"):FindFirstChild("ForestLibrary")
--- Rollout de diagnostico Android: sem biblioteca embarcada ou downloads no boot.
--- Deixar os IDs originais para reativacao somente apos teste de entrada real.
-local allowRemoteAssetsAtStartup=false
 world:SetAttribute("AssetSource",if bundled then "Bundled" else "InsertService")
 stage("LoadingSynty")
 -- Um asset externo nunca pode abortar o mundo inteiro, mesmo se carregar
@@ -443,7 +440,6 @@ local syntyIntegrated,syntyError=xpcall(function()
 local okPack
 okPack,sourcePack=pcall(function()
  if bundled and bundled:FindFirstChild("Synty") then return bundled.Synty:Clone() end
- if not allowRemoteAssetsAtStartup then return nil end
  return InsertService:LoadAsset(6933438443)
 end)
 world:SetAttribute("SyntyLoadSucceeded",okPack and sourcePack~=nil)
@@ -592,7 +588,6 @@ local naturalForest=group("Bosque premium — Forest Pack licenciado")
 stage("LoadingForestPack")
 local okForest,forestPack=pcall(function()
  if bundled and bundled:FindFirstChild("ForestPack") then return bundled.ForestPack:Clone() end
- if not allowRemoteAssetsAtStartup then return nil end
  return InsertService:LoadAsset(6432306802)
 end)
 local forestCount=0
@@ -1165,6 +1160,27 @@ task.spawn(function()
 end)
 
 end
+-- Spawn disponivel antes de qualquer clonagem de biblioteca 3D ou Terrain.
+-- O matchmaking nao deve depender da conclusao do gerador premium.
+local initialSpawn=Workspace:FindFirstChild("Nascimento Dreamcore")
+if not initialSpawn then
+ initialSpawn=Instance.new("SpawnLocation")
+ initialSpawn.Name="Nascimento Dreamcore"
+ initialSpawn.Size=Vector3.new(13,1,13)
+ initialSpawn.CFrame=CFrame.new(0,-0.45,8)
+ initialSpawn.Anchored=true
+ initialSpawn.Neutral=true
+ initialSpawn.Material=Enum.Material.Grass
+ initialSpawn.Color=Color3.fromRGB(73,116,74)
+ initialSpawn.Transparency=1
+ initialSpawn.CanTouch=false
+ initialSpawn.CanCollide=true
+ initialSpawn.Duration=0
+ initialSpawn.Parent=Workspace
+end
+-- Executar a criacao do mundo fora da inicializacao imediata do script.
+-- Mantem todos os assets Codex/efeitos; caso falhe o spawn inicial permanece.
+task.spawn(function()
 local generated, generationError=xpcall(generateWorld,debug.traceback)
 if not generated then
  ReplicatedStorage:SetAttribute("ForestState","Failed")
@@ -1189,3 +1205,4 @@ if not generated then
  warn("[Dreamcore] Falha de geracao; apoio de emergencia ativo")
  error(generationError)
 end
+end)
