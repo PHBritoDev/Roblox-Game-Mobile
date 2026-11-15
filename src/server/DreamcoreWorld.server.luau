@@ -17,6 +17,7 @@ local PI = math.pi
 
 local world
 local pathX
+local initialSpawn
 local function generateWorld()
 local old = Workspace:FindFirstChild("DreamcoreGenerated")
 if old then old:Destroy() end
@@ -1162,7 +1163,7 @@ end)
 end
 -- Spawn disponivel antes de qualquer clonagem de biblioteca 3D ou Terrain.
 -- O matchmaking nao deve depender da conclusao do gerador premium.
-local initialSpawn=Workspace:FindFirstChild("Nascimento Dreamcore")
+initialSpawn=Workspace:FindFirstChild("Nascimento Dreamcore")
 if not initialSpawn then
  initialSpawn=Instance.new("SpawnLocation")
  initialSpawn.Name="Nascimento Dreamcore"
