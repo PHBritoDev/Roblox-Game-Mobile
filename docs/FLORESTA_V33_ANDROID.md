@@ -29,3 +29,7 @@ O build é validado como arquivo, incluindo a biblioteca sem scripts. Open Cloud
 Previews Blender em três ângulos são gerados tanto com assets quanto sem assets. As formas autorais são representadas; PBR, folhas alfa, água e iluminação Roblox não são fiéis. Captura real, orçamento de triângulos/overdraw, alinhamento percebido e FPS Android continuam pendentes na issue #3. Sem aprovação estética premium.
 
 V33 não foi publicada automaticamente. Autorizações antigas V29–V32 não foram reutilizadas. Merge não altera o jogo Android; publicação exige o fluxo manual autorizado e teste de entrada posterior. Resultados e links dos checks desta rodada ficam no PR correspondente.
+
+## Continuação da integração
+
+As correções concorrentes da main (metadados de exportação e rotas duplicadas) foram integradas. Mantida exportação completa da V33. Cycles abortava durante construção de BVH; Workbench foi preservado como proxy exclusivamente geométrico. O teste seguinte revelou libEGL ausente no runner (exit 134): adicionados Mesa/EGL, Xvfb e renderização por software, sem requerer GPU paga. Workbench não avalia os perfis de iluminação Roblox.
