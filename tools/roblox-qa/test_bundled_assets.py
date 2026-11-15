@@ -30,6 +30,17 @@ class BundledAssetTests(unittest.TestCase):
                         source.index('task.spawn(function()\nlocal generated, generationError'))
         self.assertIn('SetAttribute("ForestVersion",33)',source)
 
+    def test_android_loading_reports_each_server_stage_without_removing_assets(self):
+        server=(ROOT/'src/server/DreamcoreWorld.server.luau').read_text()
+        client=(ROOT/'src/client/Welcome.client.luau').read_text()
+        import re
+        stages=set(re.findall(r'stage\\("([^"]+)"\\)',server))
+        hints=set(re.findall(r'^ ([A-Za-z]+)="',client,re.M))
+        self.assertFalse(stages-hints, f"Stages missing from Android UI: {stages-hints}")
+        self.assertIn('hint.Text=if state=="Generating" then progressHint()',client)
+        self.assertIn('local spawn=initialSpawn',server)
+        self.assertIn('LoadingForestPack',stages)
+
     def test_script_or_empty_mesh_is_rejected(self):
         for mutation in ['script','empty_mesh']:
             root=ET.parse(ROOT/'assets/ForestLibrary.rbxmx').getroot()
