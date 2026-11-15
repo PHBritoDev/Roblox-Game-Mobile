@@ -14,14 +14,20 @@ class BundledAssetTests(unittest.TestCase):
         result=describe(ROOT/'assets/ForestLibrary.rbxmx')
         self.assertEqual(sum(len(p['templates']) for p in result['packages'].values()),24)
 
-    def test_android_diagnostic_place_has_no_startup_mesh_bundle_or_remote_fetch(self):
-        """Published diagnostic V33 must test join without preload-heavy asset paths."""
+    def test_v33_preserves_all_assets_and_spawns_before_generation(self):
+        """No feature loss: the full licensed library stays in the published Place."""
         import json
         project=json.loads((ROOT/'default.project.json').read_text())
-        self.assertNotIn('ServerStorage',project['tree'])
+        self.assertEqual(project['tree']['ServerStorage']['ForestLibrary']['$path'],
+                         'assets/ForestLibrary.rbxmx')
         source=(ROOT/'src/server/DreamcoreWorld.server.luau').read_text()
-        self.assertIn('local allowRemoteAssetsAtStartup=false',source)
-        self.assertEqual(source.count('if not allowRemoteAssetsAtStartup then return nil end'),2)
+        self.assertNotIn('allowRemoteAssetsAtStartup=false',source)
+        self.assertIn('InsertService:LoadAsset(6933438443)',source)
+        self.assertIn('InsertService:LoadAsset(6432306802)',source)
+        self.assertIn('local initialSpawn',source)
+        self.assertIn('local spawn=initialSpawn',source)
+        self.assertLess(source.index('initialSpawn=Workspace:FindFirstChild'),
+                        source.index('task.spawn(function()\nlocal generated, generationError'))
         self.assertIn('SetAttribute("ForestVersion",33)',source)
 
     def test_script_or_empty_mesh_is_rejected(self):
