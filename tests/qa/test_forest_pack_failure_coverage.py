@@ -8,7 +8,7 @@ class ForestFailureCoverage(unittest.TestCase):
     def test_counter_initialized_before_integration(self):
         self.assertLess(SOURCE.index('world:SetAttribute("ForestTreePlacementFailures",0)'), SOURCE.index('local forestIntegrated,forestError='))
     def test_missing_pack_reports_all_fallback_sites(self):
-        self.assertIn('world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites)', SOURCE)
+        self.assertEqual(SOURCE.count('world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)'), 2)
     def test_missing_hero_variant_is_counted(self):
         self.assertIn('warn("[Dreamcore] Arvore principal Forest Pack ausente; fallback ativado.")', SOURCE)
         self.assertIn('local okHero,heroError=pcall(plantForest', SOURCE)
