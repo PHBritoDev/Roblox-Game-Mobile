@@ -96,7 +96,7 @@ local function makeBird(index)
  local left=part("Asa esquerda",Vector3.new(1.0,0.085,0.34),dark,Enum.PartType.Block,bird)
  local right=part("Asa direita",Vector3.new(1.0,0.085,0.34),dark,Enum.PartType.Block,bird)
  local tail=part("Cauda",Vector3.new(0.28,0.06,0.42),dark,Enum.PartType.Block,bird)
- bird.Parent=folder
+ bird.Parent=nil -- esconder ate haver terreno pronto
  return {model=bird,body=body,left=left,right=right,tail=tail,phase=index*2.1,angle=index*2.09,radius=58+index*12}
 end
 
