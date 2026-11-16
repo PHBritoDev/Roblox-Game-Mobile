@@ -21,7 +21,7 @@ Ceu escuro violeta com estrelas numerosas e faixa de aurora magenta/roxa acima d
 ## Iteracao 1 (PR vinculada)
 - Terreno expandido de **680×792** para **760×880 studs** (~24,1% de area), mantendo celulas de 4 studs e solo da regiao existente.
 - Ampliar o bosque exterior com mais reservas Forest Pack e grupos pequenos de grama/samambaias sem colisao, nao deslocar trilhas.
-- Duas novas atmosferas: Dawn Haze e Amber Sunset; preservar Twilight e Starry Dream Night. Corrigir virada do relogio noturno para amanhecer.
+- Iluminacao do amanhecer e virada de horario sao responsabilidade da PR #34 do outro agente; nao duplicar seu trabalho nesta PR.
 - Nao adicionar fauna/audio/aurora neste mesmo lote: precisam de teste estetico e orcamento separado.
 
 ## Criterios de aceite
