@@ -1080,6 +1080,7 @@ local moods={
   tint=Color3.fromRGB(255,248,235), exposure=-0.05,
    sunTint=Color3.fromRGB(59,39,17), shadeTint=Color3.fromRGB(9,23,28),
   cloud=Color3.fromRGB(245,214,192), stars=0, rays=0.065, glow=0.72, fireflyRate=2,
+  density=0.13, haze=0.45, cloudCover=0.31, bloom=0.14,
  },
  {
   name="Cold Twilight", clock=19.0, brightness=1.55,
@@ -1088,6 +1089,7 @@ local moods={
   tint=Color3.fromRGB(208,211,255), exposure=-0.09,
    sunTint=Color3.fromRGB(24,14,31), shadeTint=Color3.fromRGB(8,16,30),
   cloud=Color3.fromRGB(175,166,219), stars=1400, rays=0.05, glow=1.15, fireflyRate=6,
+  density=0.17, haze=0.62, cloudCover=0.24, bloom=0.16,
  },
  {
   name="Starry Dream Night", clock=23.6, brightness=1.1,
@@ -1096,6 +1098,7 @@ local moods={
   tint=Color3.fromRGB(185,201,255), exposure=-0.15,
    sunTint=Color3.fromRGB(12,20,36), shadeTint=Color3.fromRGB(5,10,23),
   cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0, glow=1.75, fireflyRate=8,
+  density=0.11, haze=0.30, cloudCover=0.14, bloom=0.12,
  },
  {
   -- Manha dourada/azul inspirada nas referencias enviadas, sem copiar assets.
@@ -1105,6 +1108,7 @@ local moods={
   tint=Color3.fromRGB(255,241,220), exposure=-0.08,
   sunTint=Color3.fromRGB(52,32,16), shadeTint=Color3.fromRGB(7,25,35),
   cloud=Color3.fromRGB(255,211,185), stars=0, rays=0.055, glow=0.65, fireflyRate=1,
+  density=0.19, haze=0.75, cloudCover=0.23, bloom=0.12,
  }
 }
 
@@ -1167,6 +1171,10 @@ local function applyMood(mood)
  Lighting.FogEnd=1050
  atmosphere.Color=mood.atm
  atmosphere.Decay=mood.decay
+ atmosphere.Density=mood.density
+ atmosphere.Haze=mood.haze
+ clouds.Cover=mood.cloudCover
+ bloom.Intensity=mood.bloom
  grade.TintColor=mood.tint
  rays.Intensity=mood.rays
  ancientGlow.Brightness=mood.glow
@@ -1244,6 +1252,10 @@ task.spawn(function()
     Lighting.FogColor=start.atm:Lerp(target.atm,smooth)
     atmosphere.Color=start.atm:Lerp(target.atm,smooth)
     atmosphere.Decay=start.decay:Lerp(target.decay,smooth)
+    atmosphere.Density=start.density+(target.density-start.density)*smooth
+    atmosphere.Haze=start.haze+(target.haze-start.haze)*smooth
+    clouds.Cover=start.cloudCover+(target.cloudCover-start.cloudCover)*smooth
+    bloom.Intensity=start.bloom+(target.bloom-start.bloom)*smooth
     grade.TintColor=start.tint:Lerp(target.tint,smooth)
     clouds.Color=start.cloud:Lerp(target.cloud,smooth)
     rays.Intensity=start.rays+(target.rays-start.rays)*smooth
