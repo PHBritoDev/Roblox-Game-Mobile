@@ -5,6 +5,7 @@ local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local Workspace=game:GetService("Workspace")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local Lighting=game:GetService("Lighting")
 
 local player=Players.LocalPlayer
 local old=Workspace:FindFirstChild("DreamcoreLocalWildlife")
@@ -17,6 +18,26 @@ local UPDATE_INTERVAL=0.05 -- 20 Hz, evitando custo por frame no Android
 local MAX_RABBITS=3
 local MAX_BIRDS=3
 local MAX_VIEW_DISTANCE=185
+-- Habitats devem permanecer longe de passagens, lago, rio e limites da floresta.
+-- Predicados replicam somente a geometria do corredor; nenhuma instancia de terreno e gerada aqui.
+local function pathX(z)
+ return math.sin((z+5)*0.027)*10+math.sin(z*0.059)*2.5
+end
+local function riverX(z)
+ return 125+math.sin((115-z)/23*0.32)*24
+end
+local function safeRabbitHabitat(x,y,z)
+ if x< -345 or x>345 or z< -485 or z>307 or y< -0.35 or y>3 then return false end
+ if z>=-261 and z<=39 and math.abs(x-pathX(z))<18 then return false end
+ if x>=pathX(-89)-7 and x<=184 and math.abs(z+89)<18 then return false end
+ if x>=-74 and x<=pathX(-151)+8 and math.abs(z+151)<16 then return false end
+ if math.abs(x-riverX(z))<34 then return false end
+ if (x+84)^2+(z+151)^2<31*31 then return false end
+ return true
+end
+local function birdsActive(hour)
+ return hour>=5.9 and hour<19.15
+end
 local clock=0
 local elapsed=0
 local ready=false
@@ -61,7 +82,7 @@ local function makeRabbit(index)
  feature("Pata direita",Vector3.new(0.38,0.32,0.57),fur,Vector3.new(0.40,-0.34,0.40),Enum.PartType.Ball)
  feature("Olho esquerdo",Vector3.new(0.12,0.15,0.12),dark,Vector3.new(-0.35,0.53,-1.02),Enum.PartType.Ball)
  feature("Olho direito",Vector3.new(0.12,0.15,0.12),dark,Vector3.new(0.35,0.53,-1.02),Enum.PartType.Ball)
- rabbit.Parent=folder
+ rabbit.Parent=nil -- esconder ate haver terreno pronto
  return {model=rabbit,phase=index*1.74,angle=index*2.399,dist=57+index*16,groundY=nil}
 end
 
@@ -75,7 +96,7 @@ local function makeBird(index)
  local left=part("Asa esquerda",Vector3.new(1.0,0.085,0.34),dark,Enum.PartType.Block,bird)
  local right=part("Asa direita",Vector3.new(1.0,0.085,0.34),dark,Enum.PartType.Block,bird)
  local tail=part("Cauda",Vector3.new(0.28,0.06,0.42),dark,Enum.PartType.Block,bird)
- bird.Parent=folder
+ bird.Parent=nil -- esconder ate haver terreno pronto
  return {model=bird,body=body,left=left,right=right,tail=tail,phase=index*2.1,angle=index*2.09,radius=58+index*12}
 end
 
@@ -129,7 +150,8 @@ local function step(dt)
   if updateGround or not r.groundY then
    r.groundY=groundAt(x,z)
   end
-  if not r.groundY or (Vector3.new(x,r.groundY,z)-focus).Magnitude>MAX_VIEW_DISTANCE then
+  if not r.groundY or not safeRabbitHabitat(x,r.groundY,z)
+   or (Vector3.new(x,r.groundY,z)-focus).Magnitude>MAX_VIEW_DISTANCE then
    hideGroup(r)
   else
    showGroup(r)
@@ -137,6 +159,11 @@ local function step(dt)
    local facing=theta+math.pi*0.5
    r.model:PivotTo(CFrame.new(x,r.groundY+0.52+hop,z)*CFrame.Angles(0,facing,0))
   end
+ end
+ -- Durante a noite os passaros descansam; a aurora e os grilos ganham destaque.
+ if not birdsActive(Lighting.ClockTime) then
+  for _,b in birds do hideGroup(b) end
+  return
  end
  for _,b in birds do
   local theta=b.angle+clock*(0.09+b.phase*0.004)
