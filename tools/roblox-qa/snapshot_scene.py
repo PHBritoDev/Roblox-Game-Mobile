@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import time
 import urllib.error
@@ -113,16 +114,32 @@ def request(path, key, payload=None):
         method="POST" if data is not None else "GET",
         headers={"x-api-key": key, "Content-Type": "application/json"},
     )
-    # Retrying POST could execute the generator twice; only GET is retried.
-    attempts = 3 if data is None else 1
+    # Retry POST *only* when Roblox explicitly returns HTTP 429 (rejected
+    # before creating a task). Do not retry other POST errors or timeouts:
+    # those may have executed the generator, so a repeat is unsafe.
+    attempts = 3 if data is None else 4
     for attempt in range(attempts):
         try:
             with urllib.request.urlopen(req, timeout=50) as reply:
                 return json.load(reply)
         except urllib.error.HTTPError as exc:
             message = exc.read().decode("utf-8", errors="replace").replace(key, "[REDACTED]")
-            if exc.code in (429, 502, 503, 504) and attempt+1 < attempts:
-                time.sleep(2**attempt)
+            retry = attempt + 1 < attempts and (
+                (data is None and exc.code in (429, 502, 503, 504))
+                or (data is not None and exc.code == 429)
+            )
+            if retry:
+                # Respect Retry-After; fall back to exponential cooldown.
+                raw_wait = exc.headers.get("Retry-After", "") if exc.headers else ""
+                try:
+                    requested = float(raw_wait)
+                    if not math.isfinite(requested) or requested <= 0:
+                        raise ValueError("invalid Retry-After")
+                except (ValueError, TypeError):
+                    requested = (10 * 2**attempt) if data is not None else (2**attempt)
+                wait = min(90.0, max(2.0, requested))
+                print(f"Roblox HTTP {exc.code}: aguardando {wait:g}s antes da tentativa {attempt + 2}/{attempts}.")
+                time.sleep(wait)
                 continue
             raise SystemExit(f"Erro API Roblox HTTP {exc.code}: {message[:450]}") from None
 
