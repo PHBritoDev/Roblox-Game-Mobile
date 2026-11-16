@@ -32,5 +32,19 @@ class MalformedNavigationTests(unittest.TestCase):
                 self.assertTrue(any("Malformed spawn" in error for error in failures))
 
 
+    def test_invalid_numeric_fields(self):
+        for value in ("bad", None, [], float("nan"), float("inf"), True):
+            with self.subTest(field="footing.y", value=value):
+                result = module.navigation_failures({"routes": [], "spawn": {"present": True, "anchored": True, "collidable": True, "footing": {"supported": True, "y": value}}, "proxyCount": 1})
+                self.assertTrue(any("Spawn missing" in error for error in result))
+            with self.subTest(field="proxyCount", value=value):
+                result = module.navigation_failures({"routes": [], "spawn": {}, "proxyCount": value})
+                self.assertIn("No physical tree/rock proxies measured", result)
+
+    def test_valid_numeric_fields_do_not_trigger_numeric_errors(self):
+        result = module.navigation_failures({"routes": [], "spawn": {"present": True, "anchored": True, "collidable": True, "footing": {"supported": True, "y": 0.0}}, "proxyCount": 3})
+        self.assertNotIn("No physical tree/rock proxies measured", result)
+        self.assertFalse(any("Spawn missing" in error for error in result))
+
 if __name__ == "__main__":
     unittest.main()
