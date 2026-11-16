@@ -35,7 +35,8 @@ class WildlifeHabitatTests(unittest.TestCase):
         for fragment in ('local COUNT=4','local UPDATE_INTERVAL=0.09',
                          'local MAX_DISTANCE=105','local function daylight(hour)',
                          'ReplicatedStorage:GetAttribute("ForestState")~="Ready"',
-                         'model.Parent=nil','model.Parent=folder','ray.IgnoreWater=true',
+                         'model.Parent=nil','model.Parent=folder','ray.IgnoreWater=true','wing.Shape=Enum.PartType.Ball',
+                         'math.abs(z+89)<18','math.abs(z+151)<16',
                          'local function validGround(x,y,z)','if refresh or b.ground==nil then',
                          'conn:Disconnect()'):
             with self.subTest(fragment=fragment):
