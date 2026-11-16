@@ -82,7 +82,7 @@ local function makeRabbit(index)
  feature("Pata direita",Vector3.new(0.38,0.32,0.57),fur,Vector3.new(0.40,-0.34,0.40),Enum.PartType.Ball)
  feature("Olho esquerdo",Vector3.new(0.12,0.15,0.12),dark,Vector3.new(-0.35,0.53,-1.02),Enum.PartType.Ball)
  feature("Olho direito",Vector3.new(0.12,0.15,0.12),dark,Vector3.new(0.35,0.53,-1.02),Enum.PartType.Ball)
- rabbit.Parent=folder
+ rabbit.Parent=nil -- esconder ate haver terreno pronto
  return {model=rabbit,phase=index*1.74,angle=index*2.399,dist=57+index*16,groundY=nil}
 end
 
