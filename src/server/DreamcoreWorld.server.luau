@@ -597,6 +597,7 @@ end)
 local forestCount=0
 local forestHeroBuilt=false
 -- Publicar zero antes da tentativa: falha de carga nao pode parecer sucesso.
+world:SetAttribute("ForestMeadowPremiumTufts",0)
 world:SetAttribute("ForestTreePlacementFailures",0)
 world:SetAttribute("ForestTreeFirstPlacementError","")
 local forestIntegrated,forestError=xpcall(function()
@@ -769,6 +770,53 @@ if okForest and forestPack then
     end
   end
  end
+ -- Expansion outer meadow: up to 42 curated fern patches in new woodland.
+ -- Culling via StreamingEnabled; avoid spawn, paths, water, and expensive shadows.
+ local meadowTufts=0
+ for i=1,42 do
+  if i%6==0 then task.wait() end
+  local angle=i*2.39996
+  local radius=145+(i%5)*32
+  local x=math.cos(angle)*radius
+  local z=-94+math.sin(angle)*radius*1.15
+  if x>-332 and x<332 and z>-414 and z<240
+   and not reservedSite(x,z,12) and math.abs(x-riverX(z))>35 then
+   local template=if #undergrowthTemplates>0 then undergrowthTemplates[((i*5-1)%#undergrowthTemplates)+1] else nil
+   if template then
+    local foliage=nil
+    local okMeadow,meadowError=pcall(function()
+     foliage=template:Clone()
+     foliage.Name="Clareira texturizada exterior — "..i
+     for _,item in foliage:GetDescendants() do
+      if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter")
+       or item:IsA("Trail") or item:IsA("Beam") or item:IsA("Fire")
+       or item:IsA("Smoke") or item:IsA("Sparkles") or item:IsA("Light") then
+       item:Destroy()
+      elseif item:IsA("BasePart") then
+       optimizeDecorativeMesh(item,false)
+      end
+     end
+     local extents=foliage:GetExtentsSize()
+     local goal=1.55+(i%4)*0.34
+     foliage:ScaleTo(foliage:GetScale()*goal/math.max(extents.Y,0.1))
+     local bounds,size=foliage:GetBoundingBox()
+     local y=terrainHeightAt(x,z)
+     local target=CFrame.new(x,y+size.Y*0.5-0.08,z)*CFrame.Angles(0,i*1.17,0)
+     foliage:PivotTo(target*bounds:Inverse()*foliage:GetPivot())
+     foliage.Parent=naturalForest
+    end)
+    if okMeadow then
+     meadowTufts+=1
+     undergrowthPlaced+=1
+    else
+     undergrowthFailures+=1
+     if not firstUndergrowthError then firstUndergrowthError=tostring(meadowError) end
+     if foliage then foliage:Destroy() end
+    end
+   end
+  end
+ end
+ world:SetAttribute("ForestMeadowPremiumTufts",meadowTufts)
  world:SetAttribute("ForestUndergrowthPlacementFailures",undergrowthFailures)
   world:SetAttribute("ForestUndergrowthFirstPlacementError",string.sub(firstUndergrowthError or "",1,400))
   if undergrowthFailures>0 then
