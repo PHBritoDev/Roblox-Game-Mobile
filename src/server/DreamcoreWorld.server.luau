@@ -698,6 +698,8 @@ if okForest and forestPack then
   table.remove(undergrowthTemplates)
  end
  local undergrowthPlaced=0
+ local undergrowthFailures=0
+ local firstUndergrowthError=nil
  for i=1,84 do
   local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
   if template then
@@ -707,7 +709,7 @@ if okForest and forestPack then
    local x=pathX(z)+side*(13+(i%7)*3.7)
    -- Isolar clonagem e saneamento de cada planta: assets externos podem falhar.
    local foliage=nil
-   local okFoliage=pcall(function()
+   local okFoliage,foliageError=pcall(function()
     foliage=template:Clone()
     foliage.Name="Estrato baixo texturizado — "..i
     for _,item in foliage:GetDescendants() do
@@ -728,10 +730,21 @@ if okForest and forestPack then
     foliage:PivotTo(desired*boundsCF:Inverse()*foliage:GetPivot())
     foliage.Parent=naturalForest
    end)
-   if okFoliage then undergrowthPlaced+=1 elseif foliage then foliage:Destroy() end
+   if okFoliage then
+     undergrowthPlaced+=1
+    else
+     undergrowthFailures+=1
+     if not firstUndergrowthError then firstUndergrowthError=tostring(foliageError) end
+     if foliage then foliage:Destroy() end
+    end
   end
  end
- world:SetAttribute("ForestUndergrowthModels",undergrowthPlaced)
+ world:SetAttribute("ForestUndergrowthPlacementFailures",undergrowthFailures)
+  world:SetAttribute("ForestUndergrowthFirstPlacementError",string.sub(firstUndergrowthError or "",1,400))
+  if undergrowthFailures>0 then
+   warn("[Dreamcore] Falhas no plantio do estrato baixo:",undergrowthFailures,"primeira causa:",firstUndergrowthError)
+  end
+  world:SetAttribute("ForestUndergrowthModels",undergrowthPlaced)
  world:SetAttribute("ForestUndergrowthVariants",#undergrowthTemplates)
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
