@@ -105,6 +105,25 @@ def evaluate(scene):
             errors.append("Imported mesh has empty MeshId")
         if meta["partsTotal"]>6500:
             errors.append("Mobile part budget exceeded")
+    # A partir da V34, nao confundir telemetria ausente com ausencia de falhas.
+    # O snapshot de fallback deve carregar um motivo explicito de degradacao.
+    if meta.get("worldVersion", 0) >= 34:
+        status = assets.get("undergrowthStatus")
+        failures = assets.get("undergrowthFailures")
+        first_error = assets.get("undergrowthFirstError")
+        valid = {"Placed", "Partial", "NoTemplates", "Unavailable", "IntegrationFailed"}
+        if (status not in valid or not isinstance(failures, int)
+                or isinstance(failures, bool) or failures < 0
+                or not isinstance(first_error, str)):
+            errors.append("Missing or malformed undergrowth rollback telemetry")
+        elif status != "Placed" and (failures == 0 or not first_error):
+            errors.append("Undergrowth degradation missing explicit cause and failure count")
+        elif status == "Placed" and failures != 0:
+            errors.append("Successful undergrowth placement reports failures")
+        elif meta.get("forcedAssetFailure") and status != "Unavailable":
+            errors.append("Forced asset failure failed to report undergrowth unavailability")
+        elif meta.get("forcedIntegrationFailure") and status != "IntegrationFailed":
+            errors.append("Forced integration failure failed to report undergrowth rollback")
     if meta.get("forcedIntegrationFailure") and (assets.get("syntyIntegration") is not False or assets.get("forestIntegration") is not False):
         errors.append("Integration failure injection did not exercise both rollback paths")
     if meta.get("bakedEquivalentFixture") and assets.get("source")!="Bundled":

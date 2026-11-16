@@ -599,6 +599,12 @@ local forestHeroBuilt=false
 -- Publicar zero antes da tentativa: falha de carga nao pode parecer sucesso.
 world:SetAttribute("ForestTreePlacementFailures",0)
 world:SetAttribute("ForestTreeFirstPlacementError","")
+-- Publicar diagnosticos do sub-bosque antes do LoadAsset e mesmo em fallback.
+world:SetAttribute("ForestUndergrowthModels",0)
+world:SetAttribute("ForestUndergrowthVariants",0)
+world:SetAttribute("ForestUndergrowthPlacementFailures",0)
+world:SetAttribute("ForestUndergrowthFirstPlacementError","")
+world:SetAttribute("ForestUndergrowthLoadStatus","Pending")
 local forestIntegrated,forestError=xpcall(function()
 world:SetAttribute("ForestPackLoadSucceeded",okForest and forestPack~=nil)
 if okForest and forestPack then
@@ -730,6 +736,10 @@ if okForest and forestPack then
  local undergrowthPlaced=0
  local undergrowthFailures=0
  local firstUndergrowthError=nil
+ if #undergrowthTemplates==0 then
+  undergrowthFailures=84 -- 84 locais sem especie, nao confundir com zero erros.
+  firstUndergrowthError="Nenhuma especie de estrato baixo encontrada no Forest Pack"
+ end
  for i=1,84 do
   local template=if #undergrowthTemplates>0 then undergrowthTemplates[(i-1)%#undergrowthTemplates+1] else nil
   if template then
@@ -776,6 +786,7 @@ if okForest and forestPack then
   end
   world:SetAttribute("ForestUndergrowthModels",undergrowthPlaced)
  world:SetAttribute("ForestUndergrowthVariants",#undergrowthTemplates)
+ world:SetAttribute("ForestUndergrowthLoadStatus",if #undergrowthTemplates==0 then "NoTemplates" else if undergrowthFailures>0 then "Partial" else "Placed")
  local heroTemplate=candidates["BeechwoodTreeLarge_Var01"]
  if heroTemplate then
   local okHero,heroError=pcall(plantForest,heroTemplate,{x=pathX(-245),z=-281,s=3.65},9001)
@@ -802,6 +813,9 @@ else
  end
  world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)
  world:SetAttribute("ForestTreeFirstPlacementError","Forest Pack indisponivel")
+ world:SetAttribute("ForestUndergrowthPlacementFailures",84)
+ world:SetAttribute("ForestUndergrowthFirstPlacementError","Forest Pack indisponivel")
+ world:SetAttribute("ForestUndergrowthLoadStatus","Unavailable")
  warn("[Dreamcore] Forest Pack indisponivel; fallback do bosque ativado.")
 end
 end,debug.traceback)
@@ -810,6 +824,10 @@ if not forestIntegrated then
  world:SetAttribute("ForestPackIntegrationFailed",true)
  world:SetAttribute("ForestTreePlacementFailures",#forestTreeSites+1)
  world:SetAttribute("ForestTreeFirstPlacementError",string.sub(tostring(forestError),1,400))
+ world:SetAttribute("ForestUndergrowthModels",0)
+ world:SetAttribute("ForestUndergrowthPlacementFailures",84)
+ world:SetAttribute("ForestUndergrowthFirstPlacementError",string.sub(tostring(forestError),1,400))
+ world:SetAttribute("ForestUndergrowthLoadStatus","IntegrationFailed")
  ReplicatedStorage:SetAttribute("ForestAssetWarning","ForestPack")
  naturalForest:ClearAllChildren()
  forestCount=0; forestHeroBuilt=false
