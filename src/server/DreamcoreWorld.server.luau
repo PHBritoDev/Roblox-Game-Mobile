@@ -5,7 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 ReplicatedStorage:SetAttribute("ForestState","Generating")
-ReplicatedStorage:SetAttribute("ForestVersion",33)
+ReplicatedStorage:SetAttribute("ForestVersion",34)
 ReplicatedStorage:SetAttribute("ForestStage","Starting")
 ReplicatedStorage:SetAttribute("ForestErrorCode","")
 local function stage(value)
@@ -157,15 +157,16 @@ local function reservedSite(x,z,margin)
   or ((x+84)^2+(z+151)^2)<(22+margin)^2
 end
 stage("BuildingGround")
-terrain:FillBlock(CFrame.new(0,-28,-92),Vector3.new(680,24,792),Enum.Material.Ground)
+-- Ampliacao incremental ~24% de area, alinhada a voxels de 4 studs.
+terrain:FillBlock(CFrame.new(0,-28,-88),Vector3.new(760,24,880),Enum.Material.Ground)
 local materials,occupancies={},{}
-for ix=1,170 do
+for ix=1,190 do
  materials[ix]={}; occupancies[ix]={}
  for iy=1,4 do materials[ix][iy]={}; occupancies[ix][iy]={} end
  -- Distribui trabalho volumetrico por frames, evitando timeout do script no servidor.
  if ix%4==0 then task.wait() end
- for iz=1,198 do
-  local x,z=-340+(ix-0.5)*4,-488+(iz-0.5)*4
+ for iz=1,220 do
+  local x,z=-380+(ix-0.5)*4,-528+(iz-0.5)*4
   local waterDistance=math.min(math.abs(x-riverX(z))-14,math.sqrt((x+84)^2+(z+151)^2)-11)
   local bed=-2-9*(1-math.clamp(waterDistance/9,0,1))
   local noise=math.noise(x/39,z/39,6.7)+0.32*math.noise(x/13,z/13,2)
@@ -184,7 +185,8 @@ for ix=1,170 do
  end
 end
 stage("WritingTerrain")
-terrain:WriteVoxels(Region3.new(Vector3.new(-340,-16,-488),Vector3.new(340,0,304)),4,materials,occupancies)
+terrain:WriteVoxels(Region3.new(Vector3.new(-380,-16,-528),Vector3.new(380,0,352)),4,materials,occupancies)
+world:SetAttribute("TerrainBounds","X -380..380 | Z -528..352")
 materials=nil; occupancies=nil
 -- WriteVoxels atualiza colisao assincronamente. Nao depender do tempo de LoadAsset.
 local readiness=RaycastParams.new()
@@ -356,9 +358,10 @@ for row=0,18 do
 end
 
 -- Floresta exterior: reservas intercaladas, mantendo sites de vegetacao coerentes.
-for i=1,68 do
- local x=rng:NextNumber(-275,275)
- local z=rng:NextNumber(-345,175)
+-- Novas reservas premium distribuidas ate os limites expandidos; sem placeholder.
+for i=1,92 do
+ local x=rng:NextNumber(-330,330)
+ local z=rng:NextNumber(-420,245)
  local nearPath=math.abs(x-pathX(z))<19 and z > -300 and z < 35
  local nearRiver=math.abs(x-125-math.sin((115-z)/23*0.32)*24)<23
  if not nearPath and not nearRiver and (x*x+(z+110)*(z+110))>900 then
@@ -406,6 +409,18 @@ for i=1,84 do
  groundPlant(x,z,i%3==0)
  groundPlant(x+side*2.5,z+1.8,false)
 end
+-- Bosque exterior: clareiras com pequenas ilhas de gramineas, sem bloquear trilhas.
+-- Instancias baratas e sem colisao; pequenos grupos visiveis, nao uma malha por folha.
+for i=1,34 do
+ local x=plantRng:NextNumber(-315,315)
+ local z=plantRng:NextNumber(-408,235)
+ if not reservedSite(x,z,6) and math.abs(x-riverX(z))>30 then
+  groundPlant(x,z,i%4==0)
+  groundPlant(x+2.2,z+1.7,false)
+ end
+ if i%8==0 then task.wait() end
+end
+world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
 -- Margens com juncos, musgo e seixos; preserva a travessia da ponte.
 for i=1,48 do
  local z=110-i*8
@@ -424,14 +439,14 @@ end
 local horizon=group("Bosque de horizonte")
 for i=0,25 do
  local angle=i*2*PI/26
- local x=math.cos(angle)*265
- local z=-95+math.sin(angle)*330
+ local x=math.cos(angle)*322
+ local z=-95+math.sin(angle)*384
  if math.abs(x-riverX(z))>32 then
   table.insert(forestTreeSites,{x=x,z=z,s=1.5+(i%4)*0.2,horizon=true})
  end
 end
 -- Limite fisico recuado da borda do Terrain, escondido pelo bosque distante.
-for _,edge in {{0,-464,640,2},{0,280,640,2},{-320,-92,2,744},{320,-92,2,744}} do
+for _,edge in {{0,-506,720,2},{0,328,720,2},{-358,-88,2,832},{358,-88,2,832}} do
  local barrier=part("Limite seguro do bosque",Vector3.new(edge[3],70,edge[4]),CFrame.new(edge[1],30,edge[2]),P.moss,Enum.Material.Grass,horizon)
  barrier.Transparency=1; barrier.CastShadow=false
  barrier:SetAttribute("CollisionRole","Boundary")
@@ -1134,10 +1149,10 @@ local function applyMood(mood)
  clouds.Color=mood.cloud
  world:SetAttribute("LightingMood",mood.name)
 end
--- Pôr do sol para primeira impressão; transições suaves entre os três climas.
+-- Por do sol para primeira impressao; transicoes suaves entre os tres climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
-world:SetAttribute("WorldVersion",33)
+world:SetAttribute("WorldVersion",34)
 world:SetAttribute("ForestTrunkCollision","Native Forest Pack trunks; anchored Synty proxies; foliage noncolliding")
 task.wait() -- integrar as estruturas novas ao mundo fisico antes de liberar a chegada
 stage("Finalizing")
@@ -1161,10 +1176,10 @@ world:SetAttribute("GenerationComplete",true)
 ReplicatedStorage:SetAttribute("ForestState","Ready")
 stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
-world:SetAttribute("TerrainProfile","Flat woodland meadow | no mountains")
+world:SetAttribute("TerrainProfile","Expanded woodland meadows | no mountains")
 world:SetAttribute("AuthoredTreeCount",authoredTrees)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
-print("[Dreamcore] Floresta das Memorias v33:",#world:GetDescendants(),"instancias")
+print("[Dreamcore] Floresta das Memorias v34:",#world:GetDescendants(),"instancias")
 
 -- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
 task.spawn(function()
@@ -1243,7 +1258,7 @@ if not generated then
  ReplicatedStorage:SetAttribute("ForestState","Failed")
  local failedStage=tostring(ReplicatedStorage:GetAttribute("ForestStage") or "Unknown")
  ReplicatedStorage:SetAttribute("ForestErrorCode",failedStage)
- warn("[Dreamcore] V33 falha etapa "..failedStage..": "..tostring(generationError))
+ warn("[Dreamcore] V34 falha etapa "..failedStage..": "..tostring(generationError))
  -- Apoio emergencial mesmo quando o gerador falha antes de criar o spawn.
  local safeSpawn=Workspace:FindFirstChild("Nascimento Dreamcore",true)
  if not safeSpawn then
