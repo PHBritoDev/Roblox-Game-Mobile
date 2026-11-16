@@ -63,9 +63,13 @@ def navigation_failures(navigation):
         return errors + ["Malformed spawn footing"]
     if not (spawn.get("present") and spawn.get("anchored") and spawn.get("collidable")
             and footing.get("supported") and not footing.get("blockers")
-            and -1 <= footing.get("y", -99) <= 2):
+            and isinstance(footing.get("y"), (int, float))
+            and not isinstance(footing.get("y"), bool)
+            and math.isfinite(footing["y"])
+            and -1 <= footing["y"] <= 2):
         errors.append("Spawn missing, unsupported, obstructed, or not solid")
-    if navigation.get("proxyCount", 0) < 1:
+    proxy_count = navigation.get("proxyCount", 0)
+    if not isinstance(proxy_count, (int, float)) or isinstance(proxy_count, bool) or not math.isfinite(proxy_count) or proxy_count < 1:
         errors.append("No physical tree/rock proxies measured")
     if navigation.get("invalidProxies"):
         errors.append(f"Invalid collision proxies: {navigation['invalidProxies']}")
