@@ -33,7 +33,7 @@ class BundledAssetTests(unittest.TestCase):
         self.assertIn('local spawn=initialSpawn',source)
         self.assertLess(source.index('initialSpawn=Workspace:FindFirstChild'),
                         source.index('task.spawn(function()\nlocal generated, generationError'))
-        self.assertIn('SetAttribute("ForestVersion",33)',source)
+        self.assertIn('SetAttribute("ForestVersion",34)',source)
 
     def test_android_loading_reports_each_server_stage_without_removing_assets(self):
         server=(ROOT/'src/server/DreamcoreWorld.server.luau').read_text()
