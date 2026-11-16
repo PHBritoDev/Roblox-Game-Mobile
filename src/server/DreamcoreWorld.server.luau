@@ -420,6 +420,24 @@ for i=1,34 do
  end
  if i%8==0 then task.wait() end
 end
+-- Ilhas de sub-bosque nas bordas da expansao: composicao em tres alturas,
+-- com pequenos intervalos para leitura do terreno e sem fechar corredores.
+-- Semente independente para nao deslocar as arvores existentes.
+local meadowRng=Random.new(20261116)
+local meadowClusters=0
+for i=1,56 do
+ local x=meadowRng:NextNumber(-338,338)
+ local z=meadowRng:NextNumber(-442,265)
+ if not reservedSite(x,z,12) and math.abs(x-riverX(z))>38 then
+  local spread=meadowRng:NextNumber(2.6,5.4)
+  groundPlant(x,z,true)
+  groundPlant(x+spread,z+spread*0.32,false)
+  groundPlant(x-spread*0.6,z-spread*0.55,i%3==0)
+  meadowClusters+=1
+ end
+ if i%8==0 then task.wait() end
+end
+world:SetAttribute("MeadowEdgeClusters",meadowClusters)
 world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
 -- Margens com juncos, musgo e seixos; preserva a travessia da ponte.
 for i=1,48 do
