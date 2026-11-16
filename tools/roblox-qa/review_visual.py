@@ -77,8 +77,19 @@ else:
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         report["errors"].append(f"Snapshot scene.json ilegivel: {type(exc).__name__}")
         scene = {}
+    # Fail closed on malformed snapshot schemas instead of crashing mid-review.
+    if not isinstance(scene, dict):
+        report["errors"].append("Snapshot scene.json deve ser um objeto JSON")
+        scene = {}
     parts = scene.get("parts", [])
-    if not parts or scene.get("meta", {}).get("partsTotal") != len(parts):
+    meta = scene.get("meta", {})
+    if not isinstance(parts, list) or not all(isinstance(p, dict) for p in parts):
+        report["errors"].append("Snapshot parts invalido: esperado lista de objetos")
+        parts = []
+    if not isinstance(meta, dict):
+        report["errors"].append("Snapshot meta invalido: esperado objeto")
+        meta = {}
+    if not parts or meta.get("partsTotal") != len(parts):
         report["errors"].append("Geometria exportada parcialmente; render nao confiavel")
     by_name = {}
     for item in parts:
