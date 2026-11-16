@@ -103,6 +103,7 @@ local function showGroup(group)
 end
 
 local lastGroundSample=-100
+local habitatCenter=nil
 local function step(dt)
  clock+=dt
  local character=player.Character
@@ -114,13 +115,17 @@ local function step(dt)
   return
  end
  local focus=root.Position
+ if not habitatCenter or (focus-habitatCenter).Magnitude>140 then
+  habitatCenter=focus
+  lastGroundSample=-100
+ end
  local updateGround=clock-lastGroundSample>0.8
  if updateGround then lastGroundSample=clock end
  for _,r in rabbits do
   -- Clareiras em arco afastadas do jogador, sem atravessar trilhas na sua frente.
   local theta=r.angle+clock*0.025
-  local x=focus.X+math.cos(theta)*r.dist
-  local z=focus.Z+math.sin(theta)*r.dist
+  local x=habitatCenter.X+math.cos(theta)*r.dist
+  local z=habitatCenter.Z+math.sin(theta)*r.dist
   if updateGround or not r.groundY then
    r.groundY=groundAt(x,z)
   end
