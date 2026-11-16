@@ -24,6 +24,17 @@ def main():
     checks['bloom'] = 'BloomEffect' in src
     checks['color_correction'] = 'ColorCorrectionEffect' in src
     checks['terrain'] = 'Workspace.Terrain' in src
+    # Imported assets must not retain executable scripts or legacy mobile VFX.
+    sanitizer = re.search(r'local function stripImportedEffects\(root\)(.*?)\nend', src, re.S)
+    sanitizer_body = sanitizer.group(1) if sanitizer else ''
+    required_classes = ('LuaSourceContainer', 'ParticleEmitter', 'Trail', 'Beam',
+                        'Fire', 'Smoke', 'Sparkles', 'Light')
+    checks['imported_asset_sanitizer'] = (
+        bool(sanitizer) and all(f'IsA("{name}")' in sanitizer_body for name in required_classes)
+        and 'descendant:Destroy()' in sanitizer_body
+    )
+    if not checks['imported_asset_sanitizer']:
+        issues.append('Sanitizacao de scripts/VFX de assets importados ausente ou incompleta.')
     checks['camera_capture_available'] = False
     checks['actual_roblox_screenshot'] = False
     checks['actual_roblox_video'] = False
@@ -51,7 +62,7 @@ def main():
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    if not all(checks[k] for k in ('project_data_model', 'server_script_present', 'spawn_location', 'atmosphere', 'terrain')):
+    if not all(checks[k] for k in ('project_data_model', 'server_script_present', 'spawn_location', 'atmosphere', 'terrain', 'imported_asset_sanitizer')):
         raise SystemExit('Falhou requisito estrutural básico')
 
 if __name__ == '__main__':
