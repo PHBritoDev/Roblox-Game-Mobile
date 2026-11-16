@@ -9,12 +9,14 @@ from pathlib import Path
 
 def navigation_failures(navigation):
     errors = []
-    if not navigation:
-        return ["Missing engine navigation measurements"]
+    if not isinstance(navigation, dict) or not navigation:
+        return ["Missing or malformed engine navigation measurements"]
     expected = {f"{name}:{offset}" for name, offsets in (
         ("main", (-4, 0, 4)), ("bridge", (-3, 0, 3)),
         ("lake", (-3, 0, 3)), ("river", (-3, 0, 3))) for offset in offsets}
     routes = navigation.get("routes", [])
+    if not isinstance(routes, list) or not all(isinstance(route, dict) and isinstance(route.get("name"), str) for route in routes):
+        return ["Malformed navigation routes: expected named route objects"]
     route_names = [route.get("name") for route in routes]
     if set(route_names) != expected:
         errors.append("Missing or unexpected navigation routes")
@@ -22,6 +24,9 @@ def navigation_failures(navigation):
         errors.append("Duplicate navigation routes; one route may hide an untested corridor")
     for route in routes:
         samples = route.get("samples", [])
+        if not isinstance(samples, list) or not all(isinstance(sample, dict) for sample in samples):
+            errors.append(f"{route['name']}: malformed samples")
+            continue
         if len(samples) < (140 if route["name"].startswith("main:") else 10):
             errors.append(f"{route['name']}: incomplete samples")
         previous = None
@@ -51,7 +56,11 @@ def navigation_failures(navigation):
                     errors.append(f"{prefix}: discontinuity/steep grade ({rise:.2f} in {distance:.2f})")
             previous = sample
     spawn = navigation.get("spawn", {})
+    if not isinstance(spawn, dict):
+        return errors + ["Malformed spawn measurements"]
     footing = spawn.get("footing", {})
+    if not isinstance(footing, dict):
+        return errors + ["Malformed spawn footing"]
     if not (spawn.get("present") and spawn.get("anchored") and spawn.get("collidable")
             and footing.get("supported") and not footing.get("blockers")
             and -1 <= footing.get("y", -99) <= 2):
