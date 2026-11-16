@@ -97,6 +97,19 @@ local function optimizeDecorativeMesh(item,shadow)
  end
 end
 
+-- Assets curados podem conter efeitos de particulas/luzes caros no Android.
+-- Remover somente efeitos legados; preservar MeshParts e SurfaceAppearance.
+local function stripImportedEffects(root)
+ for _,descendant in root:GetDescendants() do
+  if descendant:IsA("LuaSourceContainer") or descendant:IsA("ParticleEmitter")
+   or descendant:IsA("Trail") or descendant:IsA("Beam")
+   or descendant:IsA("Fire") or descendant:IsA("Smoke")
+   or descendant:IsA("Sparkles") or descendant:IsA("Light") then
+   descendant:Destroy()
+  end
+ end
+end
+
 local function solidMesh(item)
  item.CanCollide=true
  item.CanQuery=true
@@ -481,6 +494,7 @@ if okPack and sourcePack then
   local template=lookup[entry[1]]
   if template then
    local asset=template:Clone()
+   stripImportedEffects(asset)
    asset.Name="Synty — "..entry[1]
    local desiredHeight=entry[4]
    if asset:IsA("MeshPart") then
@@ -523,6 +537,7 @@ if okPack and sourcePack then
   local template=lookup[fernNames[(i-1)%#fernNames+1]]
   if template and template:IsA("MeshPart") then
    local leaf=template:Clone()
+   stripImportedEffects(leaf)
    leaf.Name="Synty — estrato de samambaias "..i
    local scale=2.3+rng:NextNumber(0.2,1.6)
    leaf.Size=leaf.Size*(scale/math.max(leaf.Size.Y,0.15))
