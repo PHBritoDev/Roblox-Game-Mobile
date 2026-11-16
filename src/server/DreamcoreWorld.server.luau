@@ -1063,6 +1063,15 @@ local moods={
   tint=Color3.fromRGB(185,201,255), exposure=-0.15,
    sunTint=Color3.fromRGB(12,20,36), shadeTint=Color3.fromRGB(5,10,23),
   cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0, glow=1.75, fireflyRate=8,
+ },
+ {
+  -- Manha dourada/azul inspirada nas referencias enviadas, sem copiar assets.
+  name="First Light Meadow", clock=6.35, brightness=2.05,
+  ambient=Color3.fromRGB(67,84,104), outdoor=Color3.fromRGB(113,137,145),
+  atm=Color3.fromRGB(246,208,172), decay=Color3.fromRGB(139,164,174),
+  tint=Color3.fromRGB(255,241,220), exposure=-0.08,
+  sunTint=Color3.fromRGB(52,32,16), shadeTint=Color3.fromRGB(7,25,35),
+  cloud=Color3.fromRGB(255,211,185), stars=0, rays=0.055, glow=0.65, fireflyRate=1,
  }
 }
 
@@ -1166,12 +1175,12 @@ world:SetAttribute("AuthoredTreeCount",authoredTrees)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
 print("[Dreamcore] Floresta das Memorias v33:",#world:GetDescendants(),"instancias")
 
--- Um ciclo completo dura 772 segundos. Mistura cor e brilho sem piscar no celular.
+-- Ciclo com amanhecer, tarde dourada, crepusculo e noite; sem piscar no celular.
 task.spawn(function()
  local hold=145
  local transition=48
  while world.Parent do
-  local sequence={1,2,3,2}
+  local sequence={1,2,3,4}
   for index=1,#sequence do
    local start=moods[sequence[index]]
    local target=moods[sequence[(index%#sequence)+1]]
@@ -1181,7 +1190,9 @@ task.spawn(function()
    while world.Parent do
     local t=math.clamp((os.clock()-begun)/transition,0,1)
     local smooth=t*t*(3-2*t)
-    Lighting.ClockTime=start.clock+(target.clock-start.clock)*smooth
+    -- Interpolar pela meia-noite: 23.6 -> 6.35 deve atravessar 0h, nao meio-dia.
+    local clockDelta=(target.clock-start.clock+12)%24-12
+    Lighting.ClockTime=(start.clock+clockDelta*smooth)%24
     -- Contagem de estrelas evolui gradualmente, evitando o surgimento abrupto
     -- de milhares de pontos luminosos no meio do crepusculo.
     local starBlend=math.clamp((smooth-0.22)/0.62,0,1)
