@@ -60,7 +60,7 @@ for i=1,COUNT do
  local lowerLeft=createPart("Asa posterior esquerda",Vector3.new(0.43,0.028,0.49),color:Lerp(Color3.fromRGB(255,239,209),0.23),model)
  local lowerRight=createPart("Asa posterior direita",Vector3.new(0.43,0.028,0.49),color:Lerp(Color3.fromRGB(255,239,209),0.23),model)
  model.PrimaryPart=body
- model.Parent=folder
+ model.Parent=nil -- nao empilhar modelos em (0,0,0) antes do mundo ficar pronto
  butterflies[i]={
   model=model,body=body,left=left,right=right,
   lowerLeft=lowerLeft,lowerRight=lowerRight,
