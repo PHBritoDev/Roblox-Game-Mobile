@@ -7,6 +7,7 @@ on:
       - 'assets/**'
       - 'default.project.json'
       - 'tools/roblox-qa/**'
+      - 'tests/qa/**'
       - '.github/workflows/qa-roblox.yml'
   pull_request:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'assets/**'
       - 'default.project.json'
       - 'tools/roblox-qa/**'
+      - 'tests/qa/**'
       - '.github/workflows/qa-roblox.yml'
   workflow_dispatch:
 permissions:
@@ -33,6 +35,8 @@ jobs:
         run: python tools/roblox-qa/audit.py
       - name: Testar rejeicao de regressões de navegacao
         run: python -m unittest discover -s tools/roblox-qa -p 'test_*.py'
+      - name: Testar regressões do jogo e guardas mobile
+        run: python -m unittest discover -s tests/qa -p 'test_*.py'
       - name: Auditar biblioteca incluida no Place
         run: python3 tools/roblox-qa/audit_bundled_assets.py
       - name: Publicar relatório verificável
