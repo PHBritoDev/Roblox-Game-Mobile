@@ -1011,6 +1011,32 @@ for i=1,7 do
  leaf.CanCollide=false
 end
 
+-- Faixa de juncos autorais na margem do lago: silhueta vertical, sem scripts/assets.
+-- Distribuicao deterministica em pequenos tufos; sem colisao nem sombras mobile.
+local lakeReedCount=0
+for cluster=1,12 do
+ local angle=(cluster/12)*PI*2+0.11
+ local shoreRadius=19.2+(cluster%3)*0.85
+ local bx=poolCenter.X+math.cos(angle)*shoreRadius
+ local bz=poolCenter.Z+math.sin(angle)*shoreRadius
+ if not inWalkway(bx,bz,3.5) then
+  for blade=1,3 do
+   local offset=(blade-2)*0.75
+   local height=2.8+((cluster+blade)%4)*0.58
+   local reed=part("Junco do Lago do Reflexo",Vector3.new(0.18,height,0.26),
+    CFrame.new(bx+offset,0.35+height*0.5,bz+offset*0.45)
+     *CFrame.Angles(math.rad((blade-2)*9),0,math.rad((cluster%2==0 and 1 or -1)*7)),
+    if blade==2 then P.mossLight else P.moss,Enum.Material.Grass,reflection)
+   reed.CanCollide=false
+   reed.CanTouch=false
+   reed.CanQuery=false
+   reed.CastShadow=false
+   lakeReedCount+=1
+  end
+ end
+end
+world:SetAttribute("LakeReedBlades",lakeReedCount)
+
 -- Partículas leves confinadas à clareira, evitando dezenas de luzes dinâmicas.
 local fireflies=part("Vagalumes na clareira",Vector3.new(1,1,1),
  CFrame.new(center+Vector3.new(0,7,34)),P.firefly,Enum.Material.SmoothPlastic,effects)
