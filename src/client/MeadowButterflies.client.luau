@@ -59,6 +59,8 @@ for i=1,COUNT do
  local right=createPart("Asa anterior direita",Vector3.new(0.58,0.035,0.78),color,model)
  local lowerLeft=createPart("Asa posterior esquerda",Vector3.new(0.43,0.028,0.49),color:Lerp(Color3.fromRGB(255,239,209),0.23),model)
  local lowerRight=createPart("Asa posterior direita",Vector3.new(0.43,0.028,0.49),color:Lerp(Color3.fromRGB(255,239,209),0.23),model)
+ -- Ovais de volumes delicados, evitando asas em placas retangulares genericas.
+ for _,wing in {left,right,lowerLeft,lowerRight} do wing.Shape=Enum.PartType.Ball end
  model.PrimaryPart=body
  model.Parent=nil -- nao empilhar modelos em (0,0,0) antes do mundo ficar pronto
  butterflies[i]={
@@ -85,6 +87,8 @@ end
 local function validGround(x,y,z)
  if x< -340 or x>340 or z< -480 or z>300 or y< -0.3 or y>MAX_ALTITUDE then return false end
  if z>=-258 and z<=36 and math.abs(x-pathX(z))<13 then return false end
+ if x>=pathX(-89)-7 and x<=184 and math.abs(z+89)<18 then return false end
+ if x>=-74 and x<=pathX(-151)+8 and math.abs(z+151)<16 then return false end
  if math.abs(x-(125+math.sin((115-z)/23*0.32)*24))<32 then return false end
  if (x+84)^2+(z+151)^2<30^2 then return false end
  return true
