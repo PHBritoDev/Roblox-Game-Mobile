@@ -612,7 +612,7 @@ if okForest and forestPack then
   local okPlacement,placementError=pcall(function()
   tree.Name="Bosque de folhas texturizadas — "..index
   for _,item in tree:GetDescendants() do
-   if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then item:Destroy()
+   if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") or item:IsA("Fire") or item:IsA("Smoke") or item:IsA("Sparkles") or item:IsA("Light") then item:Destroy()
    elseif item:IsA("BasePart") then
     -- Sombras detalhadas apenas no corredor visível; árvores distantes
     -- preservam silhueta e textura sem gerar dezenas de shadow casters.
@@ -713,7 +713,7 @@ if okForest and forestPack then
     foliage=template:Clone()
     foliage.Name="Estrato baixo texturizado — "..i
     for _,item in foliage:GetDescendants() do
-     if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") then
+     if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") or item:IsA("Fire") or item:IsA("Smoke") or item:IsA("Sparkles") or item:IsA("Light") then
       item:Destroy()
      elseif item:IsA("BasePart") then
       optimizeDecorativeMesh(item,false)
