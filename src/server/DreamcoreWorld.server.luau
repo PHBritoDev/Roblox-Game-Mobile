@@ -1056,28 +1056,12 @@ stage("ConfiguringLighting")
 -- Perfis calibrados para a direção de arte: quente, crepúsculo frio e noite azul.
 local moods={
  {
-  name="Dawn Haze", clock=7.15, brightness=1.9,
-  ambient=Color3.fromRGB(58,75,89), outdoor=Color3.fromRGB(110,126,120),
-  atm=Color3.fromRGB(248,218,172), decay=Color3.fromRGB(132,155,177),
-  tint=Color3.fromRGB(255,239,213), exposure=-0.06,
-  sunTint=Color3.fromRGB(70,43,24), shadeTint=Color3.fromRGB(13,27,36),
-  cloud=Color3.fromRGB(246,223,186), stars=0, rays=0.075, glow=0.5, fireflyRate=0,
- },
- {
   name="Golden Nostalgia", clock=16.75, brightness=2.35,
   ambient=Color3.fromRGB(54,75,87), outdoor=Color3.fromRGB(102,118,112),
   atm=Color3.fromRGB(235,212,178), decay=Color3.fromRGB(139,158,159),
   tint=Color3.fromRGB(255,248,235), exposure=-0.05,
    sunTint=Color3.fromRGB(59,39,17), shadeTint=Color3.fromRGB(9,23,28),
   cloud=Color3.fromRGB(245,214,192), stars=0, rays=0.065, glow=0.72, fireflyRate=2,
- },
- {
-  name="Amber Sunset", clock=18.25, brightness=1.8,
-  ambient=Color3.fromRGB(73,66,106), outdoor=Color3.fromRGB(127,98,126),
-  atm=Color3.fromRGB(255,160,119), decay=Color3.fromRGB(147,92,149),
-  tint=Color3.fromRGB(255,213,192), exposure=-0.11,
-  sunTint=Color3.fromRGB(88,35,25), shadeTint=Color3.fromRGB(16,16,38),
-  cloud=Color3.fromRGB(239,132,123), stars=0, rays=0.085, glow=0.95, fireflyRate=3,
  },
  {
   name="Cold Twilight", clock=19.0, brightness=1.55,
@@ -1165,7 +1149,7 @@ local function applyMood(mood)
  clouds.Color=mood.cloud
  world:SetAttribute("LightingMood",mood.name)
 end
--- Manha dourada na chegada; cinco quadros com transicao gradual, sem teleporte de horario.
+-- Por do sol para primeira impressao; transicoes suaves entre os tres climas.
 applyMood(moods[1])
 world:SetAttribute("ArtDirection","Floresta das Memorias | Original Anime Fantasy")
 world:SetAttribute("WorldVersion",34)
@@ -1202,7 +1186,7 @@ task.spawn(function()
  local hold=145
  local transition=48
  while world.Parent do
-  local sequence={1,2,3,4,5}
+  local sequence={1,2,3,2}
   for index=1,#sequence do
    local start=moods[sequence[index]]
    local target=moods[sequence[(index%#sequence)+1]]
@@ -1212,9 +1196,7 @@ task.spawn(function()
    while world.Parent do
     local t=math.clamp((os.clock()-begun)/transition,0,1)
     local smooth=t*t*(3-2*t)
-    -- Ao voltar da noite para amanhecer, avancar pelo relogio sem retroceder 17h.
-    local targetClock=if target.clock<start.clock then target.clock+24 else target.clock
-    Lighting.ClockTime=(start.clock+(targetClock-start.clock)*smooth)%24
+    Lighting.ClockTime=start.clock+(target.clock-start.clock)*smooth
     -- Contagem de estrelas evolui gradualmente, evitando o surgimento abrupto
     -- de milhares de pontos luminosos no meio do crepusculo.
     local starBlend=math.clamp((smooth-0.22)/0.62,0,1)
