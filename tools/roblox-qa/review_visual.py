@@ -69,8 +69,14 @@ if len(screens) == 3:
     sheet.save(OUT / "contato_3_angulos.png")
 
 scene_path = OUT / "scene.json"
-if scene_path.exists():
-    scene = json.loads(scene_path.read_text(encoding="utf-8"))
+if not scene_path.is_file():
+    report["errors"].append("Snapshot scene.json ausente: proxy sem geometria verificavel")
+else:
+    try:
+        scene = json.loads(scene_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        report["errors"].append(f"Snapshot scene.json ilegivel: {type(exc).__name__}")
+        scene = {}
     parts = scene.get("parts", [])
     if not parts or scene.get("meta", {}).get("partsTotal") != len(parts):
         report["errors"].append("Geometria exportada parcialmente; render nao confiavel")
