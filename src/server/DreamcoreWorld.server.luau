@@ -913,31 +913,53 @@ for _,side in ipairs({-1,1}) do
    P.bark,Enum.Material.Wood,landmarks)
  end
 end
--- Somente alguns detalhes de brilho autorais: o sub-bosque principal é MeshPart.
-for i=1,36 do
- local z=rng:NextNumber(-292,40)
- local side=if i%2==0 then 1 else -1
- local x=pathX(z)+side*rng:NextNumber(8,56)
- local kind=i%7
- if kind==0 then
-  local cap=orb("Flor de memoria",Vector3.new(x,1.65,z),rng:NextNumber(1,2.6),P.flower,
-   Enum.Material.SmoothPlastic,details)
-  cap.CanCollide=false
-  part("Haste de flor",Vector3.new(0.22,1.7,0.22),
-   CFrame.new(x,0.85,z),P.mossLight,Enum.Material.Grass,details).CanCollide=false
- elseif kind==1 then
-  local fungi=orb("Cogumelo luminoso",Vector3.new(x,0.8,z),1.7,P.blue,
-   Enum.Material.Neon,details)
-  fungi.CanCollide=false
- else
-  -- Retirar os arbustos-esfera que dominavam a silhueta do primeiro plano.
-  -- As samambaias MeshPart do Forest Pack compõem o estrato baixo.
-  local petal=orb("Flor silvestre discreta",Vector3.new(x,0.9,z),
-   rng:NextNumber(0.35,0.65),if i%3==0 then P.flower else P.mossLight,
-   Enum.Material.SmoothPlastic,details)
-  petal.CanCollide=false
+-- Flores autorais em tufos: substituir as antigas esferas dispersas por
+-- silhuetas de petalas lanceoladas, sem texturas externas nem emissores.
+-- Um pequeno jardim enquadra a chegada ao santuario ancestral.
+local blossoms=group("Flores de memoria — corredor e santuario")
+local flowerRng=Random.new(790131)
+local flowerCount=0
+local function memoryBlossom(x,z,scale,shade)
+ if inWalkway(x,z,3) or reservedSite(x,z,2) then return end
+ local hit=Workspace:Raycast(Vector3.new(x,12,z),Vector3.new(0,-28,0),groundParams)
+ if not hit or hit.Position.Y < -0.45 then return end
+ local base=hit.Position
+ local height=flowerRng:NextNumber(1.2,1.8)*scale
+ local stem=part("Haste curvada",Vector3.new(0.13*scale,height,0.13*scale),
+  CFrame.new(base+Vector3.new(0,height*0.5,0)),P.moss,Enum.Material.Grass,blossoms)
+ optimizeDecorativeMesh(stem,false)
+ local top=base+Vector3.new(0,height,0)
+ local angle=flowerRng:NextNumber(0,PI*2)
+ for petal=1,3 do
+  local theta=angle+petal*PI*2/3
+  local cf=CFrame.new(top)*CFrame.Angles(0,theta,0)*CFrame.new(0,0,0.28*scale)
+   *CFrame.Angles(math.rad(-24),0,0)
+  blade("Petala lanceolada",cf,Vector3.new(0.65*scale,0.16*scale,1.0*scale),
+   shade,blossoms,false)
  end
+ local core=orb("Centro floral",top+Vector3.new(0,0.09*scale,0),0.28*scale,
+  P.rune,Enum.Material.SmoothPlastic,blossoms)
+ optimizeDecorativeMesh(core,false)
+ flowerCount+=1
 end
+-- A margem de 30 studs do caminho garante leitura e mobilidade no celular.
+for i=1,44 do
+ local z=20-i*6.6
+ local side=if i%2==0 then 1 else -1
+ local x=pathX(z)+side*flowerRng:NextNumber(16,28)
+ local shade=if i%4==0 then P.blue else if i%3==0 then P.rune else P.flower
+ memoryBlossom(x,z,flowerRng:NextNumber(0.7,1.15),shade)
+end
+-- Arco floral assimetrico na chegada à arvore principal, sem ocupar a trilha.
+for i=1,24 do
+ local theta=(i/24)*PI*2
+ local radius=flowerRng:NextNumber(45,58)
+ local x=center.X+math.cos(theta)*radius
+ local z=center.Z+math.sin(theta)*radius
+ memoryBlossom(x,z,flowerRng:NextNumber(0.85,1.3),
+  if i%3==0 then P.rune else P.flower)
+end
+world:SetAttribute("AuthoredFlowerBlossoms",flowerCount)
 
 -- Capitulo visual: vestigios de uma civilizacao que venerava a arvore ancestral.
 -- Composicao deliberada: marcos em pontos fixos, nao props aleatorios no mapa.
