@@ -25,7 +25,7 @@ def main():
     checks['color_correction'] = 'ColorCorrectionEffect' in src
     checks['terrain'] = 'Workspace.Terrain' in src
     # Imported assets must not retain executable scripts or legacy mobile VFX.
-    sanitizer = re.search(r'local function stripImportedEffects\\(root\\)(.*?)\\nend', src, re.S)
+    sanitizer = re.search(r'local function stripImportedEffects\(root\)(.*?)\nend', src, re.S)
     sanitizer_body = sanitizer.group(1) if sanitizer else ''
     required_classes = ('LuaSourceContainer', 'ParticleEmitter', 'Trail', 'Beam',
                         'Fire', 'Smoke', 'Sparkles', 'Light')
