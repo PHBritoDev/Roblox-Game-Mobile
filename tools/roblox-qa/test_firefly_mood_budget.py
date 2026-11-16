@@ -9,7 +9,7 @@ SOURCE = (Path(__file__).resolve().parents[2] / "src/server/DreamcoreWorld.serve
 class FireflyMoodBudgetTests(unittest.TestCase):
     def test_moods_within_mobile_budget(self):
         rates = [int(x) for x in re.findall(r"fireflyRate=(\d+)", SOURCE)]
-        self.assertEqual(rates, [2, 6, 8])
+        self.assertEqual(rates, [2, 6, 8, 1])
         self.assertLessEqual(max(rates), 8)
 
     def test_mood_is_applied_and_interpolated(self):
