@@ -989,7 +989,8 @@ for _,site in ipairs(ruinCenters) do
   local radius=ruinRng:NextNumber(5.8,12.5)
   local x=site.X+math.cos(angle)*radius
   local z=site.Y+math.sin(angle)*radius
-  if not reservedSite(x,z,3) and not inWalkway(x,z,4) then
+  if not inWalkway(x,z,5) and math.abs(x-riverX(z))>29
+   and ((x+84)^2+(z+151)^2)>27^2 then
    local hit=Workspace:Raycast(Vector3.new(x,16,z),Vector3.new(0,-34,0),ruinGround)
    if hit and hit.Normal.Y>0.8 and math.abs(hit.Position.Y)<2 then
     local ground=hit.Position.Y
