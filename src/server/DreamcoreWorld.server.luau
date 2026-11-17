@@ -171,9 +171,15 @@ for ix=1,190 do
   local bed=-2-9*(1-math.clamp(waterDistance/9,0,1))
   local noise=math.noise(x/39,z/39,6.7)+0.32*math.noise(x/13,z/13,2)
   local trail=inWalkway(x,z,0.8*math.noise(x/11,z/11,4))
-  local surface=if trail then Enum.Material.Ground else
-   if noise>0.12 then Enum.Material.LeafyGrass else
-   if waterDistance<13 then Enum.Material.Ground else Enum.Material.Grass
+  -- Variacao de estrato no proprio Terrain: zero Parts/draw calls adicionais.
+  -- Faixas umidas permanecem terrosas; manchas de xisto ficam longe da trilha.
+  local macro=math.noise(x/87,z/87,11.3)
+  local stonePatch=math.noise(x/22,z/22,19.1)
+  local surface=if trail then Enum.Material.Ground
+   else if waterDistance<13 then Enum.Material.Ground
+   else if waterDistance>32 and noise < -0.48 and stonePatch>0.39 then Enum.Material.Rock
+   else if noise+macro*0.28>0.09 then Enum.Material.LeafyGrass
+   else Enum.Material.Grass
   for iy=1,4 do
    local bottom=-16+(iy-1)*4
    local solid=math.clamp((bed-bottom)/4,0,1)
