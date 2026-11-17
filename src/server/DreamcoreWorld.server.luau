@@ -421,6 +421,30 @@ for i=1,34 do
  if i%8==0 then task.wait() end
 end
 world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
+-- Bandos distantes: silhuetas autorais, sem assets externos, fisica ou emissores.
+-- 21 pecas leves ao todo; altura e distancia preservam a leitura da trilha.
+local skyBirds=group("Aves do horizonte — silhuetas")
+local birdRng=Random.new(804271)
+for i=1,7 do
+ local z=-290+i*68
+ local x=(if i%2==0 then -1 else 1)*birdRng:NextNumber(115,215)
+ local y=birdRng:NextNumber(65,94)
+ local center=Vector3.new(x,y,z)
+ local facing=CFrame.new(center)*CFrame.Angles(0,birdRng:NextNumber(-PI,PI),0)
+ local wingspan=birdRng:NextNumber(5.5,8.2)
+ local shade=Color3.fromRGB(65,83,91)
+ local body=part("Ave distante — corpo",Vector3.new(0.45,0.35,1.65),facing,shade,Enum.Material.SmoothPlastic,skyBirds)
+ optimizeDecorativeMesh(body,false)
+ for _,side in {-1,1} do
+  local wing=part("Ave distante — asa",Vector3.new(wingspan*0.48,0.16,0.85),
+   facing*CFrame.new(side*wingspan*0.24,0.08,0)*CFrame.Angles(0,side*0.15,side*0.13),
+   shade,Enum.Material.SmoothPlastic,skyBirds)
+  optimizeDecorativeMesh(wing,false)
+ end
+ if i%3==0 then task.wait() end
+end
+world:SetAttribute("SkyBirdCount",7)
+
 -- Margens com juncos, musgo e seixos; preserva a travessia da ponte.
 for i=1,48 do
  local z=110-i*8
