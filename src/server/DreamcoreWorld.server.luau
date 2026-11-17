@@ -422,6 +422,7 @@ for i=1,34 do
 end
 world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
 -- Margens com juncos, musgo e seixos; preserva a travessia da ponte.
+local riverbankStoneCount=0
 for i=1,48 do
  local z=110-i*8
  local side=if i%2==0 then 1 else -1
@@ -436,10 +437,12 @@ for i=1,48 do
     rock.Size=Vector3.new(3.4,1.3,2.3)
     rock.CFrame=rock.CFrame*CFrame.Angles(0,plantRng:NextNumber(-PI,PI),0)
     optimizeDecorativeMesh(rock,false)
+    riverbankStoneCount+=1
    end
   end
  end
 end
+world:SetAttribute("RiverbankGroundedStones",riverbankStoneCount)
 -- Horizonte em camadas com arvores premium, nunca placas quadradas.
 local horizon=group("Bosque de horizonte")
 for i=0,25 do
