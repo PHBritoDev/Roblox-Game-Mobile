@@ -463,6 +463,7 @@ end
 world:SetAttribute("SkyBirdCount",7)
 
 -- Margens com juncos, musgo e seixos; preserva a travessia da ponte.
+local riverbankStoneCount=0
 for i=1,48 do
  local z=110-i*8
  local side=if i%2==0 then 1 else -1
@@ -470,12 +471,19 @@ for i=1,48 do
  if math.abs(z+89)>16 then
   groundPlant(x,z,false)
   if i%3==0 then
-   local rock=orb("Seixo de margem",Vector3.new(x,0.3,z),2.7,P.stone,Enum.Material.Slate,details)
-   rock.Size=Vector3.new(3.4,1.3,2.3)
-   optimizeDecorativeMesh(rock,false)
+   -- Assentar o seixo na margem real: nao flutuar nem nascer submerso.
+   local hit=Workspace:Raycast(Vector3.new(x,20,z),Vector3.new(0,-45,0),groundParams)
+   if hit and hit.Position.Y>=-0.5 then
+    local rock=orb("Seixo de margem",hit.Position+Vector3.new(0,0.45,0),2.7,P.stone,Enum.Material.Slate,details)
+    rock.Size=Vector3.new(3.4,1.3,2.3)
+    rock.CFrame=rock.CFrame*CFrame.Angles(0,plantRng:NextNumber(-PI,PI),0)
+    optimizeDecorativeMesh(rock,false)
+    riverbankStoneCount+=1
+   end
   end
  end
 end
+world:SetAttribute("RiverbankGroundedStones",riverbankStoneCount)
 -- Horizonte em camadas com arvores premium, nunca placas quadradas.
 local horizon=group("Bosque de horizonte")
 for i=0,25 do
