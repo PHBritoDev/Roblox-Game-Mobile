@@ -965,6 +965,57 @@ local fallen=between("Travessa tombada",
  2.8,P.stone,Enum.Material.Slate,relics)
 fallen.CanCollide=false
 
+-- Camada de ruinas cobertas por musgo: pedra e vegetacao contam a historia
+-- do santuario sem luzes dinamicas, scripts externos ou custo de colisao.
+-- RNG separado evita mudar a distribuicao das arvores existentes.
+local ruinRng=Random.new(67173)
+local ruinMoss=group("Musgo e fragmentos das ruinas")
+local ruinGround=RaycastParams.new()
+ruinGround.FilterType=Enum.RaycastFilterType.Include
+ruinGround.FilterDescendantsInstances={terrain}
+ruinGround.IgnoreWater=true
+local ruinCenters={
+ Vector2.new(pathX(-38)-16,-39),
+ Vector2.new(pathX(-63)+18,-61),
+ Vector2.new(pathX(-168)-17,-166),
+ Vector2.new(center.X-26,center.Z+25),
+ Vector2.new(center.X+28,center.Z+25),
+}
+local ruinFragments=0
+local ruinMossPatches=0
+for _,site in ipairs(ruinCenters) do
+ for j=1,9 do
+  local angle=(j/9)*PI*2+ruinRng:NextNumber(-0.16,0.16)
+  local radius=ruinRng:NextNumber(5.8,12.5)
+  local x=site.X+math.cos(angle)*radius
+  local z=site.Y+math.sin(angle)*radius
+  if not reservedSite(x,z,3) and not inWalkway(x,z,4) then
+   local hit=Workspace:Raycast(Vector3.new(x,16,z),Vector3.new(0,-34,0),ruinGround)
+   if hit and hit.Normal.Y>0.8 and math.abs(hit.Position.Y)<2 then
+    local ground=hit.Position.Y
+    if j%3==0 then
+     local slab=part("Fragmento de capitel coberto",Vector3.new(
+      ruinRng:NextNumber(2.4,4.2),0.65,ruinRng:NextNumber(1.8,3.4)),
+      CFrame.new(x,ground+0.24,z)*CFrame.Angles(0,angle,ruinRng:NextNumber(-0.12,0.12)),
+      P.stone,Enum.Material.Slate,ruinMoss)
+     optimizeDecorativeMesh(slab,false)
+     ruinFragments+=1
+    else
+     -- Lajes achatadas de musgo, sem bolas ou cards transparentes.
+     local patch=part("Musgo rasteiro das ruinas",Vector3.new(
+      ruinRng:NextNumber(1.8,3.8),0.12,ruinRng:NextNumber(2.2,4.8)),
+      CFrame.new(x,ground+0.08,z)*CFrame.Angles(0,angle,0),
+      if j%2==0 then P.mossLight else P.moss,Enum.Material.Grass,ruinMoss)
+     optimizeDecorativeMesh(patch,false)
+     ruinMossPatches+=1
+    end
+   end
+  end
+ end
+end
+world:SetAttribute("RuinMossPatches",ruinMossPatches)
+world:SetAttribute("RuinStoneFragments",ruinFragments)
+
 -- Raizes mortas junto das trilhas, revelando a idade e o ciclo da floresta.
 for i=1,12 do
  local z=-18-i*21
