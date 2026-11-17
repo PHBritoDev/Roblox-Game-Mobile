@@ -1009,7 +1009,33 @@ for i=1,7 do
   3.7,P.mossLight,Enum.Material.Grass,reflection)
  leaf.Size=Vector3.new(leaf.Size.X,0.2,leaf.Size.Z)
  leaf.CanCollide=false
+ leaf.CastShadow=false
+ leaf.CanQuery=false
+ -- Flores de agua autorais: apenas quatro nenufares floridos para conter draw calls.
+ -- Petalas fisicas pequenas, sem particulas ou luzes; leitura clara a curta distancia.
+ if i%2==1 then
+  local blossom=Vector3.new(leaf.Position.X,-1.52,leaf.Position.Z)
+  local petals=4
+  for petalIndex=1,petals do
+   local angle=petalIndex*2*PI/petals+i*0.37
+   local petal=part("Petala de nenufar",Vector3.new(0.62,0.14,1.12),
+    CFrame.new(blossom+Vector3.new(math.cos(angle)*0.38,0,math.sin(angle)*0.38))
+     *CFrame.Angles(0,-angle+PI/2,math.rad(9)),
+    if i%4==1 then P.flower else Color3.fromRGB(240,229,197),
+    Enum.Material.SmoothPlastic,reflection)
+   petal.CanCollide=false
+   petal.CanQuery=false
+   petal.CastShadow=false
+  end
+  local heart=orb("Miolo dourado do nenufar",blossom+Vector3.new(0,0.08,0),
+   0.34,P.rune,Enum.Material.SmoothPlastic,reflection)
+  heart.CanCollide=false
+  heart.CanQuery=false
+  heart.CastShadow=false
+ end
 end
+reflection:SetAttribute("AuthoredWaterLilyBlooms",4)
+reflection:SetAttribute("WaterLilyDecorativeParts",20)
 
 -- Partículas leves confinadas à clareira, evitando dezenas de luzes dinâmicas.
 local fireflies=part("Vagalumes na clareira",Vector3.new(1,1,1),
