@@ -297,16 +297,17 @@ local function branchTree(x,z,s,family,species)
    -- As arvores de cena principal devem vir do Forest Pack licenciado.
    for layer=1,2 do
     local drift=Vector3.new(random:NextNumber(-1.6,1.6)*s,(layer-1)*2.2*s,random:NextNumber(-1.6,1.6)*s)
-    local crown=orb("Copa organica reserva",center+drift,1,color,Enum.Material.Grass,tree)
+    -- Silhueta lanceolada no fallback: sem esferas genéricas, sem transparência.
+    -- Duas cunhas por camada mantêm o custo previsível em Android.
     local radius=(if species==2 then 4 else 5.6)*s
-    crown.Size=Vector3.new(radius*1.6,radius*(if layer==1 then 0.95 else 1.15),radius*1.35)
-    optimizeDecorativeMesh(crown,math.abs(x-pathX(z))<65 and layer==1)
+    local canopyCF=CFrame.new(center+drift)*CFrame.Angles(0,angle+random:NextNumber(-0.3,0.3),0)
+    leafSpray(canopyCF,radius*1.6,radius*2.2,color,tree,false)
    end
   end
  end
- local apex=orb("Cume organico reserva",top,1,P.canopyMid,Enum.Material.Grass,tree)
- apex.Size=Vector3.new(7*s,6*s,7*s)
- optimizeDecorativeMesh(apex,true)
+ -- O cume também evita a antiga bola isolada.
+ leafSpray(CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0),
+  5.5*s,7*s,P.canopyMid,tree,false)
  authoredTrees+=1
  if authoredTrees%8==0 then task.wait() end
  return tree
