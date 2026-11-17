@@ -913,6 +913,33 @@ for _,side in ipairs({-1,1}) do
    P.bark,Enum.Material.Wood,landmarks)
  end
 end
+-- Travessia artesanal: tabuas ritmadas e escoras diagonais dão escala humana
+-- ao rio sem importar assets, criar luzes ou alterar a colisao do tabuleiro.
+-- 15 tabuas rasas sem colisao; o tabuleiro unico continua sendo o piso seguro.
+for i=0,14 do
+ local x=103+i*4.15
+ local board=part("Tabua envelhecida da ponte",Vector3.new(3.86,0.16,11.4),
+  CFrame.new(x,0.34,-89),if i%4==0 then P.bark else P.barkLight,
+  Enum.Material.WoodPlanks,landmarks)
+ board.CanCollide=false
+ board.CanQuery=false
+ board.CastShadow=false
+end
+-- Escoras em V entre pilares: silhueta legivel da ponte vista de longe.
+for _,side in ipairs({-1,1}) do
+ for i=0,7 do
+  local x=100+i*8
+  local z=-89+side*5.8
+  local brace=between("Escora diagonal da ponte",
+   Vector3.new(x,0.4,z),Vector3.new(x+4,2.65,z),
+   0.34,P.bark,Enum.Material.Wood,landmarks)
+  brace.CanCollide=false
+  brace.CanQuery=false
+  brace.CastShadow=false
+ end
+end
+world:SetAttribute("BridgeArtPass","15 deck boards + 16 diagonal braces; collision unchanged")
+
 -- Somente alguns detalhes de brilho autorais: o sub-bosque principal é MeshPart.
 for i=1,36 do
  local z=rng:NextNumber(-292,40)
