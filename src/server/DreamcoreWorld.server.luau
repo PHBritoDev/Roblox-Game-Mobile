@@ -1174,6 +1174,10 @@ local function applyMood(mood)
  emitter.Rate=mood.fireflyRate
  sky.StarCount=mood.stars
  clouds.Color=mood.cloud
+ -- Silhueta do ceu acompanha o horario sem novos objetos ou luzes.
+ clouds.Cover=mood.stars>0 and 0.19 or (mood.clock<12 and 0.24 or 0.32)
+ clouds.Density=mood.stars>0 and 0.16 or 0.24
+ atmosphere.Haze=mood.stars>0 and 0.27 or 0.45
  world:SetAttribute("LightingMood",mood.name)
 end
 -- Por do sol para primeira impressao; transicoes suaves entre os tres climas.
@@ -1246,6 +1250,14 @@ task.spawn(function()
     atmosphere.Decay=start.decay:Lerp(target.decay,smooth)
     grade.TintColor=start.tint:Lerp(target.tint,smooth)
     clouds.Color=start.cloud:Lerp(target.cloud,smooth)
+    -- Abrir o ceu noturno para as estrelas, manter nevoa delicada ao amanhecer.
+    local startNight=start.stars>0
+    local targetNight=target.stars>0
+    local startCover=startNight and 0.19 or (start.clock<12 and 0.24 or 0.32)
+    local targetCover=targetNight and 0.19 or (target.clock<12 and 0.24 or 0.32)
+    clouds.Cover=startCover+(targetCover-startCover)*smooth
+    clouds.Density=(startNight and 0.16 or 0.24)+((targetNight and 0.16 or 0.24)-(startNight and 0.16 or 0.24))*smooth
+    atmosphere.Haze=(startNight and 0.27 or 0.45)+((targetNight and 0.27 or 0.45)-(startNight and 0.27 or 0.45))*smooth
     rays.Intensity=start.rays+(target.rays-start.rays)*smooth
     ancientGlow.Brightness=start.glow+(target.glow-start.glow)*smooth
     lakeGlow.Brightness=ancientGlow.Brightness*0.72
