@@ -17,6 +17,7 @@ local COUNT=4
 local UPDATE_INTERVAL=0.09 -- ate ~11 atualizacoes/s, nunca todo Heartbeat
 local MAX_DISTANCE=105
 local MAX_ALTITUDE=3.5
+local GROUND_REFRESH=0.55 -- evita voo sobre altura antiga durante deslocamento
 local elapsed=0
 local clock=0
 local center=nil
@@ -111,13 +112,16 @@ local function tickWildlife(dt)
  if not center or (root.Position-center).Magnitude>85 then
   center=root.Position
   lastGround=-100
+  for _,b in butterflies do b.ground=nil end
  end
- local refresh=clock-lastGround>1.1
+ local refresh=clock-lastGround>GROUND_REFRESH
  if refresh then lastGround=clock end
- for _,b in butterflies do
-  local angle=b.angle+math.sin(clock*0.18+b.phase)*0.29
-  local x=center.X+math.cos(angle)*b.radius
-  local z=center.Z+math.sin(angle)*b.radius
+ for i,b in butterflies do
+  -- Trajetoria circular lenta com ondulacao organica: movimento real, nao apenas asas batendo.
+  local angle=b.angle+clock*0.065*(i%2==0 and -1 or 1)+math.sin(clock*0.18+b.phase)*0.18
+  local radius=b.radius+math.sin(clock*0.31+b.phase)*2.5
+  local x=center.X+math.cos(angle)*radius
+  local z=center.Z+math.sin(angle)*radius
   if refresh or b.ground==nil then
    b.ground=sampleGround(x,z)
   end
