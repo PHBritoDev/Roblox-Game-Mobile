@@ -224,10 +224,16 @@ for i=1,90 do
  local side=if i%2==0 then 1 else -1
  local x=pathX(z)+side*rng:NextNumber(8.5,16)
  if not inWalkway(x,z,-2) then
-  local leaf=part("Folha caida original",Vector3.new(rng:NextNumber(0.4,0.9),0.07,rng:NextNumber(0.8,1.5)),
-   CFrame.new(x,0.12,z)*CFrame.Angles(0,rng:NextNumber(0,2*PI),0),
-   if i%3==0 then P.canopyGold else P.moss,Enum.Material.Grass,details)
+  -- Silhueta afilada em cunha: substitui as placas retangulares do solo,
+  -- sem aumentar a contagem de instancias nem exigir textura externa.
+  local leaf=Instance.new("WedgePart")
+  leaf.Name="Folha caida lanceolada"
+  leaf.Size=Vector3.new(rng:NextNumber(0.35,0.75),0.10,rng:NextNumber(0.9,1.65))
+  leaf.CFrame=CFrame.new(x,0.13,z)*CFrame.Angles(0,rng:NextNumber(0,2*PI),0)
+  leaf.Color=if i%7==0 then P.flower else if i%3==0 then P.canopyGold else P.moss
+  leaf.Material=Enum.Material.Grass
   optimizeDecorativeMesh(leaf,false)
+  leaf.Parent=details
  end
 end
 
