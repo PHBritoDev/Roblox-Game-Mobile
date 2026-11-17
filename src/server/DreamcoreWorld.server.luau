@@ -988,22 +988,44 @@ for i=1,36 do
  local x=pathX(z)+side*rng:NextNumber(8,56)
  local kind=i%7
  if kind==0 then
-  local cap=orb("Flor de memoria",Vector3.new(x,1.65,z),rng:NextNumber(1,2.6),P.flower,
+  -- Flor radial de cinco petalas: silhueta legivel, sem bolhas gigantes.
+  local size=rng:NextNumber(0.85,1.15)
+  local stem=part("Haste de flor",Vector3.new(0.18,1.7,0.18),
+   CFrame.new(x,0.85,z),P.mossLight,Enum.Material.Grass,details)
+  optimizeDecorativeMesh(stem,false)
+  for petalIndex=1,5 do
+   local angle=(petalIndex-1)*2*PI/5
+   local petal=part("Petala da memoria",Vector3.new(0.65*size,0.12,1.15*size),
+    CFrame.new(x+math.sin(angle)*0.45*size,1.72,z+math.cos(angle)*0.45*size)
+     *CFrame.Angles(0,angle,math.rad(16)),
+    if petalIndex%2==0 then P.flower else P.canopyGold,Enum.Material.SmoothPlastic,details)
+   optimizeDecorativeMesh(petal,false)
+  end
+  local heart=orb("Miolo da memoria",Vector3.new(x,1.78,z),0.38*size,P.firefly,
    Enum.Material.SmoothPlastic,details)
-  cap.CanCollide=false
-  part("Haste de flor",Vector3.new(0.22,1.7,0.22),
-   CFrame.new(x,0.85,z),P.mossLight,Enum.Material.Grass,details).CanCollide=false
+  optimizeDecorativeMesh(heart,false)
  elseif kind==1 then
-  local fungi=orb("Cogumelo luminoso",Vector3.new(x,0.8,z),1.7,P.blue,
-   Enum.Material.Neon,details)
-  fungi.CanCollide=false
- else
-  -- Retirar os arbustos-esfera que dominavam a silhueta do primeiro plano.
-  -- As samambaias MeshPart do Forest Pack compõem o estrato baixo.
-  local petal=orb("Flor silvestre discreta",Vector3.new(x,0.9,z),
-   rng:NextNumber(0.35,0.65),if i%3==0 then P.flower else P.mossLight,
+  -- Cogumelo com pe e chapeu baixo: brilho so no miolo, sem luz dinamica.
+  local stem=part("Pe do cogumelo",Vector3.new(0.32,0.75,0.32),
+   CFrame.new(x,0.38,z),P.stone,Enum.Material.SmoothPlastic,details)
+  optimizeDecorativeMesh(stem,false)
+  local cap=orb("Chapeu do cogumelo",Vector3.new(x,0.82,z),1.35,P.blue,
    Enum.Material.SmoothPlastic,details)
-  petal.CanCollide=false
+  cap.Size=Vector3.new(1.35,0.34,1.35)
+  optimizeDecorativeMesh(cap,false)
+  local glow=orb("Nucleo bioluminescente",Vector3.new(x,0.77,z),0.26,P.blue,
+   Enum.Material.Neon,details)
+  optimizeDecorativeMesh(glow,false)
+ else
+  -- Flores baixas em pequenos tufos, sem esferas suspensas.
+  local tint=if i%3==0 then P.flower else P.mossLight
+  for petalIndex=1,3 do
+   local angle=(petalIndex-1)*2*PI/3
+   local petal=part("Flor silvestre discreta",Vector3.new(0.27,0.09,0.55),
+    CFrame.new(x+math.sin(angle)*0.16,0.22,z+math.cos(angle)*0.16)
+     *CFrame.Angles(0,angle,math.rad(9)),tint,Enum.Material.SmoothPlastic,details)
+   optimizeDecorativeMesh(petal,false)
+  end
  end
 end
 
