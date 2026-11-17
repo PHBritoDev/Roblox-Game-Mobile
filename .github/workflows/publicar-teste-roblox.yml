@@ -3,12 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       universo_id:
-        description: "Universe ID da experiencia de teste existente"
+        description: "Universe ID (produção: 2660433574)"
         required: true
+        default: "2660433574"
         type: string
       lugar_id:
-        description: "Place ID do lugar de teste existente"
+        description: "Place ID completo (produção: 6947682498, dez dígitos)"
         required: true
+        default: "6947682498"
         type: string
       modo:
         description: "Saved prepara uma versao; Published libera a versao para a experiencia"
@@ -40,6 +42,10 @@ jobs:
           set -euo pipefail
           [[ "$UNIVERSE" =~ ^[0-9]+$ ]] || { echo "Universe ID invalido"; exit 1; }
           [[ "$PLACE" =~ ^[0-9]+$ ]] || { echo "Place ID invalido"; exit 1; }
+          if [[ "$UNIVERSE" == "2660433574" && "$PLACE" != "6947682498" ]]; then
+            echo "::error::Este Universe de producao exige o Place ID completo 6947682498. Confira o ultimo digito; nenhuma publicacao foi enviada."
+            exit 1
+          fi
           if [ -z "$ROBLOX_API_KEY" ]; then
             echo "Configure ROBLOX_API_KEY em GitHub Settings > Secrets and variables > Actions."
             exit 1
