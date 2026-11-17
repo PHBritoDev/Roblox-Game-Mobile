@@ -42,7 +42,7 @@ class MalformedNavigationTests(unittest.TestCase):
                 self.assertIn("No physical tree/rock proxies measured", result)
 
     def test_valid_numeric_fields_do_not_trigger_numeric_errors(self):
-        result = module.navigation_failures({"routes": [], "spawn": {"present": True, "anchored": True, "collidable": True, "footing": {"supported": True, "y": 0.0}}, "proxyCount": 3})
+        result = module.navigation_failures({"routes": [], "spawn": {"present": True, "anchored": True, "collidable": True, "footing": {"supported": True, "y": 0.0, "blockers": []}}, "proxyCount": 3})
         self.assertNotIn("No physical tree/rock proxies measured", result)
         self.assertFalse(any("Spawn missing" in error for error in result))
 

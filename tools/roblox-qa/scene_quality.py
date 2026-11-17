@@ -37,8 +37,12 @@ def navigation_failures(navigation):
         previous = None
         for index, sample in enumerate(samples):
             prefix = f"{route['name']}[{index}]"
-            if not sample.get("supported"):
+            if sample.get("supported") is not True:
                 errors.append(f"{prefix}: no solid support")
+                previous = None
+                continue
+            if not isinstance(sample.get("blockers"), list) or not all(isinstance(b, str) for b in sample["blockers"]):
+                errors.append(f"{prefix}: malformed collision blockers")
                 previous = None
                 continue
             if not all(finite_number(sample.get(key))
@@ -68,26 +72,39 @@ def navigation_failures(navigation):
     footing = spawn.get("footing", {})
     if not isinstance(footing, dict):
         return errors + ["Malformed spawn footing"]
-    if not (spawn.get("present") and spawn.get("anchored") and spawn.get("collidable")
-            and footing.get("supported") and not footing.get("blockers")
+    if not (spawn.get("present") is True and spawn.get("anchored") is True
+            and spawn.get("collidable") is True and footing.get("supported") is True
+            and isinstance(footing.get("blockers"), list) and not footing["blockers"]
             and finite_number(footing.get("y"))
             and -1 <= footing["y"] <= 2):
         errors.append("Spawn missing, unsupported, obstructed, or not solid")
     proxy_count = navigation.get("proxyCount", 0)
-    if not isinstance(proxy_count, (int, float)) or isinstance(proxy_count, bool) or not math.isfinite(proxy_count) or proxy_count < 1:
+    if not finite_number(proxy_count) or proxy_count < 1:
         errors.append("No physical tree/rock proxies measured")
+    if not isinstance(navigation.get("invalidProxies"), list):
+        errors.append("Malformed invalidProxies telemetry")
     if navigation.get("invalidProxies"):
         errors.append(f"Invalid collision proxies: {navigation['invalidProxies']}")
+    if not isinstance(navigation.get("activeScripts"), list):
+        errors.append("Malformed activeScripts telemetry")
     if navigation.get("activeScripts"):
         errors.append(f"Third-party scripts in generated world: {navigation['activeScripts']}")
     return errors
 
 
 def evaluate(scene):
-    parts = scene["parts"]
+    if not isinstance(scene, dict):
+        return {"pass": False, "navigationFailures": ["Scene snapshot must be a JSON object"]}
+    parts = scene.get("parts")
+    meta = scene.get("meta")
+    if not isinstance(parts, list) or not all(isinstance(p, dict) and isinstance(p.get("n"), str) for p in parts):
+        return {"pass": False, "navigationFailures": ["Malformed scene parts"]}
+    if not isinstance(meta, dict) or not all(
+            finite_number(meta.get(k)) and meta[k] >= 0 and int(meta[k]) == meta[k]
+            for k in ("partsTotal", "partsExported")):
+        return {"pass": False, "navigationFailures": ["Malformed scene geometry metadata"]}
     counts = Counter(p["n"] for p in parts)
     origins = Counter(p.get("origin", "Authored") for p in parts)
-    meta = scene["meta"]
     navigation = scene.get("navigation", {})
     errors = navigation_failures(navigation)
     if len(parts) != meta["partsExported"] or len(parts) > meta["partsTotal"]:
@@ -97,6 +114,9 @@ def evaluate(scene):
     if len(parts) != meta["partsTotal"]:
         errors.append("Incomplete exported geometry")
     assets = scene.get("assets", {})
+    if not isinstance(assets, dict):
+        errors.append("Malformed asset diagnostics")
+        assets = {}
     if meta.get("worldVersion",0)>=33:
         if not meta.get("generationComplete"):
             errors.append("World not ready")

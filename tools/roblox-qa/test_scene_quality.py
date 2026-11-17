@@ -87,5 +87,39 @@ class NavigationRegressionTests(unittest.TestCase):
         self.assertFalse(evaluate(self.scene)["pass"])
 
 
+    def test_malformed_snapshot_fails_closed(self):
+        cases = [
+            None, [], {}, {"parts": None, "meta": {}},
+            {"parts": [None], "meta": {"partsTotal": 1, "partsExported": 1}},
+            {"parts": [], "meta": {"partsTotal": float("nan"), "partsExported": 0}},
+            {"parts": [], "meta": {"partsTotal": 0, "partsExported": True}},
+        ]
+        for scene in cases:
+            with self.subTest(scene=scene):
+                report = evaluate(scene)
+                self.assertFalse(report["pass"])
+                self.assertTrue(report["navigationFailures"])
+
+    def test_malformed_collision_telemetry_fails_closed(self):
+        changes = [
+            lambda scene: scene["navigation"]["routes"][0]["samples"][0].update(supported=1),
+            lambda scene: scene["navigation"]["routes"][0]["samples"][0].update(blockers=""),
+            lambda scene: scene["navigation"]["spawn"].update(collidable=1),
+            lambda scene: scene["navigation"]["spawn"]["footing"].update(blockers=""),
+            lambda scene: scene["navigation"].update(invalidProxies=None),
+            lambda scene: scene["navigation"].update(activeScripts=None),
+            lambda scene: scene["navigation"].update(proxyCount=float("nan")),
+        ]
+        for change in changes:
+            with self.subTest(change=changes.index(change)):
+                scene = flat_scene()
+                change(scene)
+                self.assertFalse(evaluate(scene)["pass"])
+
+    def test_invalid_asset_diagnostics_fails_closed(self):
+        self.scene["assets"] = []
+        self.assertFalse(evaluate(self.scene)["pass"])
+
+
 if __name__ == "__main__":
     unittest.main()
