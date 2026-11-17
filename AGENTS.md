@@ -41,3 +41,26 @@ Não inserir música qualquer. Só integrar áudio cuja licença e ID da Creator
 - Evitar serviços pagos, mudanças de conta ou compras sem autorização.
 - Não inventar screenshot, FPS, sucesso de compilação ou conclusão de workflow.
 - Captura real via Roblox Studio MCP precisa de máquina compatível conectada; ainda não disponível.
+
+
+## Protocolo de entrega contínua e desbloqueio de PRs (diretriz do criador — 17/11/2026)
+**Objetivo prioritário: fazer as melhorias chegarem ao jogo, não acumular dezenas de PRs paradas.** A floresta ainda está visualmente genérica. Aproveitar o trabalho existente com velocidade **sem trocar estabilidade por quantidade de merges**.
+
+### Agente principal — Evoluir jogo Roblox
+- No início de cada rodada, consultar o backlog de PRs abertas e seus comentários de revisão. **Corrigir e consolidar PRs existentes antes de abrir outra PR do mesmo subsistema.** Evitar sequências de PRs concorrentes para o mesmo `DreamcoreWorld.server.luau`.
+- Não deixar PR em draft indefinidamente: terminar implementação, adicionar testes/evidências e marcar **Ready for review** quando os critérios estiverem satisfeitos. Draft só se ainda houver trabalho objetivo, com checklist e responsável no corpo da PR.
+- Corrigir primeiro os defeitos documentados pelo integrador; quando duas PRs se sobrepõem, consolidar numa branch própria, indicar PRs substituídas e preservar o melhor das duas. **Não apagar melhorias para fazer CI passar.**
+- Priorizar lotes que produzam transformação perceptível: silhuetas de árvores naturais, cobertura do solo, flores, pontos de interesse, iluminação e fauna leve; proteger spawn, trilhas, pontes, streaming, colisões e entrada rápida. Fazer regressões de fallback e orçamento de Parts.
+- Entregar na PR: HEAD SHA; resumo de mudanças; tabela de checks completos; contagem de Parts e QA de navegação; inspeção de artefatos proxy (três ângulos + relatórios); riscos; plano de rollback; aviso explícito do que não foi testado no Roblox/Android. Solicitar revisão visual real quando a aprovação estética depender dela.
+
+### Agente integrador — Bugs e Melhorias
+- Revisar **em lote** PRs do principal, priorizar desbloquear 2–5 entregas coerentes por rodada, atualizar branches próprias quando necessário; não modificar a branch do outro agente. Fazer correções independentes ou pedir patches precisos ao autor.
+- Não usar `draft` como desculpa para imobilidade: explicar por comentário exatamente o que falta, ajudar a concluir a PR e, **somente depois que estiver apta**, marcá-la Ready e integrar. PR sem conflito e verde ainda pode estar insegura; observar revisões, dependências, assets, fallback e UI mobile.
+- Em alterações concorrentes no arquivo gerador único, definir ordem de integração; após cada merge atualizar a base das PRs dependentes e exigir novos checks no SHA atualizado. Evitar aceitar simultaneamente branches antigas que sobrescrevam ou revertam avanços.
+- Para cada merge elegível: comprovar checks essenciais verdes e concluídos, evidências de QA/visual suficientes ao escopo, segurança, orçamento e rollback; mesclar, confirmar novo SHA da `main` e acompanhar validação pós-merge. Registrar com clareza falhas e bloqueios reais.
+- **Indicador de produtividade**: total integrado com segurança, correções resolvidas, regressões evitadas e melhoria real do jogo — não o número de PRs abertas ou comentários.
+
+### Publicação e teste no Android
+- O criador **autoriza publicar no jogo principal após um lote validado**, para testar no Android. Isso **não** autoriza pular CI, revelar segredos, pagar por serviços ou publicar código com erro conhecido.
+- Publicação continua **operação separada e explícita** pelo workflow manual protegido; não ocorre automaticamente por merge. Se o mecanismo de disparo manual autorizado estiver disponível, usá-lo **após** integrar e verificar a `main` e registrar Place/versão sem divulgar credenciais. Se não estiver disponível, informar o bloqueio exato e oferecer o caminho manual, **sem afirmar que o Roblox foi atualizado**.
+- Nunca confundir proxy Blender com imagem de Roblox, nem afirmar FPS Android sem teste real. Plano de rollback da `main` e da versão publicada antes do envio.
