@@ -21,6 +21,7 @@ local elapsed=0
 local clock=0
 local center=nil
 local lastGround=-100
+local wasActive=false
 
 local ray=RaycastParams.new()
 ray.FilterType=Enum.RaycastFilterType.Include
@@ -66,7 +67,7 @@ for i=1,COUNT do
  butterflies[i]={
   model=model,body=body,left=left,right=right,
   lowerLeft=lowerLeft,lowerRight=lowerRight,
-  angle=i*2.39996,radius=21+i*11,phase=i*1.7,ground=nil
+  angle=i*2.39996,radius=21+i*11,phase=i*1.7,ground=nil,groundX=nil,groundZ=nil
  }
 end
 
@@ -105,8 +106,19 @@ local function tickWildlife(dt)
  local character=localPlayer.Character
  local root=character and character:FindFirstChild("HumanoidRootPart")
  if ReplicatedStorage:GetAttribute("ForestState")~="Ready" or not root or not daylight(Lighting.ClockTime) then
-  for _,b in butterflies do show(b,false) end
+  for _,b in butterflies do
+   show(b,false)
+   b.ground=nil
+   b.groundX=nil
+   b.groundZ=nil
+  end
+  wasActive=false
+  center=nil
   return
+ end
+ if not wasActive then
+  lastGround=-100
+  wasActive=true
  end
  if not center or (root.Position-center).Magnitude>85 then
   center=root.Position
@@ -118,8 +130,12 @@ local function tickWildlife(dt)
   local angle=b.angle+math.sin(clock*0.18+b.phase)*0.29
   local x=center.X+math.cos(angle)*b.radius
   local z=center.Z+math.sin(angle)*b.radius
-  if refresh or b.ground==nil then
+  -- Nunca reutilizar a altura de um ponto distante enquanto a borboleta orbita.
+  local moved=b.groundX==nil or (x-b.groundX)^2+(z-b.groundZ)^2>9
+  if refresh or moved or b.ground==nil then
    b.ground=sampleGround(x,z)
+   b.groundX=x
+   b.groundZ=z
   end
   local visible=b.ground~=nil and (Vector3.new(x,b.ground or 0,z)-root.Position).Magnitude<=MAX_DISTANCE
   show(b,visible)
