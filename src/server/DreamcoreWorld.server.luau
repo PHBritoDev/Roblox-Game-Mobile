@@ -1203,7 +1203,7 @@ local moods={
   atm=Color3.fromRGB(235,212,178), decay=Color3.fromRGB(139,158,159),
   tint=Color3.fromRGB(255,248,235), exposure=-0.05,
    sunTint=Color3.fromRGB(59,39,17), shadeTint=Color3.fromRGB(9,23,28),
-  cloud=Color3.fromRGB(245,214,192), stars=0, rays=0.065, glow=0.72, fireflyRate=2,
+  cloud=Color3.fromRGB(245,214,192), cloudCover=0.32, cloudDensity=0.23, stars=0, rays=0.065, glow=0.72, fireflyRate=2,
  },
  {
   name="Cold Twilight", clock=19.0, brightness=1.55,
@@ -1211,7 +1211,7 @@ local moods={
   atm=Color3.fromRGB(155,154,207), decay=Color3.fromRGB(92,112,167),
   tint=Color3.fromRGB(208,211,255), exposure=-0.09,
    sunTint=Color3.fromRGB(24,14,31), shadeTint=Color3.fromRGB(8,16,30),
-  cloud=Color3.fromRGB(175,166,219), stars=1400, rays=0.05, glow=1.15, fireflyRate=6,
+  cloud=Color3.fromRGB(175,166,219), cloudCover=0.24, cloudDensity=0.19, stars=1400, rays=0.05, glow=1.15, fireflyRate=6,
  },
  {
   name="Starry Dream Night", clock=23.6, brightness=1.1,
@@ -1219,7 +1219,7 @@ local moods={
   atm=Color3.fromRGB(88,117,175), decay=Color3.fromRGB(43,54,107),
   tint=Color3.fromRGB(185,201,255), exposure=-0.15,
    sunTint=Color3.fromRGB(12,20,36), shadeTint=Color3.fromRGB(5,10,23),
-  cloud=Color3.fromRGB(105,130,183), stars=3000, rays=0.0, glow=1.75, fireflyRate=8,
+  cloud=Color3.fromRGB(105,130,183), cloudCover=0.12, cloudDensity=0.13, stars=3000, rays=0.0, glow=1.75, fireflyRate=8,
  },
  {
   -- Manha dourada/azul inspirada nas referencias enviadas, sem copiar assets.
@@ -1228,7 +1228,7 @@ local moods={
   atm=Color3.fromRGB(246,208,172), decay=Color3.fromRGB(139,164,174),
   tint=Color3.fromRGB(255,241,220), exposure=-0.08,
   sunTint=Color3.fromRGB(52,32,16), shadeTint=Color3.fromRGB(7,25,35),
-  cloud=Color3.fromRGB(255,211,185), stars=0, rays=0.055, glow=0.65, fireflyRate=1,
+  cloud=Color3.fromRGB(255,211,185), cloudCover=0.29, cloudDensity=0.21, stars=0, rays=0.055, glow=0.65, fireflyRate=1,
  }
 }
 
@@ -1267,8 +1267,7 @@ sky.CelestialBodiesShown=true
 sky.Parent=Lighting
 local clouds=terrain:FindFirstChild("DreamcoreClouds") or Instance.new("Clouds")
 clouds.Name="DreamcoreClouds"
-clouds.Cover=0.31
-clouds.Density=0.24
+-- Os valores definitivos sao aplicados pelo perfil de clima, inclusive apos reload.
 clouds.Parent=terrain
 Lighting.GlobalShadows=true
 Lighting.ShadowSoftness=0.38
@@ -1298,6 +1297,8 @@ local function applyMood(mood)
  emitter.Rate=mood.fireflyRate
  sky.StarCount=mood.stars
  clouds.Color=mood.cloud
+ clouds.Cover=mood.cloudCover
+ clouds.Density=mood.cloudDensity
  world:SetAttribute("LightingMood",mood.name)
 end
 -- Por do sol para primeira impressao; transicoes suaves entre os tres climas.
@@ -1370,6 +1371,8 @@ task.spawn(function()
     atmosphere.Decay=start.decay:Lerp(target.decay,smooth)
     grade.TintColor=start.tint:Lerp(target.tint,smooth)
     clouds.Color=start.cloud:Lerp(target.cloud,smooth)
+    clouds.Cover=start.cloudCover+(target.cloudCover-start.cloudCover)*smooth
+    clouds.Density=start.cloudDensity+(target.cloudDensity-start.cloudDensity)*smooth
     rays.Intensity=start.rays+(target.rays-start.rays)*smooth
     ancientGlow.Brightness=start.glow+(target.glow-start.glow)*smooth
     lakeGlow.Brightness=ancientGlow.Brightness*0.72
