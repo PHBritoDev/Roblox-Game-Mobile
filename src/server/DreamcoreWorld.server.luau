@@ -944,30 +944,57 @@ for _,side in ipairs({-1,1}) do
  end
 end
 -- Somente alguns detalhes de brilho autorais: o sub-bosque principal é MeshPart.
+-- Microjardins autorais: retirar flores-esfera da composicao principal.
+-- Poucos elementos, sem colisao/sombra; sem dependencia de assets externos.
+local authoredMeadowFlowers=0
+local authoredMeadowFungi=0
+local flowerRng=Random.new(340217)
 for i=1,36 do
- local z=rng:NextNumber(-292,40)
+ local z=flowerRng:NextNumber(-292,40)
  local side=if i%2==0 then 1 else -1
- local x=pathX(z)+side*rng:NextNumber(8,56)
- local kind=i%7
- if kind==0 then
-  local cap=orb("Flor de memoria",Vector3.new(x,1.65,z),rng:NextNumber(1,2.6),P.flower,
-   Enum.Material.SmoothPlastic,details)
-  cap.CanCollide=false
-  part("Haste de flor",Vector3.new(0.22,1.7,0.22),
-   CFrame.new(x,0.85,z),P.mossLight,Enum.Material.Grass,details).CanCollide=false
- elseif kind==1 then
-  local fungi=orb("Cogumelo luminoso",Vector3.new(x,0.8,z),1.7,P.blue,
-   Enum.Material.Neon,details)
-  fungi.CanCollide=false
+ local x=pathX(z)+side*flowerRng:NextNumber(17,53)
+ if inWalkway(x,z,5) then continue end
+ local ground=terrainHeightAt(x,z)
+ if i%7==1 then
+  -- Pequenos cogumelos com chapeu achatado e haste, nao orbes neon gigantes.
+  local stem=part("Haste de fungo",Vector3.new(0.23,0.7,0.23),
+   CFrame.new(x,ground+0.35,z),P.barkLight,Enum.Material.SmoothPlastic,details)
+  local cap=part("Chapeu de fungo",Vector3.new(1.1,0.24,0.95),
+   CFrame.new(x,ground+0.76,z)*CFrame.Angles(0,i*0.6,0),
+   P.blue,Enum.Material.SmoothPlastic,details)
+  for _,piece in {stem,cap} do
+   piece.CanCollide=false
+   piece.CanTouch=false
+   piece.CanQuery=false
+   piece.CastShadow=false
+  end
+  authoredMeadowFungi+=1
  else
-  -- Retirar os arbustos-esfera que dominavam a silhueta do primeiro plano.
-  -- As samambaias MeshPart do Forest Pack compõem o estrato baixo.
-  local petal=orb("Flor silvestre discreta",Vector3.new(x,0.9,z),
-   rng:NextNumber(0.35,0.65),if i%3==0 then P.flower else P.mossLight,
-   Enum.Material.SmoothPlastic,details)
-  petal.CanCollide=false
+  local height=flowerRng:NextNumber(0.75,1.2)
+  local stem=part("Haste floral fina",Vector3.new(0.12,height,0.12),
+   CFrame.new(x,ground+height*0.5,z),P.mossLight,Enum.Material.Grass,details)
+  stem.CanCollide=false
+  stem.CanTouch=false
+  stem.CanQuery=false
+  stem.CastShadow=false
+  local flowerColor=if i%3==0 then P.flower else P.canopyGold
+  for petalIndex=1,4 do
+   local angle=(petalIndex-1)*PI*0.5+i*0.39
+   local petal=part("Petala lanceolada",Vector3.new(0.34,0.09,0.65),
+    CFrame.new(x,ground+height+0.07,z)
+     *CFrame.Angles(0,angle,0)*CFrame.new(0,0,-0.25)
+     *CFrame.Angles(math.rad(-24),0,0),
+    flowerColor,Enum.Material.SmoothPlastic,details)
+   petal.CanCollide=false
+   petal.CanTouch=false
+   petal.CanQuery=false
+   petal.CastShadow=false
+  end
+  authoredMeadowFlowers+=1
  end
 end
+world:SetAttribute("AuthoredMeadowFlowers",authoredMeadowFlowers)
+world:SetAttribute("AuthoredMeadowFungi",authoredMeadowFungi)
 
 -- Capitulo visual: vestigios de uma civilizacao que venerava a arvore ancestral.
 -- Composicao deliberada: marcos em pontos fixos, nao props aleatorios no mapa.
