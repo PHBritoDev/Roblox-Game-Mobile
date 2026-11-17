@@ -394,9 +394,14 @@ groundParams.IgnoreWater=true
 local plantRng=Random.new(330067)
 local function groundPlant(x,z,fern)
  if inWalkway(x,z,-1) then return end
- local hit=Workspace:Raycast(Vector3.new(x,10,z),Vector3.new(0,-25,0),groundParams)
- if not hit or hit.Position.Y < -0.5 then return end
- local base=CFrame.new(hit.Position+Vector3.new(0,0.08,0))
+ -- Amostrar acima de barrancos; rejeitar encostas ingremes e margens submersas.
+ local hit=Workspace:Raycast(Vector3.new(x,80,z),Vector3.new(0,-120,0),groundParams)
+ if not hit or hit.Position.Y < -0.5 or hit.Normal.Y < 0.78 then return end
+ -- Alinhar as touceiras ao solo sem inclinar excessivamente as laminas.
+ local normal=hit.Normal
+ local right=Vector3.new(0,0,1):Cross(normal).Unit
+ local back=right:Cross(normal).Unit
+ local base=CFrame.fromMatrix(hit.Position+normal*0.08,right,normal,back)
  local scale=plantRng:NextNumber(0.75,1.3)
  for j=1,(if fern then 5 else 3) do
   local a=j*2.4+plantRng:NextNumber(0,0.4)
