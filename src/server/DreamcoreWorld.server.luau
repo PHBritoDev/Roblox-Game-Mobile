@@ -299,20 +299,17 @@ local function branchTree(x,z,s,family,species)
   for lobe=1,2 do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
    local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
-   -- Emergencia somente: massas ovais organicas, nunca placas quadradas.
-   -- As arvores de cena principal devem vir do Forest Pack licenciado.
-   for layer=1,2 do
-    local drift=Vector3.new(random:NextNumber(-1.6,1.6)*s,(layer-1)*2.2*s,random:NextNumber(-1.6,1.6)*s)
-    local crown=orb("Copa organica reserva",center+drift,1,color,Enum.Material.Grass,tree)
-    local radius=(if species==2 then 4 else 5.6)*s
-    crown.Size=Vector3.new(radius*1.6,radius*(if layer==1 then 0.95 else 1.15),radius*1.35)
-    optimizeDecorativeMesh(crown,math.abs(x-pathX(z))<65 and layer==1)
-   end
+   -- Reserva sem esferas genericas: leque foliar orientado por ramo.
+   -- Apenas quando Forest Pack falha; duas cunhas por lobo, sem sombras/colisao.
+   local span=(if species==2 then 6.4 else 8.4)*s
+   local drift=Vector3.new(random:NextNumber(-0.7,0.7)*s,random:NextNumber(-0.4,0.9)*s,random:NextNumber(-0.7,0.7)*s)
+   local angle=math.atan2(radial.X,radial.Z)+random:NextNumber(-0.2,0.2)
+   local foliageCF=CFrame.new(center+drift)*CFrame.Angles(0,angle,math.rad(random:NextNumber(-16,16)))
+   leafSpray(foliageCF,span*0.58,span,color,tree,false)
   end
  end
- local apex=orb("Cume organico reserva",top,1,P.canopyMid,Enum.Material.Grass,tree)
- apex.Size=Vector3.new(7*s,6*s,7*s)
- optimizeDecorativeMesh(apex,true)
+ -- Coroa terminal em folhas alongadas, evitando a bola no topo.
+ leafSpray(CFrame.new(top)*CFrame.Angles(0,PI/4,math.rad(18)),4.5*s,7*s,P.canopyMid,tree,false)
  authoredTrees+=1
  if authoredTrees%8==0 then task.wait() end
  return tree
