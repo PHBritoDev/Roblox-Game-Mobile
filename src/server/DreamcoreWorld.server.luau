@@ -426,6 +426,47 @@ for i=1,34 do
  end
  if i%8==0 then task.wait() end
 end
+-- Rochas baixas em grupos irregulares criam ritmo visual entre gramados externos.
+-- Raycast apenas no Terrain; sem colisao, sombras, assets externos ou loops de animacao.
+local stoneRng=Random.new(20261117)
+local stoneGroups=0
+local stonePieces=0
+local stoneCast=RaycastParams.new()
+stoneCast.FilterType=Enum.RaycastFilterType.Include
+stoneCast.FilterDescendantsInstances={terrain}
+for i=1,54 do
+ local x=stoneRng:NextNumber(-342,342)
+ local z=stoneRng:NextNumber(-465,295)
+ if not reservedSite(x,z,13) and math.abs(x-riverX(z))>38 then
+  local hit=Workspace:Raycast(Vector3.new(x,22,z),Vector3.new(0,-48,0),stoneCast)
+  if hit and hit.Material~=Enum.Material.Water and math.abs(hit.Position.Y)<4 then
+   stoneGroups+=1
+   local stones=Instance.new("Folder")
+   stones.Name="Afloramento musgoso "..stoneGroups
+   stones.Parent=world
+   for j=1,3 do
+    local angle=stoneRng:NextNumber(0,PI*2)
+    local radius=stoneRng:NextNumber(0.4,2.1)
+    local sx=x+math.cos(angle)*radius
+    local sz=z+math.sin(angle)*radius
+    local ground=Workspace:Raycast(Vector3.new(sx,22,sz),Vector3.new(0,-48,0),stoneCast)
+    if ground and ground.Material~=Enum.Material.Water and math.abs(ground.Position.Y)<4 then
+     local width=stoneRng:NextNumber(0.8,2.2)
+     local height=stoneRng:NextNumber(0.35,0.85)
+     local rock=part("Pedra de xisto",Vector3.new(width,height,width*stoneRng:NextNumber(0.75,1.35)),
+      CFrame.new(sx,ground.Position.Y+height*0.28,sz)*CFrame.Angles(0,angle,stoneRng:NextNumber(-0.15,0.15)),
+      Color3.fromRGB(94+((i+j)%4)*7,105+((i+j)%3)*7,94+((i+j)%5)*4),Enum.Material.Slate,stones)
+     optimizeDecorativeMesh(rock,false)
+     stonePieces+=1
+    end
+   end
+   if i%2==0 then groundPlant(x+3,z+2,false) end
+  end
+ end
+ if i%9==0 then task.wait() end
+end
+world:SetAttribute("OuterStoneGroups",stoneGroups)
+world:SetAttribute("OuterStonePieces",stonePieces)
 world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
 -- Bandos distantes: silhuetas autorais, sem assets externos, fisica ou emissores.
 -- 21 pecas leves ao todo; altura e distancia preservam a leitura da trilha.
