@@ -7,6 +7,11 @@ from collections import Counter
 from pathlib import Path
 
 
+def finite_number(value):
+    """Reject booleans, non-numbers and NaN/Infinity from engine measurements."""
+    return type(value) in (int, float) and math.isfinite(value)
+
+
 def navigation_failures(navigation):
     errors = []
     if not isinstance(navigation, dict) or not navigation:
@@ -36,14 +41,16 @@ def navigation_failures(navigation):
                 errors.append(f"{prefix}: no solid support")
                 previous = None
                 continue
-            if not all(isinstance(sample.get(key), (int, float)) and math.isfinite(sample[key])
+            if not all(finite_number(sample.get(key))
                        for key in ("x", "y", "z", "normalY")):
                 errors.append(f"{prefix}: invalid measurement")
                 previous = None
                 continue
             if not -1 <= sample["y"] <= 2:
                 errors.append(f"{prefix}: support outside walkable ground height ({sample['y']:.2f})")
-            if sample["normalY"] < math.cos(math.radians(20)):
+            if not -1 <= sample["normalY"] <= 1:
+                errors.append(f"{prefix}: surface normal outside [-1, 1]")
+            elif sample["normalY"] < math.cos(math.radians(20)):
                 errors.append(f"{prefix}: support slope exceeds 20 degrees")
             if sample.get("blockers"):
                 errors.append(f"{prefix}: solid obstacle {sample['blockers']}")
@@ -63,9 +70,7 @@ def navigation_failures(navigation):
         return errors + ["Malformed spawn footing"]
     if not (spawn.get("present") and spawn.get("anchored") and spawn.get("collidable")
             and footing.get("supported") and not footing.get("blockers")
-            and isinstance(footing.get("y"), (int, float))
-            and not isinstance(footing.get("y"), bool)
-            and math.isfinite(footing["y"])
+            and finite_number(footing.get("y"))
             and -1 <= footing["y"] <= 2):
         errors.append("Spawn missing, unsupported, obstructed, or not solid")
     proxy_count = navigation.get("proxyCount", 0)
