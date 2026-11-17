@@ -21,11 +21,14 @@ class PremiumTreeVisualTests(unittest.TestCase):
         self.assertNotIn("local treeTypes=", SOURCE)
         self.assertIn("table.insert(forestTreeSites,site)", SOURCE)
 
-    def test_fallback_has_organic_crowns_instead_of_rectangular_leaf_sprays(self):
+    def test_fallback_has_bounded_lanceolate_crowns_instead_of_spheres(self):
         fallback = SOURCE.split("local function branchTree", 1)[1].split("-- Reservar toda arvore", 1)[0]
-        self.assertNotIn("leafSpray(", fallback)
-        self.assertIn('orb("Copa organica reserva"', fallback)
-        self.assertIn('orb("Cume organico reserva"', fallback)
+        # Seis lobos x 2 cunhas + cume x 2 = 14 folhas por árvore,
+        # em vez das 26 cunhas da PR anterior que estourava 6.500 Parts.
+        self.assertEqual(fallback.count("leafSpray("), 2)
+        self.assertNotIn("for layer=1,2 do", fallback)
+        self.assertNotIn('orb("Copa organica reserva"', fallback)
+        self.assertNotIn('orb("Cume organico reserva"', fallback)
         self.assertIn('orb("Copa dourada ancestral reserva"', SOURCE)
 
     def test_emergency_crowns_only_allowed_during_forced_asset_failure(self):
