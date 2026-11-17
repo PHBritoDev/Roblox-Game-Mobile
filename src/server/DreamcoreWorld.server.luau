@@ -293,15 +293,13 @@ local function branchTree(x,z,s,family,species)
   for lobe=1,2 do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
    local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
-   -- Reserva sem esferas genericas: dois leques foliares orientados por ramo.
-   -- Apenas quando Forest Pack falha; quatro cunhas por lobo, sem sombras/colisao.
+   -- Reserva sem esferas genericas: leque foliar orientado por ramo.
+   -- Apenas quando Forest Pack falha; duas cunhas por lobo, sem sombras/colisao.
    local span=(if species==2 then 6.4 else 8.4)*s
-   for layer=1,2 do
-    local drift=Vector3.new(random:NextNumber(-0.7,0.7)*s,(layer-1)*1.9*s,random:NextNumber(-0.7,0.7)*s)
-    local angle=math.atan2(radial.X,radial.Z)+(layer-1)*0.55
-    local foliageCF=CFrame.new(center+drift)*CFrame.Angles(0,angle,math.rad(if layer==1 then -12 else 14))
-    leafSpray(foliageCF,span*0.58,span,color,tree,false)
-   end
+   local drift=Vector3.new(random:NextNumber(-0.7,0.7)*s,random:NextNumber(-0.4,0.9)*s,random:NextNumber(-0.7,0.7)*s)
+   local angle=math.atan2(radial.X,radial.Z)+random:NextNumber(-0.2,0.2)
+   local foliageCF=CFrame.new(center+drift)*CFrame.Angles(0,angle,math.rad(random:NextNumber(-16,16)))
+   leafSpray(foliageCF,span*0.58,span,color,tree,false)
   end
  end
  -- Coroa terminal em folhas alongadas, evitando a bola no topo.
