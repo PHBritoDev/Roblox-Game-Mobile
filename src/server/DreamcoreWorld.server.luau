@@ -505,7 +505,13 @@ for i=1,40 do
      stonePieces+=1
     end
    end
-   if i%2==0 then groundPlant(x+3,z+2,false) end
+   -- Nao contabilizar nem manter grupos sem pedras validas apos os filtros.
+   if #stones:GetChildren()==0 then
+    stones:Destroy()
+    stoneGroups-=1
+   elseif i%2==0 then
+    groundPlant(x+3,z+2,false)
+   end
   end
  end
  if i%9==0 then task.wait() end
