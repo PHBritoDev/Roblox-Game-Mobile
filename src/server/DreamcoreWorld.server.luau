@@ -448,10 +448,23 @@ for i=1,20 do
  local z=meadowRng:NextNumber(-442,265)
  if not reservedSite(x,z,12) and math.abs(x-riverX(z))>38 then
   local spread=meadowRng:NextNumber(2.6,5.4)
-  groundPlant(x,z,true)
-  groundPlant(x+spread,z+spread*0.32,false)
-  groundPlant(x-spread*0.6,z-spread*0.55,i%3==0)
-  meadowClusters+=1
+  -- Cada muda deve respeitar a reserva individualmente; checar so o
+  -- centro deixava folhas invadirem trilhas, agua e espaco das arvores.
+  local offsets={
+   {x,z,true},
+   {x+spread,z+spread*0.32,false},
+   {x-spread*0.6,z-spread*0.55,i%3==0},
+  }
+  local planted=0
+  for _,site in ipairs(offsets) do
+   local px,pz=site[1],site[2]
+   if not reservedSite(px,pz,7) and not inWalkway(px,pz,5)
+    and math.abs(px-riverX(pz))>38 then
+    groundPlant(px,pz,site[3])
+    planted+=1
+   end
+  end
+  if planted>0 then meadowClusters+=1 end
  end
  if i%8==0 then task.wait() end
 end
@@ -469,7 +482,7 @@ for i=1,40 do
  local z=stoneRng:NextNumber(-465,295)
  if not reservedSite(x,z,13) and math.abs(x-riverX(z))>38 then
   local hit=Workspace:Raycast(Vector3.new(x,22,z),Vector3.new(0,-48,0),stoneCast)
-  if hit and hit.Material~=Enum.Material.Water and math.abs(hit.Position.Y)<4 then
+  if hit and hit.Material~=Enum.Material.Water and hit.Normal.Y>0.82 and math.abs(hit.Position.Y)<4 then
    stoneGroups+=1
    local stones=Instance.new("Folder")
    stones.Name="Afloramento musgoso "..stoneGroups
@@ -480,7 +493,9 @@ for i=1,40 do
     local sx=x+math.cos(angle)*radius
     local sz=z+math.sin(angle)*radius
     local ground=Workspace:Raycast(Vector3.new(sx,22,sz),Vector3.new(0,-48,0),stoneCast)
-    if ground and ground.Material~=Enum.Material.Water and math.abs(ground.Position.Y)<4 then
+    if ground and ground.Material~=Enum.Material.Water and ground.Normal.Y>0.82
+     and not reservedSite(sx,sz,5) and not inWalkway(sx,sz,4)
+     and math.abs(sx-riverX(sz))>34 and math.abs(ground.Position.Y)<4 then
      local width=stoneRng:NextNumber(0.8,2.2)
      local height=stoneRng:NextNumber(0.35,0.85)
      local rock=part("Pedra de xisto",Vector3.new(width,height,width*stoneRng:NextNumber(0.75,1.35)),
