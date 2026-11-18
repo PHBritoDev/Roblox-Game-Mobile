@@ -436,6 +436,65 @@ for i=1,34 do
  end
  if i%8==0 then task.wait() end
 end
+-- Ilhas de sub-bosque nas bordas da expansao: composicao em tres alturas,
+-- com pequenos intervalos para leitura do terreno e sem fechar corredores.
+-- Semente independente para nao deslocar as arvores existentes.
+local meadowRng=Random.new(20261116)
+local meadowClusters=0
+for i=1,56 do
+ local x=meadowRng:NextNumber(-338,338)
+ local z=meadowRng:NextNumber(-442,265)
+ if not reservedSite(x,z,12) and math.abs(x-riverX(z))>38 then
+  local spread=meadowRng:NextNumber(2.6,5.4)
+  groundPlant(x,z,true)
+  groundPlant(x+spread,z+spread*0.32,false)
+  groundPlant(x-spread*0.6,z-spread*0.55,i%3==0)
+  meadowClusters+=1
+ end
+ if i%8==0 then task.wait() end
+end
+world:SetAttribute("MeadowEdgeClusters",meadowClusters)
+-- Rochas baixas em grupos irregulares criam ritmo visual entre gramados externos.
+-- Raycast apenas no Terrain; sem colisao, sombras, assets externos ou loops de animacao.
+local stoneRng=Random.new(20261117)
+local stoneGroups=0
+local stonePieces=0
+local stoneCast=RaycastParams.new()
+stoneCast.FilterType=Enum.RaycastFilterType.Include
+stoneCast.FilterDescendantsInstances={terrain}
+for i=1,54 do
+ local x=stoneRng:NextNumber(-342,342)
+ local z=stoneRng:NextNumber(-465,295)
+ if not reservedSite(x,z,13) and math.abs(x-riverX(z))>38 then
+  local hit=Workspace:Raycast(Vector3.new(x,22,z),Vector3.new(0,-48,0),stoneCast)
+  if hit and hit.Material~=Enum.Material.Water and math.abs(hit.Position.Y)<4 then
+   stoneGroups+=1
+   local stones=Instance.new("Folder")
+   stones.Name="Afloramento musgoso "..stoneGroups
+   stones.Parent=world
+   for j=1,3 do
+    local angle=stoneRng:NextNumber(0,PI*2)
+    local radius=stoneRng:NextNumber(0.4,2.1)
+    local sx=x+math.cos(angle)*radius
+    local sz=z+math.sin(angle)*radius
+    local ground=Workspace:Raycast(Vector3.new(sx,22,sz),Vector3.new(0,-48,0),stoneCast)
+    if ground and ground.Material~=Enum.Material.Water and math.abs(ground.Position.Y)<4 then
+     local width=stoneRng:NextNumber(0.8,2.2)
+     local height=stoneRng:NextNumber(0.35,0.85)
+     local rock=part("Pedra de xisto",Vector3.new(width,height,width*stoneRng:NextNumber(0.75,1.35)),
+      CFrame.new(sx,ground.Position.Y+height*0.28,sz)*CFrame.Angles(0,angle,stoneRng:NextNumber(-0.15,0.15)),
+      Color3.fromRGB(94+((i+j)%4)*7,105+((i+j)%3)*7,94+((i+j)%5)*4),Enum.Material.Slate,stones)
+     optimizeDecorativeMesh(rock,false)
+     stonePieces+=1
+    end
+   end
+   if i%2==0 then groundPlant(x+3,z+2,false) end
+  end
+ end
+ if i%9==0 then task.wait() end
+end
+world:SetAttribute("OuterStoneGroups",stoneGroups)
+world:SetAttribute("OuterStonePieces",stonePieces)
 world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
 -- Bandos distantes: silhuetas autorais, sem assets externos, fisica ou emissores.
 -- 21 pecas leves ao todo; altura e distancia preservam a leitura da trilha.
@@ -1061,6 +1120,58 @@ local fallen=between("Travessa tombada",
  Vector3.new(center.X-23,2,center.Z+17),Vector3.new(center.X+10,3,center.Z+13),
  2.8,P.stone,Enum.Material.Slate,relics)
 fallen.CanCollide=false
+
+-- Camada de ruinas cobertas por musgo: pedra e vegetacao contam a historia
+-- do santuario sem luzes dinamicas, scripts externos ou custo de colisao.
+-- RNG separado evita mudar a distribuicao das arvores existentes.
+local ruinRng=Random.new(67173)
+local ruinMoss=group("Musgo e fragmentos das ruinas")
+local ruinGround=RaycastParams.new()
+ruinGround.FilterType=Enum.RaycastFilterType.Include
+ruinGround.FilterDescendantsInstances={terrain}
+ruinGround.IgnoreWater=true
+local ruinCenters={
+ Vector2.new(pathX(-38)-16,-39),
+ Vector2.new(pathX(-63)+18,-61),
+ Vector2.new(pathX(-168)-17,-166),
+ Vector2.new(center.X-26,center.Z+25),
+ Vector2.new(center.X+28,center.Z+25),
+}
+local ruinFragments=0
+local ruinMossPatches=0
+for _,site in ipairs(ruinCenters) do
+ for j=1,9 do
+  local angle=(j/9)*PI*2+ruinRng:NextNumber(-0.16,0.16)
+  local radius=ruinRng:NextNumber(5.8,12.5)
+  local x=site.X+math.cos(angle)*radius
+  local z=site.Y+math.sin(angle)*radius
+  if not inWalkway(x,z,5) and math.abs(x-riverX(z))>29
+   and ((x+84)^2+(z+151)^2)>27^2 then
+   local hit=Workspace:Raycast(Vector3.new(x,16,z),Vector3.new(0,-34,0),ruinGround)
+   if hit and hit.Normal.Y>0.8 and math.abs(hit.Position.Y)<2 then
+    local ground=hit.Position.Y
+    if j%3==0 then
+     local slab=part("Fragmento de capitel coberto",Vector3.new(
+      ruinRng:NextNumber(2.4,4.2),0.65,ruinRng:NextNumber(1.8,3.4)),
+      CFrame.new(x,ground+0.24,z)*CFrame.Angles(0,angle,ruinRng:NextNumber(-0.12,0.12)),
+      P.stone,Enum.Material.Slate,ruinMoss)
+     optimizeDecorativeMesh(slab,false)
+     ruinFragments+=1
+    else
+     -- Lajes achatadas de musgo, sem bolas ou cards transparentes.
+     local patch=part("Musgo rasteiro das ruinas",Vector3.new(
+      ruinRng:NextNumber(1.8,3.8),0.12,ruinRng:NextNumber(2.2,4.8)),
+      CFrame.new(x,ground+0.08,z)*CFrame.Angles(0,angle,0),
+      if j%2==0 then P.mossLight else P.moss,Enum.Material.Grass,ruinMoss)
+     optimizeDecorativeMesh(patch,false)
+     ruinMossPatches+=1
+    end
+   end
+  end
+ end
+end
+world:SetAttribute("RuinMossPatches",ruinMossPatches)
+world:SetAttribute("RuinStoneFragments",ruinFragments)
 
 -- Raizes mortas junto das trilhas, revelando a idade e o ciclo da floresta.
 for i=1,12 do
