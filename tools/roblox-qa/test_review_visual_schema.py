@@ -20,6 +20,11 @@ class SnapshotSchemaTests(unittest.TestCase):
             ("parts_object", {"parts": {}, "meta": {}}, "Snapshot parts invalido"),
             ("parts_scalars", {"parts": [None, 2], "meta": {}}, "Snapshot parts invalido"),
             ("meta_list", {"parts": [{"n": "Cerne antigo"}], "meta": []}, "Snapshot meta invalido"),
+            ("missing_transform", {"parts": [{"n": "Cerne antigo"}], "meta": {"partsTotal": 1}}, "transformacao/geometria invalida"),
+            ("bad_hero_position", {"parts": [{"n": "Trunk", "origin": "ForestPack", "p": None,
+                "s": [2, 60, 2], "c": [0.4, 0.5, 0.6], "rot": [1, 0, 0, 0, 1, 0, 0, 0, 1]}],
+                "meta": {"partsTotal": 1}}, "transformacao/geometria invalida"),
+            ("invalid_total", {"parts": [], "meta": {"partsTotal": True}}, "partsTotal invalido"),
         ):
             with self.subTest(label=label), tempfile.TemporaryDirectory() as folder:
                 out = Path(folder)
