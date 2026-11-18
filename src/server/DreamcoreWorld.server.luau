@@ -918,9 +918,17 @@ else
   local angle=j*PI*2/5
   local tip=center+Vector3.new(math.cos(angle)*24,42+j*3,math.sin(angle)*24)
   woodSegment("Braco ancestral",center+Vector3.new(0,28,0),tip,1.7,sacred,false)
-  local canopy=orb("Copa dourada ancestral reserva",tip,1,P.canopyGold,Enum.Material.Grass,sacred)
-  canopy.Size=Vector3.new(23,13,20)
-  optimizeDecorativeMesh(canopy,j%2==0)
+  -- Silhueta organica mesmo sem Forest Pack: folhas longas em camadas,
+  -- em vez de cinco esferas gigantes no ponto focal do mapa.
+  -- Sem colisao, raycast, sombras ou scripts; custo limitado a 30 folhas.
+  for layer=1,3 do
+   local tilt=(layer-2)*0.34
+   local spread=if layer==2 then 1.0 else 0.76
+   local pose=CFrame.new(tip+Vector3.new(0,(layer-2)*2.2,0))
+    *CFrame.Angles(0,a+layer*1.16,tilt)
+   leafSpray(pose,4.2*spread,21*spread,
+    if layer==3 then P.canopyGold else P.canopyMid,sacred,false)
+  end
  end
 end
 
