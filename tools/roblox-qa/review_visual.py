@@ -120,8 +120,8 @@ else:
     hero_x = math.sin((-245 + 5) * 0.027) * 10 + math.sin(-245 * 0.059) * 2.5
     hero_mesh = [
         item for item in parts
-        if valid_vector(item.get("p"), 3) and valid_vector(item.get("s"), 3)
-        and item.get("origin") == "ForestPack"
+        if (valid_vector(item.get("p"), 3) and valid_vector(item.get("s"), 3)
+            and item.get("origin") == "ForestPack")
         and item.get("shape") == "MeshPart"
         and item.get("n") == "Trunk"
         and abs(item.get("p", [0, 0, 0])[0] - hero_x) < 16
