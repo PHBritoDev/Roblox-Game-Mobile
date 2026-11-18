@@ -40,6 +40,38 @@ class NavigationRegressionTests(unittest.TestCase):
                 self.assertFalse(report["pass"])
                 self.assertTrue(any("part[0]" in e for e in report["navigationFailures"]))
 
+    def test_rotation_matrix_must_be_proper_cframe(self):
+        valid = {"n": "Tronco", "p": [0, 1, 2], "s": [2, 3, 4],
+                 "c": [0.2, 0.4, 0.6], "rot": [1, 0, 0, 0, 1, 0, 0, 0, 1]}
+        cases = (
+            [0] * 9,  # Finite but collapsed matrix
+            [2, 0, 0, 0, 1, 0, 0, 0, 1],  # Scale hidden in rotation
+            [1, 0, 0, 1, 0, 0, 0, 0, 1],  # Parallel axes
+            [-1, 0, 0, 0, 1, 0, 0, 0, 1],  # Reflection
+            [1, 0, 0, 0, 1, 0, 0, 0, -1],  # Reflection
+        )
+        for rot in cases:
+            with self.subTest(rot=rot):
+                scene = flat_scene()
+                scene["parts"] = [dict(valid, rot=rot)]
+                scene["meta"].update(partsTotal=1, partsExported=1)
+                report = evaluate(scene)
+                self.assertFalse(report["pass"])
+                self.assertTrue(any("rotation" in e for e in report["navigationFailures"]))
+        scene = flat_scene()
+        scene["parts"] = [dict(valid, rot=[0, -1, 0, 1, 0, 0, 0, 0, 1])]
+        scene["meta"].update(partsTotal=1, partsExported=1)
+        self.assertTrue(evaluate(scene)["pass"])
+
+    def test_world_version_malformed_does_not_crash_or_pass(self):
+        for version in ("34", True, float("nan"), float("inf"), -1, 33.5, []):
+            with self.subTest(version=version):
+                scene = flat_scene()
+                scene["meta"]["worldVersion"] = version
+                report = evaluate(scene)
+                self.assertFalse(report["pass"])
+                self.assertTrue(any("worldVersion" in e for e in report["navigationFailures"]))
+
     def test_flat_supported_routes_pass(self):
         self.assertTrue(evaluate(self.scene)["pass"])
 

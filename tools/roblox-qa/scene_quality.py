@@ -12,6 +12,24 @@ def finite_number(value):
     return type(value) in (int, float) and math.isfinite(value)
 
 
+def valid_rotation(values):
+    """CFrame rotation must be orthonormal and right-handed, not just finite."""
+    if not isinstance(values, list) or len(values) != 9 or not all(finite_number(v) for v in values):
+        return False
+    rows = (values[0:3], values[3:6], values[6:9])
+    dot = lambda a, b: sum(x * y for x, y in zip(a, b))
+    if any(abs(dot(row, row) - 1) > 0.025 for row in rows):
+        return False
+    if any(abs(dot(rows[i], rows[j])) > 0.025 for i, j in ((0, 1), (0, 2), (1, 2))):
+        return False
+    cross = (
+        rows[0][1] * rows[1][2] - rows[0][2] * rows[1][1],
+        rows[0][2] * rows[1][0] - rows[0][0] * rows[1][2],
+        rows[0][0] * rows[1][1] - rows[0][1] * rows[1][0],
+    )
+    return dot(cross, rows[2]) > 0.975
+
+
 def navigation_failures(navigation):
     errors = []
     if not isinstance(navigation, dict) or not navigation:
@@ -114,6 +132,9 @@ def evaluate(scene):
             if not isinstance(values, list) or len(values) != length or not all(finite_number(v) for v in values):
                 geometry_errors.append(f"part[{index}]: invalid {key} vector")
                 break
+            if key == "rot" and not valid_rotation(values):
+                geometry_errors.append(f"part[{index}]: non-orthonormal or mirrored rotation")
+                break
             if key == "s" and any(v <= 0 for v in values):
                 geometry_errors.append(f"part[{index}]: non-positive size")
                 break
@@ -137,7 +158,11 @@ def evaluate(scene):
     if not isinstance(assets, dict):
         errors.append("Malformed asset diagnostics")
         assets = {}
-    if meta.get("worldVersion",0)>=33:
+    version = meta.get("worldVersion", 0)
+    if not finite_number(version) or version < 0 or int(version) != version:
+        errors.append("Invalid worldVersion metadata")
+        version = 0
+    if version >= 33:
         if not meta.get("generationComplete"):
             errors.append("World not ready")
         if not assets or assets.get("reserved",0)<1 or assets.get("fulfilled")!=assets.get("reserved"):
@@ -152,7 +177,7 @@ def evaluate(scene):
             errors.append("Mobile part budget exceeded")
     # A partir da V34, nao confundir telemetria ausente com ausencia de falhas.
     # O snapshot de fallback deve carregar um motivo explicito de degradacao.
-    if meta.get("worldVersion", 0) >= 34:
+    if version >= 34:
         status = assets.get("undergrowthStatus")
         failures = assets.get("undergrowthFailures")
         first_error = assets.get("undergrowthFirstError")

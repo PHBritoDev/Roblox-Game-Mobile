@@ -10,6 +10,7 @@ import math
 import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageStat, ImageChops
+from scene_quality import valid_rotation
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ.get("PREVIEW_FOLDER", ROOT / "artifacts/visual-preview"))
@@ -101,7 +102,7 @@ else:
         if not isinstance(item.get("n"), str) or not all(
             valid_vector(item.get(key), length, positive=(key == "s"))
             for key, length in (("p", 3), ("s", 3), ("c", 3), ("rot", 9))
-        ) or any(not 0 <= component <= 1 for component in item.get("c", []) if type(component) in (int, float)):
+        ) or not valid_rotation(item.get("rot")) or any(not 0 <= component <= 1 for component in item.get("c", []) if type(component) in (int, float)):
             report["errors"].append(f"Parte {index}: transformacao/geometria invalida")
             if index >= 19:
                 report["errors"].append("Mais erros de geometria omitidos")
