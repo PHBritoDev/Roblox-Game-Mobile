@@ -398,10 +398,10 @@ groundParams.FilterDescendantsInstances={terrain}
 groundParams.IgnoreWater=true
 local plantRng=Random.new(330067)
 local function groundPlant(x,z,fern)
- if inWalkway(x,z,-1) then return end
+ if inWalkway(x,z,-1) then return false end
  -- Amostrar acima de barrancos; rejeitar encostas ingremes e margens submersas.
  local hit=Workspace:Raycast(Vector3.new(x,80,z),Vector3.new(0,-120,0),groundParams)
- if not hit or hit.Position.Y < -0.5 or hit.Normal.Y < 0.78 then return end
+ if not hit or hit.Position.Y < -0.5 or hit.Normal.Y < 0.78 then return false end
  -- Alinhar as touceiras ao solo sem inclinar excessivamente as laminas.
  local normal=hit.Normal
  local right=Vector3.new(0,0,1):Cross(normal).Unit
@@ -417,6 +417,7 @@ local function groundPlant(x,z,fern)
    blade("Lamina de capim",pose,Vector3.new(0.23*scale,1.8*scale,0.7*scale),P.mossLight,understory,false)
   end
  end
+ return true
 end
 for i=1,84 do
  local z=22-i*3.2
@@ -460,8 +461,7 @@ for i=1,20 do
    local px,pz=site[1],site[2]
    if not reservedSite(px,pz,7) and not inWalkway(px,pz,5)
     and math.abs(px-riverX(pz))>38 then
-    groundPlant(px,pz,site[3])
-    planted+=1
+    if groundPlant(px,pz,site[3]) then planted+=1 end
    end
   end
   if planted>0 then meadowClusters+=1 end
