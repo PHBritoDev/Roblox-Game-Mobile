@@ -24,6 +24,22 @@ class NavigationRegressionTests(unittest.TestCase):
     def setUp(self):
         self.scene = flat_scene()
 
+    def test_corrupt_geometry_fails_even_with_valid_navigation(self):
+        valid = {"n": "Tronco", "p": [0, 1, 2], "s": [2, 3, 4],
+                 "c": [0.2, 0.4, 0.6], "rot": [1, 0, 0, 0, 1, 0, 0, 0, 1]}
+        cases = (("p", None), ("p", [0, float("nan"), 2]),
+                 ("s", [1, 0, 1]), ("s", [1, float("inf"), 1]),
+                 ("c", [2, 0, 0]), ("rot", [1, 0, 0]),
+                 ("rot", [1, 0, 0, 0, 1, 0, 0, 0, True]))
+        for key, bad in cases:
+            with self.subTest(key=key, bad=bad):
+                scene = flat_scene()
+                scene["parts"] = [dict(valid, **{key: bad})]
+                scene["meta"].update(partsTotal=1, partsExported=1)
+                report = evaluate(scene)
+                self.assertFalse(report["pass"])
+                self.assertTrue(any("part[0]" in e for e in report["navigationFailures"]))
+
     def test_flat_supported_routes_pass(self):
         self.assertTrue(evaluate(self.scene)["pass"])
 
