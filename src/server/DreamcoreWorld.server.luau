@@ -554,12 +554,14 @@ for i=1,48 do
  local z=110-i*8
  local side=if i%2==0 then 1 else -1
  local x=riverX(z)+side*25
- if math.abs(z+89)>16 then
+ if math.abs(z+89)>16 and not reservedSite(x,z,7)
+  and not inWalkway(x,z,5) and math.abs(x-riverX(z))>22 then
   groundPlant(x,z,false)
   if i%3==0 then
-   -- Assentar o seixo na margem real: nao flutuar nem nascer submerso.
+   -- Preservar trilha, arvores e declives; pedras nao devem flutuar na margem.
    local hit=Workspace:Raycast(Vector3.new(x,20,z),Vector3.new(0,-45,0),groundParams)
-   if hit and hit.Position.Y>=-0.5 then
+   if hit and hit.Position.Y>=-0.5 and hit.Normal.Y>0.82
+    and math.abs(hit.Position.Y)<4 then
     local rock=orb("Seixo de margem",hit.Position+Vector3.new(0,0.45,0),2.7,P.stone,Enum.Material.Slate,details)
     rock.Size=Vector3.new(3.4,1.3,2.3)
     rock.CFrame=rock.CFrame*CFrame.Angles(0,plantRng:NextNumber(-PI,PI),0)
