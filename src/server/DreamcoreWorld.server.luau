@@ -441,7 +441,9 @@ end
 -- Semente independente para nao deslocar as arvores existentes.
 local meadowRng=Random.new(20261116)
 local meadowClusters=0
-for i=1,56 do
+-- Limite conservador: cada touceira autoral cria varias Parts; manter ilhas
+-- visiveis sem inflar a geometria mobile em mais de mil pecas.
+for i=1,20 do
  local x=meadowRng:NextNumber(-338,338)
  local z=meadowRng:NextNumber(-442,265)
  if not reservedSite(x,z,12) and math.abs(x-riverX(z))>38 then
@@ -462,7 +464,7 @@ local stonePieces=0
 local stoneCast=RaycastParams.new()
 stoneCast.FilterType=Enum.RaycastFilterType.Include
 stoneCast.FilterDescendantsInstances={terrain}
-for i=1,54 do
+for i=1,40 do
  local x=stoneRng:NextNumber(-342,342)
  local z=stoneRng:NextNumber(-465,295)
  if not reservedSite(x,z,13) and math.abs(x-riverX(z))>38 then
