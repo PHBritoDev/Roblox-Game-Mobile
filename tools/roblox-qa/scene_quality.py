@@ -103,10 +103,27 @@ def evaluate(scene):
             finite_number(meta.get(k)) and meta[k] >= 0 and int(meta[k]) == meta[k]
             for k in ("partsTotal", "partsExported")):
         return {"pass": False, "navigationFailures": ["Malformed scene geometry metadata"]}
+    # Reject corrupt geometry even when navigation and total counts look valid.
+    geometry_errors = []
+    for index, part in enumerate(parts):
+        for key, length in (("p", 3), ("s", 3), ("c", 3), ("rot", 9)):
+            values = part.get(key)
+            if not isinstance(values, list) or len(values) != length or not all(finite_number(v) for v in values):
+                geometry_errors.append(f"part[{index}]: invalid {key} vector")
+                break
+            if key == "s" and any(v <= 0 for v in values):
+                geometry_errors.append(f"part[{index}]: non-positive size")
+                break
+            if key == "c" and any(not 0 <= v <= 1 for v in values):
+                geometry_errors.append(f"part[{index}]: color outside [0, 1]")
+                break
+        if len(geometry_errors) >= 20:
+            geometry_errors.append("Further invalid geometry omitted")
+            break
     counts = Counter(p["n"] for p in parts)
     origins = Counter(p.get("origin", "Authored") for p in parts)
     navigation = scene.get("navigation", {})
-    errors = navigation_failures(navigation)
+    errors = geometry_errors + navigation_failures(navigation)
     if len(parts) != meta["partsExported"] or len(parts) > meta["partsTotal"]:
         errors.append("Exported geometry metadata inconsistent")
     if len(parts) < meta["partsTotal"] and not meta.get("geometrySampled", False):
