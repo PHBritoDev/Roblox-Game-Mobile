@@ -510,7 +510,12 @@ for i=1,40 do
     stones:Destroy()
     stoneGroups-=1
    elseif i%2==0 then
-    groundPlant(x+3,z+2,false)
+    -- A muda auxiliar tambem deve respeitar as reservas individuais.
+    local px,pz=x+3,z+2
+    if not reservedSite(px,pz,7) and not inWalkway(px,pz,5)
+     and math.abs(px-riverX(pz))>38 then
+     groundPlant(px,pz,false)
+    end
    end
   end
  end
