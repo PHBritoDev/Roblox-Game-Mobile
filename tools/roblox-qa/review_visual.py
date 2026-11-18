@@ -89,6 +89,23 @@ else:
     if not isinstance(meta, dict):
         report["errors"].append("Snapshot meta invalido: esperado objeto")
         meta = {}
+    # Fail closed on malformed transforms rather than crashing at hero-mesh checks.
+    def valid_vector(value, length, positive=False):
+        return (isinstance(value, list) and len(value) == length
+                and all(type(n) in (int, float) and math.isfinite(n)
+                        and (not positive or n > 0) for n in value))
+
+    if type(meta.get("partsTotal")) is not int or meta["partsTotal"] < 0:
+        report["errors"].append("Snapshot partsTotal invalido")
+    for index, item in enumerate(parts):
+        if not isinstance(item.get("n"), str) or not all(
+            valid_vector(item.get(key), length, positive=(key == "s"))
+            for key, length in (("p", 3), ("s", 3), ("c", 3), ("rot", 9))
+        ):
+            report["errors"].append(f"Parte {index}: transformacao/geometria invalida")
+            if index >= 19:
+                report["errors"].append("Mais erros de geometria omitidos")
+                break
     if not parts or meta.get("partsTotal") != len(parts):
         report["errors"].append("Geometria exportada parcialmente; render nao confiavel")
     by_name = {}
@@ -103,7 +120,8 @@ else:
     hero_x = math.sin((-245 + 5) * 0.027) * 10 + math.sin(-245 * 0.059) * 2.5
     hero_mesh = [
         item for item in parts
-        if item.get("origin") == "ForestPack"
+        if valid_vector(item.get("p"), 3) and valid_vector(item.get("s"), 3)
+        and item.get("origin") == "ForestPack"
         and item.get("shape") == "MeshPart"
         and item.get("n") == "Trunk"
         and abs(item.get("p", [0, 0, 0])[0] - hero_x) < 16
