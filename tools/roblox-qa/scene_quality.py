@@ -106,6 +106,9 @@ def evaluate(scene):
     # Reject corrupt geometry even when navigation and total counts look valid.
     geometry_errors = []
     for index, part in enumerate(parts):
+        if not isinstance(part.get("origin", "Authored"), str):
+            geometry_errors.append(f"part[{index}]: invalid origin")
+            continue
         for key, length in (("p", 3), ("s", 3), ("c", 3), ("rot", 9)):
             values = part.get(key)
             if not isinstance(values, list) or len(values) != length or not all(finite_number(v) for v in values):
