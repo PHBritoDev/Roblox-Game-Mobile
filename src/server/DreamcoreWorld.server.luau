@@ -1007,9 +1007,10 @@ else
   local angle=j*PI*2/5
   local tip=center+Vector3.new(math.cos(angle)*24,42+j*3,math.sin(angle)*24)
   woodSegment("Braco ancestral",center+Vector3.new(0,28,0),tip,1.7,sacred,false)
-  local canopy=orb("Copa dourada ancestral reserva",tip,1,P.canopyGold,Enum.Material.Grass,sacred)
-  canopy.Size=Vector3.new(23,13,20)
-  optimizeDecorativeMesh(canopy,j%2==0)
+  -- Substituir as cinco esferas heroicas por folhagem lanceolada autoral.
+  -- Duas cunhas por ramo, sem colisao e sem sombras caras no Android.
+  local canopyCF=CFrame.new(tip)*CFrame.Angles(0,angle,math.rad(if j%2==0 then 9 else -9))
+  leafSpray(canopyCF,18,24,P.canopyGold,sacred,false)
  end
 end
 
