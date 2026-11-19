@@ -175,6 +175,25 @@ def evaluate(scene):
             errors.append("Imported mesh has empty MeshId")
         if meta["partsTotal"]>6500:
             errors.append("Mobile part budget exceeded")
+    # Telemetria do gerador deve bater com as instancias reais exportadas.
+    # Isto nao mede FPS: detecta custo e inconsistencias antes do Android.
+    if meta.get("generatedPartCount") is not None:
+        total = meta["generatedPartCount"]
+        meshes = meta.get("generatedMeshPartCount")
+        noncolliding = meta.get("generatedNonCollidingPartCount")
+        seconds = meta.get("generationSeconds")
+        if (not finite_number(total) or int(total) != total or total != meta["partsTotal"]
+                or not finite_number(meshes) or int(meshes) != meshes or not 0 <= meshes <= total
+                or not finite_number(noncolliding) or int(noncolliding) != noncolliding
+                or not 0 <= noncolliding <= total
+                or not finite_number(seconds) or seconds < 0):
+            errors.append("Invalid or inconsistent forest generation budget telemetry")
+        elif meshes != sum(p.get("shape") == "MeshPart" for p in parts):
+            errors.append("Generated MeshPart count disagrees with exported geometry")
+        elif noncolliding != sum(p.get("collide") is False for p in parts):
+            errors.append("Generated non-colliding count disagrees with exported geometry")
+    elif meta.get("sourceSha256") and version >= 34:
+        errors.append("Missing forest generation budget telemetry in headless snapshot")
     # A partir da V34, nao confundir telemetria ausente com ausencia de falhas.
     # O snapshot de fallback deve carregar um motivo explicito de degradacao.
     if version >= 34:

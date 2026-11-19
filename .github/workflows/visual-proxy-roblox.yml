@@ -52,8 +52,20 @@ jobs:
           python3 tools/roblox-qa/scene_quality.py --folder artifacts/visual-preview/integration-failure
       - name: Instalar Blender para renderizar offline (sem Studio)
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq blender ffmpeg python3-pil libegl1 libgl1-mesa-dri xvfb xauth
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          packages=(blender ffmpeg python3-pil libegl1 libgl1-mesa-dri xvfb xauth)
+          # Ubuntu Actions normalmente ja possui indices APT. Evitar update
+          # incondicional: dois jobs ficaram ~35 min parados sem saida no update.
+          if ! sudo timeout 240 apt-get install -y -qq --no-install-recommends "${packages[@]}"; then
+            echo "Instalacao direta falhou; atualizando indices com timeout limitado."
+            sudo timeout 120 apt-get update -qq \
+              -o Acquire::Retries=0 \
+              -o Acquire::http::Timeout=20 \
+              -o Acquire::https::Timeout=20
+            sudo timeout 240 apt-get install -y -qq --no-install-recommends "${packages[@]}"
+          fi
+          blender --version | head -1
       - name: Renderizar 3 perspectivas de floresta
         run: xvfb-run -a blender --background --threads 2 --python tools/roblox-qa/render_scene.py
       - name: Revisar imagens, detectar falhas e produzir contato visual

@@ -19,6 +19,7 @@ local world
 local pathX
 local initialSpawn
 local function generateWorld()
+local generationStartedAt=os.clock()
 local old = Workspace:FindFirstChild("DreamcoreGenerated")
 if old then old:Destroy() end
 world = Instance.new("Folder")
@@ -288,6 +289,9 @@ local function branchTree(x,z,s,family,species)
  tree.Name="Arvore autoral — "..species
  tree:SetAttribute("AuthoredTree",true)
  tree.Parent=family
+ -- LOD exclusivo da emergencia: silhueta preservada, menos pecas no bosque distante.
+ -- Nao afetar a arvore heroica nem os exemplares que enquadram a trilha.
+ local distant=math.abs(x-pathX(z))>105 and (x-pathX(-245))^2+(z+281)^2>110*110 and s<2.5
  local h=(if species==2 then 25 else 20)*s
  local base=Vector3.new(x,0,z)
  local bend=Vector3.new(random:NextNumber(-2,2)*s,0,random:NextNumber(-2,2)*s)
@@ -298,26 +302,40 @@ local function branchTree(x,z,s,family,species)
  for j=1,3 do
   local angle=j*PI*2/3+random:NextNumber(-0.3,0.3)
   local radial=Vector3.new(math.cos(angle),0,math.sin(angle))
-  woodSegment("Raiz autoral",base+radial*3*s+Vector3.new(0,0.18,0),base+Vector3.new(0,3*s,0),0.35*s,tree,false)
+  if not distant then
+   woodSegment("Raiz autoral",base+radial*3*s+Vector3.new(0,0.18,0),base+Vector3.new(0,3*s,0),0.35*s,tree,false)
+  end
   local reach=(if species==2 then 4.6 else 7.6)*s
   local tip=base+radial*reach+bend+Vector3.new(0,h*(0.65+j*0.08),0)
-  woodSegment("Braco autoral",fork,tip,0.42*s,tree,false)
-  for lobe=1,2 do
+  if not distant then woodSegment("Braco autoral",fork,tip,0.42*s,tree,false) end
+  for lobe=1,(if distant then 1 else 2) do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
    local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
-   -- Somente fallback, quando Forest Pack indisponivel: forma lanceolada
-   -- com UMA dupla de cunhas por lobo (12 no total), evitando bolas e
+   -- Fallback distante: tres massas radiais + cume (4 cunhas), nao seis + cume.
+   -- Proximas: duas cunhas por lobo, preservando volume e silhueta.
+   -- Somente fallback quando Forest Pack indisponivel, evitando bolas e
    -- evitando duplicar camadas e ultrapassar o orcamento Android.
    local radius=(if species==2 then 4 else 5.6)*s
    local drift=Vector3.new(random:NextNumber(-1.1,1.1)*s,1.1*s,random:NextNumber(-1.1,1.1)*s)
    local canopyCF=CFrame.new(center+drift)*CFrame.Angles(0,angle+random:NextNumber(-0.2,0.2),0)
-   leafSpray(canopyCF,radius*1.6,radius*2.2,color,tree,false)
+   if distant then
+    -- Um unico volume lanceolado por lobo distante; sem translucidez ou sombra.
+    blade("Folhagem distante lanceolada",canopyCF,
+     Vector3.new(radius*1.6,math.max(0.3,radius*0.22),radius*2.2),color,tree,false)
+   else
+    leafSpray(canopyCF,radius*1.6,radius*2.2,color,tree,false)
+   end
   end
  end
- -- Dois painéis lanceolados no cume; no máximo 14 folhas por árvore
- -- de emergência contra as 13 antigas esferas (mais 1 instância/árvore).
- leafSpray(CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0),
-  5.5*s,7*s,P.canopyMid,tree,false)
+ -- Cume proximo com duas cunhas; distante com apenas uma, sem sombra.
+ -- A simplificacao atua exclusivamente no fallback e longe do corredor.
+ local crownCF=CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0)
+ if distant then
+  blade("Cume distante lanceolado",crownCF,
+   Vector3.new(5.5*s,math.max(0.3,1.21*s),7*s),P.canopyMid,tree,false)
+ else
+  leafSpray(crownCF,5.5*s,7*s,P.canopyMid,tree,false)
+ end
  authoredTrees+=1
  if authoredTrees%8==0 then task.wait() end
  return tree
@@ -398,10 +416,10 @@ groundParams.FilterDescendantsInstances={terrain}
 groundParams.IgnoreWater=true
 local plantRng=Random.new(330067)
 local function groundPlant(x,z,fern)
- if inWalkway(x,z,-1) then return end
+ if inWalkway(x,z,-1) then return false end
  -- Amostrar acima de barrancos; rejeitar encostas ingremes e margens submersas.
  local hit=Workspace:Raycast(Vector3.new(x,80,z),Vector3.new(0,-120,0),groundParams)
- if not hit or hit.Position.Y < -0.5 or hit.Normal.Y < 0.78 then return end
+ if not hit or hit.Position.Y < -0.5 or hit.Normal.Y < 0.78 then return false end
  -- Alinhar as touceiras ao solo sem inclinar excessivamente as laminas.
  local normal=hit.Normal
  local right=Vector3.new(0,0,1):Cross(normal).Unit
@@ -417,6 +435,7 @@ local function groundPlant(x,z,fern)
    blade("Lamina de capim",pose,Vector3.new(0.23*scale,1.8*scale,0.7*scale),P.mossLight,understory,false)
   end
  end
+ return true
 end
 for i=1,84 do
  local z=22-i*3.2
@@ -436,6 +455,92 @@ for i=1,34 do
  end
  if i%8==0 then task.wait() end
 end
+-- Ilhas de sub-bosque nas bordas da expansao: composicao em tres alturas,
+-- com pequenos intervalos para leitura do terreno e sem fechar corredores.
+-- Semente independente para nao deslocar as arvores existentes.
+local meadowRng=Random.new(20261116)
+local meadowClusters=0
+-- Limite conservador: cada touceira autoral cria varias Parts; manter ilhas
+-- visiveis sem inflar a geometria mobile em mais de mil pecas.
+for i=1,20 do
+ local x=meadowRng:NextNumber(-338,338)
+ local z=meadowRng:NextNumber(-442,265)
+ if not reservedSite(x,z,12) and math.abs(x-riverX(z))>38 then
+  local spread=meadowRng:NextNumber(2.6,5.4)
+  -- Cada muda deve respeitar a reserva individualmente; checar so o
+  -- centro deixava folhas invadirem trilhas, agua e espaco das arvores.
+  local offsets={
+   {x,z,true},
+   {x+spread,z+spread*0.32,false},
+   {x-spread*0.6,z-spread*0.55,i%3==0},
+  }
+  local planted=0
+  for _,site in ipairs(offsets) do
+   local px,pz=site[1],site[2]
+   if not reservedSite(px,pz,7) and not inWalkway(px,pz,5)
+    and math.abs(px-riverX(pz))>38 then
+    if groundPlant(px,pz,site[3]) then planted+=1 end
+   end
+  end
+  if planted>0 then meadowClusters+=1 end
+ end
+ if i%8==0 then task.wait() end
+end
+world:SetAttribute("MeadowEdgeClusters",meadowClusters)
+-- Rochas baixas em grupos irregulares criam ritmo visual entre gramados externos.
+-- Raycast apenas no Terrain; sem colisao, sombras, assets externos ou loops de animacao.
+local stoneRng=Random.new(20261117)
+local stoneGroups=0
+local stonePieces=0
+local stoneCast=RaycastParams.new()
+stoneCast.FilterType=Enum.RaycastFilterType.Include
+stoneCast.FilterDescendantsInstances={terrain}
+for i=1,40 do
+ local x=stoneRng:NextNumber(-342,342)
+ local z=stoneRng:NextNumber(-465,295)
+ if not reservedSite(x,z,13) and math.abs(x-riverX(z))>38 then
+  local hit=Workspace:Raycast(Vector3.new(x,22,z),Vector3.new(0,-48,0),stoneCast)
+  if hit and hit.Material~=Enum.Material.Water and hit.Normal.Y>0.82 and math.abs(hit.Position.Y)<4 then
+   stoneGroups+=1
+   local stones=Instance.new("Folder")
+   stones.Name="Afloramento musgoso "..stoneGroups
+   stones.Parent=world
+   for j=1,3 do
+    local angle=stoneRng:NextNumber(0,PI*2)
+    local radius=stoneRng:NextNumber(0.4,2.1)
+    local sx=x+math.cos(angle)*radius
+    local sz=z+math.sin(angle)*radius
+    local ground=Workspace:Raycast(Vector3.new(sx,22,sz),Vector3.new(0,-48,0),stoneCast)
+    if ground and ground.Material~=Enum.Material.Water and ground.Normal.Y>0.82
+     and not reservedSite(sx,sz,5) and not inWalkway(sx,sz,4)
+     and math.abs(sx-riverX(sz))>34 and math.abs(ground.Position.Y)<4 then
+     local width=stoneRng:NextNumber(0.8,2.2)
+     local height=stoneRng:NextNumber(0.35,0.85)
+     local rock=part("Pedra de xisto",Vector3.new(width,height,width*stoneRng:NextNumber(0.75,1.35)),
+      CFrame.new(sx,ground.Position.Y+height*0.28,sz)*CFrame.Angles(0,angle,stoneRng:NextNumber(-0.15,0.15)),
+      Color3.fromRGB(94+((i+j)%4)*7,105+((i+j)%3)*7,94+((i+j)%5)*4),Enum.Material.Slate,stones)
+     optimizeDecorativeMesh(rock,false)
+     stonePieces+=1
+    end
+   end
+   -- Nao contabilizar nem manter grupos sem pedras validas apos os filtros.
+   if #stones:GetChildren()==0 then
+    stones:Destroy()
+    stoneGroups-=1
+   elseif i%2==0 then
+    -- A muda auxiliar tambem deve respeitar as reservas individuais.
+    local px,pz=x+3,z+2
+    if not reservedSite(px,pz,7) and not inWalkway(px,pz,5)
+     and math.abs(px-riverX(pz))>38 then
+     groundPlant(px,pz,false)
+    end
+   end
+  end
+ end
+ if i%9==0 then task.wait() end
+end
+world:SetAttribute("OuterStoneGroups",stoneGroups)
+world:SetAttribute("OuterStonePieces",stonePieces)
 world:SetAttribute("ForestExpansionPatch","Outer meadow vegetation + premium tree sites")
 -- Bandos distantes: silhuetas autorais, sem assets externos, fisica ou emissores.
 -- 21 pecas leves ao todo; altura e distancia preservam a leitura da trilha.
@@ -467,12 +572,14 @@ for i=1,48 do
  local z=110-i*8
  local side=if i%2==0 then 1 else -1
  local x=riverX(z)+side*25
- if math.abs(z+89)>16 then
+ if math.abs(z+89)>16 and not reservedSite(x,z,7)
+  and not inWalkway(x,z,5) and math.abs(x-riverX(z))>22 then
   groundPlant(x,z,false)
   if i%3==0 then
-   -- Assentar o seixo na margem real: nao flutuar nem nascer submerso.
+   -- Preservar trilha, arvores e declives; pedras nao devem flutuar na margem.
    local hit=Workspace:Raycast(Vector3.new(x,20,z),Vector3.new(0,-45,0),groundParams)
-   if hit and hit.Position.Y>=-0.5 then
+   if hit and hit.Position.Y>=-0.5 and hit.Normal.Y>0.82
+    and math.abs(hit.Position.Y)<4 then
     local rock=orb("Seixo de margem",hit.Position+Vector3.new(0,0.45,0),2.7,P.stone,Enum.Material.Slate,details)
     rock.Size=Vector3.new(3.4,1.3,2.3)
     rock.CFrame=rock.CFrame*CFrame.Angles(0,plantRng:NextNumber(-PI,PI),0)
@@ -918,9 +1025,10 @@ else
   local angle=j*PI*2/5
   local tip=center+Vector3.new(math.cos(angle)*24,42+j*3,math.sin(angle)*24)
   woodSegment("Braco ancestral",center+Vector3.new(0,28,0),tip,1.7,sacred,false)
-  local canopy=orb("Copa dourada ancestral reserva",tip,1,P.canopyGold,Enum.Material.Grass,sacred)
-  canopy.Size=Vector3.new(23,13,20)
-  optimizeDecorativeMesh(canopy,j%2==0)
+  -- Substituir as cinco esferas heroicas por folhagem lanceolada autoral.
+  -- Duas cunhas por ramo, sem colisao e sem sombras caras no Android.
+  local canopyCF=CFrame.new(tip)*CFrame.Angles(0,angle,math.rad(if j%2==0 then 9 else -9))
+  leafSpray(canopyCF,18,24,P.canopyGold,sacred,false)
  end
 end
 
@@ -1061,6 +1169,58 @@ local fallen=between("Travessa tombada",
  Vector3.new(center.X-23,2,center.Z+17),Vector3.new(center.X+10,3,center.Z+13),
  2.8,P.stone,Enum.Material.Slate,relics)
 fallen.CanCollide=false
+
+-- Camada de ruinas cobertas por musgo: pedra e vegetacao contam a historia
+-- do santuario sem luzes dinamicas, scripts externos ou custo de colisao.
+-- RNG separado evita mudar a distribuicao das arvores existentes.
+local ruinRng=Random.new(67173)
+local ruinMoss=group("Musgo e fragmentos das ruinas")
+local ruinGround=RaycastParams.new()
+ruinGround.FilterType=Enum.RaycastFilterType.Include
+ruinGround.FilterDescendantsInstances={terrain}
+ruinGround.IgnoreWater=true
+local ruinCenters={
+ Vector2.new(pathX(-38)-16,-39),
+ Vector2.new(pathX(-63)+18,-61),
+ Vector2.new(pathX(-168)-17,-166),
+ Vector2.new(center.X-26,center.Z+25),
+ Vector2.new(center.X+28,center.Z+25),
+}
+local ruinFragments=0
+local ruinMossPatches=0
+for _,site in ipairs(ruinCenters) do
+ for j=1,9 do
+  local angle=(j/9)*PI*2+ruinRng:NextNumber(-0.16,0.16)
+  local radius=ruinRng:NextNumber(5.8,12.5)
+  local x=site.X+math.cos(angle)*radius
+  local z=site.Y+math.sin(angle)*radius
+  if not inWalkway(x,z,5) and math.abs(x-riverX(z))>29
+   and ((x+84)^2+(z+151)^2)>27^2 then
+   local hit=Workspace:Raycast(Vector3.new(x,16,z),Vector3.new(0,-34,0),ruinGround)
+   if hit and hit.Normal.Y>0.8 and math.abs(hit.Position.Y)<2 then
+    local ground=hit.Position.Y
+    if j%3==0 then
+     local slab=part("Fragmento de capitel coberto",Vector3.new(
+      ruinRng:NextNumber(2.4,4.2),0.65,ruinRng:NextNumber(1.8,3.4)),
+      CFrame.new(x,ground+0.24,z)*CFrame.Angles(0,angle,ruinRng:NextNumber(-0.12,0.12)),
+      P.stone,Enum.Material.Slate,ruinMoss)
+     optimizeDecorativeMesh(slab,false)
+     ruinFragments+=1
+    else
+     -- Lajes achatadas de musgo, sem bolas ou cards transparentes.
+     local patch=part("Musgo rasteiro das ruinas",Vector3.new(
+      ruinRng:NextNumber(1.8,3.8),0.12,ruinRng:NextNumber(2.2,4.8)),
+      CFrame.new(x,ground+0.08,z)*CFrame.Angles(0,angle,0),
+      if j%2==0 then P.mossLight else P.moss,Enum.Material.Grass,ruinMoss)
+     optimizeDecorativeMesh(patch,false)
+     ruinMossPatches+=1
+    end
+   end
+  end
+ end
+end
+world:SetAttribute("RuinMossPatches",ruinMossPatches)
+world:SetAttribute("RuinStoneFragments",ruinFragments)
 
 -- Raizes mortas junto das trilhas, revelando a idade e o ciclo da floresta.
 for i=1,12 do
@@ -1355,6 +1515,19 @@ stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Expanded woodland meadows | no mountains")
 world:SetAttribute("AuthoredTreeCount",authoredTrees)
+-- Telemetria de custo real da geracao (headless e servidor); nao e FPS Android.
+local partCount,meshCount,nonCollidingCount=0,0,0
+for _,descendant in world:GetDescendants() do
+ if descendant:IsA("BasePart") then
+  partCount+=1
+  if descendant:IsA("MeshPart") then meshCount+=1 end
+  if not descendant.CanCollide then nonCollidingCount+=1 end
+ end
+end
+world:SetAttribute("GeneratedPartCount",partCount)
+world:SetAttribute("GeneratedMeshPartCount",meshCount)
+world:SetAttribute("GeneratedNonCollidingPartCount",nonCollidingCount)
+world:SetAttribute("GenerationSeconds",math.floor((os.clock()-generationStartedAt)*100+0.5)/100)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
 print("[Dreamcore] Floresta das Memorias v34:",#world:GetDescendants(),"instancias")
 
