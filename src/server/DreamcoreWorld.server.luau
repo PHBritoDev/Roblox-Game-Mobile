@@ -325,10 +325,15 @@ local function branchTree(x,z,s,family,species)
    end
   end
  end
- -- Dois painéis lanceolados no cume; no máximo 14 folhas por árvore
- -- de emergência contra as 13 antigas esferas (mais 1 instância/árvore).
- leafSpray(CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0),
-  5.5*s,7*s,P.canopyMid,tree,false)
+ -- Cume proximo com duas cunhas; distante com apenas uma, sem sombra.
+ -- A simplificacao atua exclusivamente no fallback e longe do corredor.
+ local crownCF=CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0)
+ if distant then
+  blade("Cume distante lanceolado",crownCF,
+   Vector3.new(5.5*s,math.max(0.3,1.21*s),7*s),P.canopyMid,tree,false)
+ else
+  leafSpray(crownCF,5.5*s,7*s,P.canopyMid,tree,false)
+ end
  authoredTrees+=1
  if authoredTrees%8==0 then task.wait() end
  return tree
