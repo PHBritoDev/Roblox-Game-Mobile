@@ -345,6 +345,22 @@ end
 -- A alternativa organica so aparece quando a Roblox recusa o asset.
 local meshTreeSites={}
 local forestTreeSites={}
+-- Distancia minima entre troncos evita sobreposicao de copas e colisores
+-- sem adicionar instancias ou consultas de fisica no Android.
+local function treeSiteIsSafe(x,z,s)
+ if reservedSite(x,z,5) then return false end
+ for _,site in forestTreeSites do
+  local dx,dz=x-site.x,z-site.z
+  local clearance=math.max(9,7*(s+site.s))
+  if dx*dx+dz*dz<clearance*clearance then return false end
+ end
+ for _,site in meshTreeSites do
+  local dx,dz=x-site.x,z-site.z
+  local clearance=math.max(9,7*(s+site.s))
+  if dx*dx+dz*dz<clearance*clearance then return false end
+ end
+ return true
+end
 local function plantOrReserve(x,z,s,useMesh)
  if reservedSite(x,z,5) then return end
  if useMesh then
@@ -354,7 +370,7 @@ local function plantOrReserve(x,z,s,useMesh)
   if z>-238 and z<32 and math.abs(offset)<32 then
    x=pathX(z)+(if offset>=0 then 1 else -1)*32
   end
-  table.insert(meshTreeSites,{x=x,z=z,s=s})
+  if treeSiteIsSafe(x,z,s) then table.insert(meshTreeSites,{x=x,z=z,s=s}) end
  else
   -- Todas as arvores visiveis sao reservadas para MeshParts texturizadas.
   -- Nada de arvores low-poly no horizonte nem nas clareiras.
@@ -364,7 +380,7 @@ local function plantOrReserve(x,z,s,useMesh)
   if z>-238 and z<32 and math.abs(offset)<32 then
    x=path+(if offset>=0 then 1 else -1)*(32+rng:NextNumber(0,14))
   end
-  table.insert(forestTreeSites,{x=x,z=z,s=s})
+  if treeSiteIsSafe(x,z,s) then table.insert(forestTreeSites,{x=x,z=z,s=s}) end
  end
 end
 
