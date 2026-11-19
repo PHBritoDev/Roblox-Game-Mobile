@@ -288,6 +288,9 @@ local function branchTree(x,z,s,family,species)
  tree.Name="Arvore autoral — "..species
  tree:SetAttribute("AuthoredTree",true)
  tree.Parent=family
+ -- LOD exclusivo da emergencia: silhueta preservada, menos pecas no bosque distante.
+ -- Nao afetar a arvore heroica nem os exemplares que enquadram a trilha.
+ local distant=math.abs(x-pathX(z))>105 and (x-pathX(-245))^2+(z+281)^2>110*110 and s<2.5
  local h=(if species==2 then 25 else 20)*s
  local base=Vector3.new(x,0,z)
  local bend=Vector3.new(random:NextNumber(-2,2)*s,0,random:NextNumber(-2,2)*s)
@@ -298,10 +301,12 @@ local function branchTree(x,z,s,family,species)
  for j=1,3 do
   local angle=j*PI*2/3+random:NextNumber(-0.3,0.3)
   local radial=Vector3.new(math.cos(angle),0,math.sin(angle))
-  woodSegment("Raiz autoral",base+radial*3*s+Vector3.new(0,0.18,0),base+Vector3.new(0,3*s,0),0.35*s,tree,false)
+  if not distant then
+   woodSegment("Raiz autoral",base+radial*3*s+Vector3.new(0,0.18,0),base+Vector3.new(0,3*s,0),0.35*s,tree,false)
+  end
   local reach=(if species==2 then 4.6 else 7.6)*s
   local tip=base+radial*reach+bend+Vector3.new(0,h*(0.65+j*0.08),0)
-  woodSegment("Braco autoral",fork,tip,0.42*s,tree,false)
+  if not distant then woodSegment("Braco autoral",fork,tip,0.42*s,tree,false) end
   for lobe=1,2 do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
    local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
@@ -311,7 +316,13 @@ local function branchTree(x,z,s,family,species)
    local radius=(if species==2 then 4 else 5.6)*s
    local drift=Vector3.new(random:NextNumber(-1.1,1.1)*s,1.1*s,random:NextNumber(-1.1,1.1)*s)
    local canopyCF=CFrame.new(center+drift)*CFrame.Angles(0,angle+random:NextNumber(-0.2,0.2),0)
-   leafSpray(canopyCF,radius*1.6,radius*2.2,color,tree,false)
+   if distant then
+    -- Um unico volume lanceolado por lobo distante; sem translucidez ou sombra.
+    blade("Folhagem distante lanceolada",canopyCF,
+     Vector3.new(radius*1.6,math.max(0.3,radius*0.22),radius*2.2),color,tree,false)
+   else
+    leafSpray(canopyCF,radius*1.6,radius*2.2,color,tree,false)
+   end
   end
  end
  -- Dois painéis lanceolados no cume; no máximo 14 folhas por árvore
