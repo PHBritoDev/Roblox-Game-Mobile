@@ -308,11 +308,12 @@ local function branchTree(x,z,s,family,species)
   local reach=(if species==2 then 4.6 else 7.6)*s
   local tip=base+radial*reach+bend+Vector3.new(0,h*(0.65+j*0.08),0)
   if not distant then woodSegment("Braco autoral",fork,tip,0.42*s,tree,false) end
-  for lobe=1,2 do
+  for lobe=1,(if distant then 1 else 2) do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
    local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
-   -- Somente fallback, quando Forest Pack indisponivel: forma lanceolada
-   -- com UMA dupla de cunhas por lobo (12 no total), evitando bolas e
+   -- Fallback distante: tres massas radiais + cume (4 cunhas), nao seis + cume.
+   -- Proximas: duas cunhas por lobo, preservando volume e silhueta.
+   -- Somente fallback quando Forest Pack indisponivel, evitando bolas e
    -- evitando duplicar camadas e ultrapassar o orcamento Android.
    local radius=(if species==2 then 4 else 5.6)*s
    local drift=Vector3.new(random:NextNumber(-1.1,1.1)*s,1.1*s,random:NextNumber(-1.1,1.1)*s)
