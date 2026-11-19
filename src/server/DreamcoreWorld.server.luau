@@ -19,6 +19,7 @@ local world
 local pathX
 local initialSpawn
 local function generateWorld()
+local generationStartedAt=os.clock()
 local old = Workspace:FindFirstChild("DreamcoreGenerated")
 if old then old:Destroy() end
 world = Instance.new("Folder")
@@ -1513,6 +1514,19 @@ stage("Ready")
 world:SetAttribute("LightingArtPass","Amber sunlight / teal shadow global color shift")
 world:SetAttribute("TerrainProfile","Expanded woodland meadows | no mountains")
 world:SetAttribute("AuthoredTreeCount",authoredTrees)
+-- Telemetria de custo real da geracao (headless e servidor); nao e FPS Android.
+local partCount,meshCount,nonCollidingCount=0,0,0
+for _,descendant in world:GetDescendants() do
+ if descendant:IsA("BasePart") then
+  partCount+=1
+  if descendant:IsA("MeshPart") then meshCount+=1 end
+  if not descendant.CanCollide then nonCollidingCount+=1 end
+ end
+end
+world:SetAttribute("GeneratedPartCount",partCount)
+world:SetAttribute("GeneratedMeshPartCount",meshCount)
+world:SetAttribute("GeneratedNonCollidingPartCount",nonCollidingCount)
+world:SetAttribute("GenerationSeconds",math.floor((os.clock()-generationStartedAt)*100+0.5)/100)
 world:SetAttribute("GeneratedObjectCount",#world:GetDescendants())
 print("[Dreamcore] Floresta das Memorias v34:",#world:GetDescendants(),"instancias")
 
