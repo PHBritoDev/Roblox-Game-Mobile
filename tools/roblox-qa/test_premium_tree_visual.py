@@ -29,7 +29,15 @@ class PremiumTreeVisualTests(unittest.TestCase):
         self.assertNotIn("for layer=1,2 do", fallback)
         self.assertNotIn('orb("Copa organica reserva"', fallback)
         self.assertNotIn('orb("Cume organico reserva"', fallback)
-        self.assertIn('orb("Copa dourada ancestral reserva"', SOURCE)
+        # O marco ancestral do fallback tambem usa volumes lanceolados,
+        # nunca a antiga esfera. Manter o teste alinhado com a protecao visual.
+        hero = SOURCE.split("local sacred=Instance.new(\"Model\")", 1)[1].split(
+            "-- Círculo de pedras cerimoniais", 1
+        )[0]
+        self.assertIn("local hero=branchTree(", hero)
+        self.assertIn("leafSpray(canopyCF,18,24,P.canopyGold,sacred,false)", hero)
+        self.assertNotIn('orb("Copa dourada ancestral reserva"', hero)
+        self.assertNotIn('orb("Copa organica reserva"', hero)
 
     def test_emergency_crowns_only_allowed_during_forced_asset_failure(self):
         from scene_quality import evaluate
