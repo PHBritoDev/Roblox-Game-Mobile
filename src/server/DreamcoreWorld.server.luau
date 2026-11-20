@@ -301,7 +301,7 @@ local function branchTree(x,z,s,family,species)
   -- Uma haste solida no LOD distante: uma Part e um colisor em vez de dois.
   -- Preservar colisao fora da trilha: jogadores podem explorar o bosque.
   -- O bosque proximo continua com tronco articulado e colisao integral.
-  woodSegment("Tronco distante simplificado",base,top,0.95*s,tree,true)
+  woodSegment("Tronco distante simplificado",base,top,1.15*s,tree,true)
  else
   woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
   woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
