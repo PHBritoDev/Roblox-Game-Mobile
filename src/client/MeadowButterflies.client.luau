@@ -66,7 +66,7 @@ for i=1,COUNT do
  butterflies[i]={
   model=model,body=body,left=left,right=right,
   lowerLeft=lowerLeft,lowerRight=lowerRight,
-  angle=i*2.39996,radius=21+i*11,phase=i*1.7,ground=nil
+  angle=i*2.39996,radius=21+i*11,phase=i*1.7,ground=nil,groundX=nil,groundZ=nil
  }
 end
 
@@ -105,7 +105,8 @@ local function tickWildlife(dt)
  local character=localPlayer.Character
  local root=character and character:FindFirstChild("HumanoidRootPart")
  if ReplicatedStorage:GetAttribute("ForestState")~="Ready" or not root or not daylight(Lighting.ClockTime) then
-  for _,b in butterflies do show(b,false) end
+  for _,b in butterflies do b.ground=nil; b.groundX=nil; show(b,false) end
+  center=nil -- apos respawn/streaming, nao reutilizar altura antiga
   return
  end
  if not center or (root.Position-center).Magnitude>85 then
@@ -118,8 +119,10 @@ local function tickWildlife(dt)
   local angle=b.angle+math.sin(clock*0.18+b.phase)*0.29
   local x=center.X+math.cos(angle)*b.radius
   local z=center.Z+math.sin(angle)*b.radius
-  if refresh or b.ground==nil then
+  if refresh or b.groundX==nil or (x-b.groundX)^2+(z-b.groundZ)^2>9 then
    b.ground=sampleGround(x,z)
+   b.groundX=x
+   b.groundZ=z
   end
   local visible=b.ground~=nil and (Vector3.new(x,b.ground or 0,z)-root.Position).Magnitude<=MAX_DISTANCE
   show(b,visible)
