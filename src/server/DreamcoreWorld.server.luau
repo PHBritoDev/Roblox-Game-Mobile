@@ -297,8 +297,14 @@ local function branchTree(x,z,s,family,species)
  local bend=Vector3.new(random:NextNumber(-2,2)*s,0,random:NextNumber(-2,2)*s)
  local fork=base+Vector3.new(0,h*0.57,0)+bend
  local top=base+Vector3.new(0,h,0)+bend*1.8
- woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
- woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
+ if distant then
+  -- Uma unica haste no LOD de emergencia distante: menos Parts e colisores.
+  -- O bosque proximo continua com tronco articulado e colisao integral.
+  woodSegment("Tronco distante simplificado",base,top,0.95*s,tree,false)
+ else
+  woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
+  woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
+ end
  for j=1,3 do
   local angle=j*PI*2/3+random:NextNumber(-0.3,0.3)
   local radial=Vector3.new(math.cos(angle),0,math.sin(angle))
