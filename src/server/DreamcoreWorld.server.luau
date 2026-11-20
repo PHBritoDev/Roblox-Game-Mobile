@@ -298,9 +298,10 @@ local function branchTree(x,z,s,family,species)
  local fork=base+Vector3.new(0,h*0.57,0)+bend
  local top=base+Vector3.new(0,h,0)+bend*1.8
  if distant then
-  -- Uma unica haste no LOD de emergencia distante: menos Parts e colisores.
+  -- Uma haste solida no LOD distante: uma Part e um colisor em vez de dois.
+  -- Preservar colisao fora da trilha: jogadores podem explorar o bosque.
   -- O bosque proximo continua com tronco articulado e colisao integral.
-  woodSegment("Tronco distante simplificado",base,top,0.95*s,tree,false)
+  woodSegment("Tronco distante simplificado",base,top,0.95*s,tree,true)
  else
   woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
   woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
