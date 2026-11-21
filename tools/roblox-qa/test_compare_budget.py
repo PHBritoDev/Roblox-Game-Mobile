@@ -82,6 +82,23 @@ class BudgetComparisonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     metrics(candidate)
 
+    def test_rejects_shifted_route_with_same_sample_count(self):
+        baseline, candidate = scene(), scene()
+        for item in (baseline, candidate):
+            item["navigation"]["routes"][0]["name"] = "main:0"
+            for index, sample in enumerate(item["navigation"]["routes"][0]["samples"]):
+                sample.update(x=10.0, z=float(index))
+        candidate["navigation"]["routes"][0]["samples"][1]["x"] = 11.0
+        with self.assertRaisesRegex(ValueError, "coordinates"):
+            compare(baseline, candidate)
+
+    def test_rejects_renamed_route_with_same_samples(self):
+        baseline, candidate = scene(), scene()
+        baseline["navigation"]["routes"][0]["name"] = "bridge:0"
+        candidate["navigation"]["routes"][0]["name"] = "main:0"
+        with self.assertRaisesRegex(ValueError, "names"):
+            compare(baseline, candidate)
+
     def test_rejects_navigation_coverage_mismatch(self):
         candidate = scene()
         candidate["navigation"]["routes"][0]["samples"].pop()
