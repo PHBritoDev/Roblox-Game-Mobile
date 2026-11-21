@@ -34,7 +34,9 @@ def compare(base, head):
             raise ValueError(f"Incompatible snapshot modes: {key}")
     if base["assets"].get("source") != head["assets"].get("source"):
         raise ValueError("Incompatible asset sources")
-    if a["navigation_samples"] != b["navigation_samples"]:
+    base_routes = [len(route["samples"]) for route in base["navigation"]["routes"]]
+    head_routes = [len(route["samples"]) for route in head["navigation"]["routes"]]
+    if base_routes != head_routes or a["collision_proxies"] != b["collision_proxies"]:
         raise ValueError("Navigation coverage differs")
     return {
         "baseline": a,
