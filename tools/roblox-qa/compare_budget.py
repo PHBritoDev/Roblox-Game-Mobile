@@ -49,6 +49,19 @@ def compare(base, head):
     head_routes = [len(route["samples"]) for route in head["navigation"]["routes"]]
     if base_routes != head_routes or a["collision_proxies"] != b["collision_proxies"]:
         raise ValueError("Navigation coverage differs")
+    # Equal sample counts alone do not guarantee identical paths or bridge positions.
+    for old_route, new_route in zip(base["navigation"]["routes"], head["navigation"]["routes"]):
+        if old_route.get("name") != new_route.get("name"):
+            raise ValueError("Navigation route names differ")
+        for old_sample, new_sample in zip(old_route["samples"], new_route["samples"]):
+            for axis in ("x", "z"):
+                old_coord, new_coord = old_sample.get(axis), new_sample.get(axis)
+                if old_coord is None and new_coord is None:
+                    continue  # Legacy synthetic test fixtures without coordinates.
+                if (type(old_coord) not in (int, float) or type(new_coord) not in (int, float)
+                        or not math.isfinite(old_coord) or not math.isfinite(new_coord)
+                        or abs(old_coord - new_coord) > 0.01):
+                    raise ValueError("Navigation route coordinates differ")
     return {
         "baseline": a,
         "candidate": b,
