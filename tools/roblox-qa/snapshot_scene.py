@@ -239,14 +239,33 @@ assert(snapshotStatus=="Ready",
     if args.live_insertservice:
         assets = scene.get("assets", {})
         meta = scene.get("meta", {})
-        if not (assets.get("source") == "InsertService"
-                and assets.get("syntyLoad") is True
-                and assets.get("forestLoad") is True
-                and assets.get("syntyIntegration") is True
-                and assets.get("forestIntegration") is True
-                and assets.get("meshes", 0) >= 30
-                and meta.get("forestModels", 0) >= 5):
-            raise SystemExit("Live InsertService trees unavailable or not placed; inspect scene.json")
+        checks = {
+            "source_is_insertservice": assets.get("source") == "InsertService",
+            "synty_loaded": assets.get("syntyLoad") is True,
+            "forest_loaded": assets.get("forestLoad") is True,
+            "synty_integrated": assets.get("syntyIntegration") is True,
+            "forest_integrated": assets.get("forestIntegration") is True,
+            "minimum_meshes_30": isinstance(assets.get("meshes"), (int, float))
+                and not isinstance(assets.get("meshes"), bool) and assets["meshes"] >= 30,
+            "minimum_forest_models_5": isinstance(meta.get("forestModels"), (int, float))
+                and not isinstance(meta.get("forestModels"), bool) and meta["forestModels"] >= 5,
+        }
+        diagnostic = {
+            "checks": checks,
+            "failedChecks": [name for name, passed in checks.items() if not passed],
+            "assetSource": assets.get("source"),
+            "meshCount": assets.get("meshes"),
+            "forestModelCount": meta.get("forestModels"),
+            "taskPath": path,
+            "note": "Headless audit, not a Roblox client screenshot or playtest",
+        }
+        (out / "live_insertservice_checks.json").write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        if diagnostic["failedChecks"]:
+            raise SystemExit("Live InsertService audit failed: "
+                             + ", ".join(diagnostic["failedChecks"])
+                             + "; inspect live_insertservice_checks.json and scene.json")
     print(f"Snapshot: {scene['meta']['partsExported']}/{scene['meta']['partsTotal']} partes; fallback={args.without_assets}; nao e screenshot real.")
 
 
