@@ -30,10 +30,17 @@ class BudgetComparisonTests(unittest.TestCase):
         self.assertEqual(result["delta"]["parts"], -1)
         self.assertEqual(result["delta"]["collidable_parts"], -1)
         self.assertEqual(result["delta"]["generation_seconds"], -0.25)
-        self.assertEqual(result["delta"]["collidable_mesh_parts"], -1)
+        self.assertEqual(result["delta"]["collidable_mesh_parts"], 0)  # first mesh remains collidable in both fixtures
         self.assertEqual(result["percent_change"]["parts"], -33.33)
         self.assertEqual(result["percent_change"]["collidable_parts"], -50.0)
         self.assertIn("not Android FPS", result["limitations"])
+
+    def test_detects_collidable_mesh_removed(self):
+        baseline, candidate = scene(), scene()
+        candidate["parts"][0]["collide"] = False
+        result = compare(baseline, candidate)
+        self.assertEqual(result["delta"]["collidable_mesh_parts"], -1)
+        self.assertEqual(result["delta"]["collidable_parts"], -1)
 
     def test_rejects_incomplete_snapshot(self):
         sample = scene()
