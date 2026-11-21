@@ -30,6 +30,9 @@ class BudgetComparisonTests(unittest.TestCase):
         self.assertEqual(result["delta"]["parts"], -1)
         self.assertEqual(result["delta"]["collidable_parts"], -1)
         self.assertEqual(result["delta"]["generation_seconds"], -0.25)
+        self.assertEqual(result["delta"]["collidable_mesh_parts"], -1)
+        self.assertEqual(result["percent_change"]["parts"], -33.33)
+        self.assertEqual(result["percent_change"]["collidable_parts"], -50.0)
         self.assertIn("not Android FPS", result["limitations"])
 
     def test_rejects_incomplete_snapshot(self):
@@ -51,6 +54,17 @@ class BudgetComparisonTests(unittest.TestCase):
             compare(scene(), scene(fallback=False))
         with self.assertRaisesRegex(ValueError, "asset sources"):
             compare(scene(), scene(source="InsertService"))
+
+    def test_rejects_mismatched_fixture_modes(self):
+        baseline, candidate = scene(), scene()
+        baseline["meta"]["bakedEquivalentFixture"] = True
+        candidate["meta"]["bakedEquivalentFixture"] = False
+        with self.assertRaisesRegex(ValueError, "bakedEquivalentFixture"):
+            compare(baseline, candidate)
+
+    def test_zero_baseline_reports_undefined_percent(self):
+        baseline, candidate = scene(collision=0), scene(collision=1)
+        self.assertIsNone(compare(baseline, candidate)["percent_change"]["collidable_parts"])
 
     def test_rejects_same_total_but_different_route_distribution(self):
         candidate = scene()
