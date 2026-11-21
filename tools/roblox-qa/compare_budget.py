@@ -32,6 +32,7 @@ def metrics(scene):
         "parts": len(parts),
         "collidable_parts": sum(part.get("collide") is True for part in parts),
         "mesh_parts": sum(part.get("shape") == "MeshPart" for part in parts),
+        "collidable_mesh_parts": sum(part.get("shape") == "MeshPart" and part.get("collide") is True for part in parts),
         "collision_proxies": nav["proxyCount"],
         "generation_seconds": seconds,
         "navigation_samples": sum(len(route["samples"]) for route in nav["routes"]),
@@ -40,7 +41,7 @@ def metrics(scene):
 
 def compare(base, head):
     a, b = metrics(base), metrics(head)
-    for key in ("forcedAssetFailure", "forcedIntegrationFailure", "testedLiveInsertService"):
+    for key in ("forcedAssetFailure", "forcedIntegrationFailure", "testedLiveInsertService", "bakedEquivalentFixture"):
         if base["meta"].get(key) != head["meta"].get(key):
             raise ValueError(f"Incompatible snapshot modes: {key}")
     if base["assets"].get("source") != head["assets"].get("source"):
@@ -66,6 +67,8 @@ def compare(base, head):
         "baseline": a,
         "candidate": b,
         "delta": {key: round(b[key] - a[key], 4) for key in a},
+        "percent_change": {key: (round((b[key] - a[key]) * 100 / a[key], 2)
+                                if a[key] else None) for key in a},
         "limitations": "Headless geometry and generation time only; not Android FPS or Roblox visual approval",
     }
 
