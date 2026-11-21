@@ -66,6 +66,22 @@ class BudgetComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "coverage"):
             compare(scene(), candidate)
 
+    def test_rejects_malformed_navigation_and_geometry(self):
+        cases = [
+            ("empty routes", lambda s: s["navigation"].update(routes=[]), "routes"),
+            ("negative proxies", lambda s: s["navigation"].update(proxyCount=-1), "proxyCount"),
+            ("boolean proxies", lambda s: s["navigation"].update(proxyCount=True), "proxyCount"),
+            ("empty samples", lambda s: s["navigation"]["routes"][0].update(samples=[]), "samples"),
+            ("bad parts total", lambda s: s["meta"].update(partsTotal=True), "partsTotal"),
+            ("bad geometry", lambda s: s["parts"].__setitem__(0, None), "geometry part"),
+        ]
+        for label, mutate, message in cases:
+            with self.subTest(label=label):
+                candidate = scene()
+                mutate(candidate)
+                with self.assertRaisesRegex(ValueError, message):
+                    metrics(candidate)
+
     def test_rejects_navigation_coverage_mismatch(self):
         candidate = scene()
         candidate["navigation"]["routes"][0]["samples"].pop()
