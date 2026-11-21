@@ -52,6 +52,20 @@ class BudgetComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "asset sources"):
             compare(scene(), scene(source="InsertService"))
 
+    def test_rejects_same_total_but_different_route_distribution(self):
+        candidate = scene()
+        candidate["navigation"]["routes"] = [
+            {"samples": [{}]}, {"samples": [{}, {}]}
+        ]
+        with self.assertRaisesRegex(ValueError, "coverage"):
+            compare(scene(), candidate)
+
+    def test_rejects_different_collision_proxy_coverage(self):
+        candidate = scene()
+        candidate["navigation"]["proxyCount"] = 1
+        with self.assertRaisesRegex(ValueError, "coverage"):
+            compare(scene(), candidate)
+
     def test_rejects_navigation_coverage_mismatch(self):
         candidate = scene()
         candidate["navigation"]["routes"][0]["samples"].pop()
