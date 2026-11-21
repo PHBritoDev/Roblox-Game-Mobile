@@ -10,10 +10,21 @@ def metrics(scene):
     meta = scene["meta"]
     nav = scene["navigation"]
     parts = scene["parts"]
-    if len(parts) != meta["partsTotal"] or not meta.get("generationComplete"):
-        raise ValueError("Incomplete or sampled snapshot")
     if not isinstance(parts, list) or not parts:
         raise ValueError("Empty geometry")
+    if type(meta.get("partsTotal")) is not int or meta["partsTotal"] <= 0:
+        raise ValueError("Invalid partsTotal")
+    if len(parts) != meta["partsTotal"] or meta.get("generationComplete") is not True:
+        raise ValueError("Incomplete or sampled snapshot")
+    if not isinstance(nav.get("routes"), list) or not nav["routes"]:
+        raise ValueError("Missing navigation routes")
+    if type(nav.get("proxyCount")) is not int or nav["proxyCount"] < 0:
+        raise ValueError("Invalid navigation proxyCount")
+    if any(not isinstance(route, dict) or not isinstance(route.get("samples"), list)
+           or not route["samples"] for route in nav["routes"]):
+        raise ValueError("Invalid navigation route samples")
+    if any(not isinstance(part, dict) for part in parts):
+        raise ValueError("Invalid geometry part")
     seconds = meta.get("generationSeconds")
     if type(seconds) not in (int, float) or not math.isfinite(seconds) or seconds < 0:
         raise ValueError("Missing or invalid generationSeconds")
