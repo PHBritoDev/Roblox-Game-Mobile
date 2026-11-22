@@ -20,6 +20,9 @@ class MoodAtmosphereTests(unittest.TestCase):
             self.assertIn("atmosphere."+key+"=start."+key.lower()+"+(target."+key.lower()+"-start."+key.lower()+")*smooth",cycle)
         self.assertIn("bloom.Intensity=start.bloom+(target.bloom-start.bloom)*smooth",cycle)
         self.assertIn("task.wait(0.5)",cycle)
+        # Existing Clouds profile interpolation remains intact; no overwrite from stale PR.
+        self.assertIn("clouds.Cover=start.cloudCover+(target.cloudCover-start.cloudCover)*smooth",cycle)
+        self.assertIn("clouds.Density=start.cloudDensity+(target.cloudDensity-start.cloudDensity)*smooth",cycle)
     def test_no_new_climate_vfx_or_external_asset(self):
         self.assertEqual(SRC.count('local bloom=Lighting:FindFirstChild("DreamcoreBloom")'),1)
         self.assertEqual(SRC.count('local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere")'),1)
