@@ -83,7 +83,7 @@ local function makeRabbit(index)
  feature("Olho esquerdo",Vector3.new(0.12,0.15,0.12),dark,Vector3.new(-0.35,0.53,-1.02),Enum.PartType.Ball)
  feature("Olho direito",Vector3.new(0.12,0.15,0.12),dark,Vector3.new(0.35,0.53,-1.02),Enum.PartType.Ball)
  rabbit.Parent=nil -- esconder ate haver terreno pronto
- return {model=rabbit,phase=index*1.74,angle=index*2.399,dist=57+index*16,groundY=nil}
+ return {model=rabbit,phase=index*1.74,angle=index*2.399,dist=57+index*16,groundY=nil,groundX=nil,groundZ=nil}
 end
 
 local function makeBird(index)
@@ -131,7 +131,13 @@ local function step(dt)
  local root=character and character:FindFirstChild("HumanoidRootPart")
  local isReady=ReplicatedStorage:GetAttribute("ForestState")=="Ready"
  if not root or not isReady then
-  for _,r in rabbits do hideGroup(r) end
+  -- Limpar referencias ao terreno e habitat antigo depois de streaming/respawn.
+  habitatCenter=nil
+  lastGroundSample=-100
+  for _,r in rabbits do
+   r.groundY=nil; r.groundX=nil; r.groundZ=nil
+   hideGroup(r)
+  end
   for _,b in birds do hideGroup(b) end
   return
  end
@@ -139,6 +145,7 @@ local function step(dt)
  if not habitatCenter or (focus-habitatCenter).Magnitude>140 then
   habitatCenter=focus
   lastGroundSample=-100
+  for _,r in rabbits do r.groundY=nil; r.groundX=nil; r.groundZ=nil end
  end
  local updateGround=clock-lastGroundSample>0.8
  if updateGround then lastGroundSample=clock end
@@ -147,8 +154,11 @@ local function step(dt)
   local theta=r.angle+clock*0.025
   local x=habitatCenter.X+math.cos(theta)*r.dist
   local z=habitatCenter.Z+math.sin(theta)*r.dist
-  if updateGround or not r.groundY then
+  -- Altura em cache so e valida perto do ponto de amostragem.
+  local moved=r.groundX==nil or (x-r.groundX)^2+(z-r.groundZ)^2>9
+  if updateGround or moved or r.groundY==nil then
    r.groundY=groundAt(x,z)
+   r.groundX=x; r.groundZ=z
   end
   if not r.groundY or not safeRabbitHabitat(x,r.groundY,z)
    or (Vector3.new(x,r.groundY,z)-focus).Magnitude>MAX_VIEW_DISTANCE then
