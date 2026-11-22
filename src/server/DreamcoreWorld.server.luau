@@ -317,7 +317,7 @@ local function branchTree(x,z,s,family,species)
   if not distant then woodSegment("Braco autoral",fork,tip,0.42*s,tree,false) end
   for lobe=1,(if distant then 1 else 2) do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
-   local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
+   local color=if species==3 and j==2 then P.canopyGold else if distant then (if j==1 then P.canopyMid else if j==2 then P.canopy else P.canopyGold) else if lobe==1 then P.canopy else P.canopyMid
    -- Fallback distante: tres massas radiais + cume (4 cunhas), nao seis + cume.
    -- Proximas: duas cunhas por lobo, preservando volume e silhueta.
    -- Somente fallback quando Forest Pack indisponivel, evitando bolas e
@@ -337,7 +337,7 @@ local function branchTree(x,z,s,family,species)
  end
  -- Cume proximo com duas cunhas; distante com apenas uma, sem sombra.
  -- A simplificacao atua exclusivamente no fallback e longe do corredor.
- local crownCF=CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0)
+ local crownCF=CFrame.new(top)*CFrame.Angles(random:NextNumber(-0.12,0.12),random:NextNumber(0,PI),random:NextNumber(-0.12,0.12))
  if distant then
   blade("Cume distante lanceolado",crownCF,
    Vector3.new(5.5*s,math.max(0.3,1.21*s),7*s),P.canopyMid,tree,false)
