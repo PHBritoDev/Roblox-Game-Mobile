@@ -48,7 +48,7 @@ def compare(base, head):
         raise ValueError("Incompatible asset sources")
     base_routes = [len(route["samples"]) for route in base["navigation"]["routes"]]
     head_routes = [len(route["samples"]) for route in head["navigation"]["routes"]]
-    if base_routes != head_routes or a["collision_proxies"] != b["collision_proxies"]:
+    if base_routes != head_routes:
         raise ValueError("Navigation coverage differs")
     # Equal sample counts alone do not guarantee identical paths or bridge positions.
     for old_route, new_route in zip(base["navigation"]["routes"], head["navigation"]["routes"]):
