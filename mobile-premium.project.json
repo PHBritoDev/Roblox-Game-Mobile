@@ -1,0 +1,46 @@
+{
+  "name": "Brainrot — Sete Mundos (protótipo Dreamcore)",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": true
+      },
+      "Baseplate": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "Size": [
+            1,
+            1,
+            1
+          ],
+          "Transparency": 1,
+          "CanCollide": false
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$path": "src/server"
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$path": "src/client"
+      }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "LightingStyle": "Realistic",
+        "PrioritizeLightingQuality": true,
+        "GlobalShadows": true,
+        "ShadowSoftness": 0.3
+      }
+    },
+    "ServerStorage": {
+      "ForestLibrary": {
+        "$path": "assets/ForestLibraryMobile.rbxmx"
+      }
+    }
+  }
+}
