@@ -136,6 +136,19 @@ class BudgetComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "names"):
             compare(baseline, candidate)
 
+    def test_rejects_blocked_or_unsupported_route_and_spawn(self):
+        cases = [
+            (lambda s: s["navigation"]["routes"][0]["samples"][0].update(supported=False), "footing"),
+            (lambda s: s["navigation"]["routes"][0]["samples"][0].update(blockers=["Tree"]), "clearance"),
+            (lambda s: s["navigation"].update(spawn={"present": False}), "spawn"),
+            (lambda s: s["navigation"].update(invalidProxies=["Trunk"]), "proxies"),
+        ]
+        for mutate, message in cases:
+            candidate = scene()
+            mutate(candidate)
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                compare(scene(), candidate)
+
     def test_rejects_navigation_coverage_mismatch(self):
         candidate = scene()
         candidate["navigation"]["routes"][0]["samples"].pop()
