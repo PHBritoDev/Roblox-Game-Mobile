@@ -173,6 +173,25 @@ class BudgetComparisonTests(unittest.TestCase):
             with self.subTest(mutate=repr(mutate)), self.assertRaisesRegex(ValueError, "missing|Spawn footing or clearance invalid"):
                 compare(baseline, altered)
 
+    def test_rejects_malformed_present_safety_evidence(self):
+        for field, invalid_values, error in (
+            ("spawn", ({}, [], None, {"present": True}), "spawn"),
+            ("invalidProxies", (False, {}, "none", 0), "proxies"),
+        ):
+            for value in invalid_values:
+                with self.subTest(field=field, value=value):
+                    candidate = scene()
+                    candidate["navigation"][field] = value
+                    with self.assertRaisesRegex(ValueError, error):
+                        compare(scene(), candidate)
+        candidate = scene()
+        candidate["navigation"]["spawn"] = {
+            "present": True, "anchored": True, "collidable": True,
+            "footing": {"supported": True, "blockers": None},
+        }
+        with self.assertRaisesRegex(ValueError, "footing"):
+            compare(scene(), candidate)
+
     def test_rejects_navigation_coverage_mismatch(self):
         candidate = scene()
         candidate["navigation"]["routes"][0]["samples"].pop()
