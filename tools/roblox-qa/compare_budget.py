@@ -25,6 +25,10 @@ def metrics(scene):
         raise ValueError("Invalid navigation route samples")
     if any(not isinstance(part, dict) for part in parts):
         raise ValueError("Invalid geometry part")
+    if any(type(part.get("collide")) is not bool for part in parts):
+        raise ValueError("Invalid geometry collision flag")
+    if any(not isinstance(part.get("shape"), str) or not part["shape"] for part in parts):
+        raise ValueError("Invalid geometry shape")
     seconds = meta.get("generationSeconds")
     if type(seconds) not in (int, float) or not math.isfinite(seconds) or seconds < 0:
         raise ValueError("Missing or invalid generationSeconds")
@@ -44,8 +48,22 @@ def compare(base, head):
     for key in ("forcedAssetFailure", "forcedIntegrationFailure", "testedLiveInsertService", "bakedEquivalentFixture"):
         if base["meta"].get(key) != head["meta"].get(key):
             raise ValueError(f"Incompatible snapshot modes: {key}")
+    if not isinstance(base.get("assets"), dict) or not isinstance(head.get("assets"), dict):
+        raise ValueError("Missing asset metadata")
     if base["assets"].get("source") != head["assets"].get("source"):
         raise ValueError("Incompatible asset sources")
+    # Reject corrupt coordinate pairs; legacy coordinate-free fixtures remain supported.
+    for scene in (base, head):
+        for route in scene["navigation"]["routes"]:
+            for sample in route["samples"]:
+                if not isinstance(sample, dict):
+                    raise ValueError("Invalid navigation sample")
+                x, z = sample.get("x"), sample.get("z")
+                if (x is None) != (z is None):
+                    raise ValueError("Incomplete navigation coordinates")
+                if x is not None and (type(x) not in (int, float) or type(z) not in (int, float)
+                                      or not math.isfinite(x) or not math.isfinite(z)):
+                    raise ValueError("Invalid navigation coordinates")
     base_routes = [len(route["samples"]) for route in base["navigation"]["routes"]]
     head_routes = [len(route["samples"]) for route in head["navigation"]["routes"]]
     if base_routes != head_routes:
