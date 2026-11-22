@@ -809,6 +809,7 @@ world:SetAttribute("ForestUndergrowthVariants",0)
 world:SetAttribute("ForestUndergrowthPlacementFailures",0)
 world:SetAttribute("ForestUndergrowthFirstPlacementError","")
 world:SetAttribute("ForestUndergrowthLoadStatus","Pending")
+world:SetAttribute("ForestMeadowPremiumTufts",0)
 local forestIntegrated,forestError=xpcall(function()
 world:SetAttribute("ForestPackLoadSucceeded",okForest and forestPack~=nil)
 if okForest and forestPack then
@@ -983,6 +984,54 @@ if okForest and forestPack then
     end
   end
  end
+ -- Bosque externo: repetir apenas modelos premium ja carregados e saneados.
+ -- No maximo 24 pequenas ilhas de samambaias; sem novos LoadAsset, scripts
+ -- de terceiros, sombras ou colisoes. O fallback permanece identico.
+ local meadowPremiumTufts=0
+ for i=1,24 do
+  if i%6==0 then task.wait() end
+  local angle=i*2.39996
+  local radius=148+(i%5)*31
+  local x=math.cos(angle)*radius
+  local z=-94+math.sin(angle)*radius*1.15
+  if x > -332 and x < 332 and z > -418 and z < 260
+   and not reservedSite(x,z,11) and math.abs(x-riverX(z))>36
+   and #undergrowthTemplates>0 then
+   local hit=Workspace:Raycast(Vector3.new(x,160,z),Vector3.new(0,-320,0),terrainRayParams)
+   if hit and hit.Material~=Enum.Material.Water and hit.Normal.Y>0.8
+    and hit.Position.Y>=-0.45 and hit.Position.Y<4 then
+    local template=undergrowthTemplates[((i*5-1)%#undergrowthTemplates)+1]
+    local foliage=nil
+    local okMeadow,meadowError=pcall(function()
+     foliage=template:Clone()
+     foliage.Name="Clareira texturizada exterior — "..i
+     for _,item in foliage:GetDescendants() do
+      if item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter")
+       or item:IsA("Trail") or item:IsA("Beam") or item:IsA("Fire")
+       or item:IsA("Smoke") or item:IsA("Sparkles") or item:IsA("Light") then
+       item:Destroy()
+      elseif item:IsA("BasePart") then optimizeDecorativeMesh(item,false) end
+     end
+     local extents=foliage:GetExtentsSize()
+     local goal=1.55+(i%4)*0.34
+     foliage:ScaleTo(foliage:GetScale()*goal/math.max(extents.Y,0.1))
+     local bounds,size=foliage:GetBoundingBox()
+     local target=CFrame.new(x,hit.Position.Y+size.Y*0.5-0.08,z)*CFrame.Angles(0,i*1.17,0)
+     foliage:PivotTo(target*bounds:Inverse()*foliage:GetPivot())
+     foliage.Parent=naturalForest
+    end)
+    if okMeadow then
+     meadowPremiumTufts+=1
+     undergrowthPlaced+=1
+    else
+     undergrowthFailures+=1
+     if not firstUndergrowthError then firstUndergrowthError=tostring(meadowError) end
+     if foliage then foliage:Destroy() end
+    end
+   end
+  end
+ end
+ world:SetAttribute("ForestMeadowPremiumTufts",meadowPremiumTufts)
  world:SetAttribute("ForestUndergrowthPlacementFailures",undergrowthFailures)
   world:SetAttribute("ForestUndergrowthFirstPlacementError",string.sub(firstUndergrowthError or "",1,400))
   if undergrowthFailures>0 then
