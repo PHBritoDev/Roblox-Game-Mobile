@@ -74,16 +74,22 @@ def compare(base, head):
                 if "blockers" in sample and (not isinstance(sample["blockers"], list)
                                              or sample["blockers"]):
                     raise ValueError("Navigation clearance blocked or invalid")
-        spawn = scene["navigation"].get("spawn", {})
-        if spawn and (spawn.get("present") is not True or spawn.get("anchored") is not True
-                      or spawn.get("collidable") is not True):
-            raise ValueError("Invalid spawn integrity")
-        if spawn and isinstance(spawn.get("footing"), dict):
-            foot = spawn["footing"]
-            if foot.get("supported") is not True or foot.get("blockers"):
-                raise ValueError("Spawn footing or clearance invalid")
-        if scene["navigation"].get("invalidProxies"):
-            raise ValueError("Invalid collision proxies")
+        nav = scene["navigation"]
+        if "spawn" in nav:
+            spawn = nav["spawn"]
+            if not isinstance(spawn, dict) or any(
+                spawn.get(key) is not True for key in ("present", "anchored", "collidable")
+            ):
+                raise ValueError("Invalid spawn integrity")
+            if "footing" in spawn:
+                foot = spawn["footing"]
+                if (not isinstance(foot, dict) or foot.get("supported") is not True
+                        or not isinstance(foot.get("blockers"), list) or foot["blockers"]):
+                    raise ValueError("Spawn footing or clearance invalid")
+        if "invalidProxies" in nav:
+            invalid = nav["invalidProxies"]
+            if not isinstance(invalid, list) or invalid:
+                raise ValueError("Invalid collision proxies")
     # Prevent a candidate snapshot from passing by omitting safety evidence.
     # Older fixtures without these optional fields remain comparable when both omit them.
     for old_route, new_route in zip(base["navigation"]["routes"], head["navigation"]["routes"]):
