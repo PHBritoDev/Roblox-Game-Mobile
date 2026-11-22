@@ -104,6 +104,21 @@ class BudgetComparisonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     metrics(candidate)
 
+    def test_rejects_corrupt_geometry_and_navigation(self):
+        baseline = scene()
+        cases = [
+            (lambda s: s["parts"][0].update(collide="false"), "collision flag"),
+            (lambda s: s["parts"][0].update(shape=None), "shape"),
+            (lambda s: s["navigation"]["routes"][0]["samples"][0].update(x=1), "Incomplete navigation"),
+            (lambda s: s["navigation"]["routes"][0]["samples"][0].update(x=float("nan"), z=2), "Invalid navigation"),
+            (lambda s: s.update(assets=None), "asset metadata"),
+        ]
+        for mutate, message in cases:
+            candidate = scene()
+            mutate(candidate)
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                compare(baseline, candidate)
+
     def test_rejects_shifted_route_with_same_sample_count(self):
         baseline, candidate = scene(), scene()
         for item in (baseline, candidate):
