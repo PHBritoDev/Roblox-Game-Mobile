@@ -64,6 +64,26 @@ def compare(base, head):
                 if x is not None and (type(x) not in (int, float) or type(z) not in (int, float)
                                       or not math.isfinite(x) or not math.isfinite(z)):
                     raise ValueError("Invalid navigation coordinates")
+    # Route geometry alone is insufficient: a candidate can retain coordinates
+    # while losing ground support or introducing a blocking trunk.
+    for scene in (base, head):
+        for route in scene["navigation"]["routes"]:
+            for sample in route["samples"]:
+                if "supported" in sample and sample["supported"] is not True:
+                    raise ValueError("Navigation footing lost")
+                if "blockers" in sample and (not isinstance(sample["blockers"], list)
+                                             or sample["blockers"]):
+                    raise ValueError("Navigation clearance blocked or invalid")
+        spawn = scene["navigation"].get("spawn", {})
+        if spawn and (spawn.get("present") is not True or spawn.get("anchored") is not True
+                      or spawn.get("collidable") is not True):
+            raise ValueError("Invalid spawn integrity")
+        if spawn and isinstance(spawn.get("footing"), dict):
+            foot = spawn["footing"]
+            if foot.get("supported") is not True or foot.get("blockers"):
+                raise ValueError("Spawn footing or clearance invalid")
+        if scene["navigation"].get("invalidProxies"):
+            raise ValueError("Invalid collision proxies")
     base_routes = [len(route["samples"]) for route in base["navigation"]["routes"]]
     head_routes = [len(route["samples"]) for route in head["navigation"]["routes"]]
     if base_routes != head_routes:
