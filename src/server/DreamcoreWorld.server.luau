@@ -297,8 +297,15 @@ local function branchTree(x,z,s,family,species)
  local bend=Vector3.new(random:NextNumber(-2,2)*s,0,random:NextNumber(-2,2)*s)
  local fork=base+Vector3.new(0,h*0.57,0)+bend
  local top=base+Vector3.new(0,h,0)+bend*1.8
- woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
- woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
+ if distant then
+  -- Uma haste solida no LOD distante: uma Part e um colisor em vez de dois.
+  -- Preservar colisao fora da trilha: jogadores podem explorar o bosque.
+  -- O bosque proximo continua com tronco articulado e colisao integral.
+  woodSegment("Tronco distante simplificado",base,top,1.15*s,tree,true)
+ else
+  woodSegment("Tronco autoral enraizado",base,fork,1.15*s,tree,true)
+  woodSegment("Tronco autoral afilado",fork,top,0.66*s,tree,true)
+ end
  for j=1,3 do
   local angle=j*PI*2/3+random:NextNumber(-0.3,0.3)
   local radial=Vector3.new(math.cos(angle),0,math.sin(angle))
@@ -310,14 +317,15 @@ local function branchTree(x,z,s,family,species)
   if not distant then woodSegment("Braco autoral",fork,tip,0.42*s,tree,false) end
   for lobe=1,(if distant then 1 else 2) do
    local center=tip+radial*(lobe-1)*2*s+Vector3.new(0,(lobe-1)*1.5*s,0)
-   local color=if species==3 and j==2 then P.canopyGold else if lobe==1 then P.canopy else P.canopyMid
+   local color=if species==3 and j==2 then P.canopyGold else if distant then (if j==1 then P.canopyMid else if j==2 then P.canopy else P.canopyGold) else if lobe==1 then P.canopy else P.canopyMid
    -- Fallback distante: tres massas radiais + cume (4 cunhas), nao seis + cume.
    -- Proximas: duas cunhas por lobo, preservando volume e silhueta.
    -- Somente fallback quando Forest Pack indisponivel, evitando bolas e
    -- evitando duplicar camadas e ultrapassar o orcamento Android.
    local radius=(if species==2 then 4 else 5.6)*s
    local drift=Vector3.new(random:NextNumber(-1.1,1.1)*s,1.1*s,random:NextNumber(-1.1,1.1)*s)
-   local canopyCF=CFrame.new(center+drift)*CFrame.Angles(0,angle+random:NextNumber(-0.2,0.2),0)
+   local canopyCF=CFrame.new(center+drift)*CFrame.Angles(
+    random:NextNumber(-0.13,0.13),angle+random:NextNumber(-0.2,0.2),random:NextNumber(-0.13,0.13))
    if distant then
     -- Um unico volume lanceolado por lobo distante; sem translucidez ou sombra.
     blade("Folhagem distante lanceolada",canopyCF,
@@ -329,7 +337,7 @@ local function branchTree(x,z,s,family,species)
  end
  -- Cume proximo com duas cunhas; distante com apenas uma, sem sombra.
  -- A simplificacao atua exclusivamente no fallback e longe do corredor.
- local crownCF=CFrame.new(top)*CFrame.Angles(0,random:NextNumber(0,PI),0)
+ local crownCF=CFrame.new(top)*CFrame.Angles(random:NextNumber(-0.12,0.12),random:NextNumber(0,PI),random:NextNumber(-0.12,0.12))
  if distant then
   blade("Cume distante lanceolado",crownCF,
    Vector3.new(5.5*s,math.max(0.3,1.21*s),7*s),P.canopyMid,tree,false)

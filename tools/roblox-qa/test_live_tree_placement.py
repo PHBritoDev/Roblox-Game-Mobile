@@ -17,7 +17,11 @@ class LiveTreePlacementTests(unittest.TestCase):
         self.assertIn('assets.get("source") == "InsertService"',source)
         self.assertIn('assets.get("syntyLoad") is True',source)
         self.assertIn('assets.get("forestLoad") is True',source)
-        self.assertIn('meta.get("forestModels", 0) >= 5',source)
+        self.assertIn('meta["forestModels"] >= 5',source)
+        self.assertIn('"minimum_forest_models_5"',source)
+        self.assertIn('"failedChecks"',source)
+        self.assertIn('live_insertservice_checks.json',source)
+        self.assertIn('if diagnostic["failedChecks"]:',source)
         self.assertIn('out /= "live-insertservice"',source)
 
     def test_does_not_modify_game_generator(self):
