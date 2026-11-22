@@ -1105,38 +1105,49 @@ end
 world:SetAttribute("BridgeArtPass","15 deck boards + 16 diagonal braces; collision unchanged")
 
 -- Somente alguns detalhes de brilho autorais: o sub-bosque principal é MeshPart.
+local flowerRng=Random.new(340217) -- isolado: nao mover arvores/ruinas a jusante
+local groundedFlowers=0
+local skippedFlowers=0
 for i=1,36 do
- local z=rng:NextNumber(-292,40)
+ local z=flowerRng:NextNumber(-292,40)
  local side=if i%2==0 then 1 else -1
- local x=pathX(z)+side*rng:NextNumber(8,56)
+ local x=pathX(z)+side*flowerRng:NextNumber(17,56)
+ -- Nao plantar em corredores/agua nem flutuar nas encostas irregulares.
+ if reservedSite(x,z,3) then skippedFlowers+=1; continue end
+ local hit=Workspace:Raycast(Vector3.new(x,75,z),Vector3.new(0,-130,0),groundParams)
+ if not hit or hit.Material==Enum.Material.Water or hit.Normal.Y<0.80
+  or hit.Position.Y < -0.45 or hit.Position.Y>3 then
+  skippedFlowers+=1; continue
+ end
+ local soil=hit.Position.Y
  local kind=i%7
  if kind==0 then
   -- Flor radial de cinco petalas: silhueta legivel, sem bolhas gigantes.
-  local size=rng:NextNumber(0.85,1.15)
+  local size=flowerRng:NextNumber(0.85,1.15)
   local stem=part("Haste de flor",Vector3.new(0.18,1.7,0.18),
-   CFrame.new(x,0.85,z),P.mossLight,Enum.Material.Grass,details)
+   CFrame.new(x,soil+0.85,z),P.mossLight,Enum.Material.Grass,details)
   optimizeDecorativeMesh(stem,false)
   for petalIndex=1,5 do
    local angle=(petalIndex-1)*2*PI/5
    local petal=part("Petala da memoria",Vector3.new(0.65*size,0.12,1.15*size),
-    CFrame.new(x+math.sin(angle)*0.45*size,1.72,z+math.cos(angle)*0.45*size)
+    CFrame.new(x+math.sin(angle)*0.45*size,soil+1.72,z+math.cos(angle)*0.45*size)
      *CFrame.Angles(0,angle,math.rad(16)),
     if petalIndex%2==0 then P.flower else P.canopyGold,Enum.Material.SmoothPlastic,details)
    optimizeDecorativeMesh(petal,false)
   end
-  local heart=orb("Miolo da memoria",Vector3.new(x,1.78,z),0.38*size,P.firefly,
+  local heart=orb("Miolo da memoria",Vector3.new(x,soil+1.78,z),0.38*size,P.firefly,
    Enum.Material.SmoothPlastic,details)
   optimizeDecorativeMesh(heart,false)
  elseif kind==1 then
   -- Cogumelo com pe e chapeu baixo: brilho so no miolo, sem luz dinamica.
   local stem=part("Pe do cogumelo",Vector3.new(0.32,0.75,0.32),
-   CFrame.new(x,0.38,z),P.stone,Enum.Material.SmoothPlastic,details)
+   CFrame.new(x,soil+0.38,z),P.stone,Enum.Material.SmoothPlastic,details)
   optimizeDecorativeMesh(stem,false)
-  local cap=orb("Chapeu do cogumelo",Vector3.new(x,0.82,z),1.35,P.blue,
+  local cap=orb("Chapeu do cogumelo",Vector3.new(x,soil+0.82,z),1.35,P.blue,
    Enum.Material.SmoothPlastic,details)
   cap.Size=Vector3.new(1.35,0.34,1.35)
   optimizeDecorativeMesh(cap,false)
-  local glow=orb("Nucleo bioluminescente",Vector3.new(x,0.77,z),0.26,P.blue,
+  local glow=orb("Nucleo bioluminescente",Vector3.new(x,soil+0.77,z),0.26,P.blue,
    Enum.Material.Neon,details)
   optimizeDecorativeMesh(glow,false)
  else
@@ -1145,12 +1156,15 @@ for i=1,36 do
   for petalIndex=1,3 do
    local angle=(petalIndex-1)*2*PI/3
    local petal=part("Flor silvestre discreta",Vector3.new(0.27,0.09,0.55),
-    CFrame.new(x+math.sin(angle)*0.16,0.22,z+math.cos(angle)*0.16)
+    CFrame.new(x+math.sin(angle)*0.16,soil+0.22,z+math.cos(angle)*0.16)
      *CFrame.Angles(0,angle,math.rad(9)),tint,Enum.Material.SmoothPlastic,details)
    optimizeDecorativeMesh(petal,false)
   end
  end
+ groundedFlowers+=1
 end
+world:SetAttribute("GroundedDecorativePlants",groundedFlowers)
+world:SetAttribute("SkippedDecorativePlantSites",skippedFlowers)
 
 -- Capitulo visual: vestigios de uma civilizacao que venerava a arvore ancestral.
 -- Composicao deliberada: marcos em pontos fixos, nao props aleatorios no mapa.
