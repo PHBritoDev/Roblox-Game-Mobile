@@ -353,6 +353,45 @@ end
 -- A alternativa organica so aparece quando a Roblox recusa o asset.
 local meshTreeSites={}
 local forestTreeSites={}
+local treeSitesRelocated=0
+local treeSitesRejected=0
+-- Afastar troncos sobrepostos sem descartar imediatamente uma arvore premium.
+-- Custos ficam na geracao, nunca no Heartbeat do celular.
+local function isTreeSiteClear(x,z,s)
+ if x < -339 or x > 339 or z < -460 or z > 290
+  or reservedSite(x,z,5) then return false end
+ for _,sites in {forestTreeSites,meshTreeSites} do
+  for _,other in sites do
+   local dx,dz=x-other.x,z-other.z
+   local clearance=math.max(10,6*(s+other.s))
+   if dx*dx+dz*dz < clearance*clearance then return false end
+  end
+ end
+ return true
+end
+local function recordTreeSite(sites,x,z,s)
+ if isTreeSiteClear(x,z,s) then
+  table.insert(sites,{x=x,z=z,s=s})
+  return
+ end
+ -- Deslocamento pequeno em anel com orientacao deterministica, sem alterar RNG
+ -- de gramado, lighting, terreno nem outros tipos de decoracao.
+ local seedAngle=(math.abs(math.floor(x*13+z*31))%360)*PI/180
+ for ring=1,2 do
+  for sample=1,8 do
+   local angle=seedAngle+sample*PI/4
+   local radius=ring*11
+   local nx=x+math.cos(angle)*radius
+   local nz=z+math.sin(angle)*radius
+   if isTreeSiteClear(nx,nz,s) then
+    table.insert(sites,{x=nx,z=nz,s=s})
+    treeSitesRelocated+=1
+    return
+   end
+  end
+ end
+ treeSitesRejected+=1
+end
 local function plantOrReserve(x,z,s,useMesh)
  if reservedSite(x,z,5) then return end
  if useMesh then
@@ -362,7 +401,7 @@ local function plantOrReserve(x,z,s,useMesh)
   if z>-238 and z<32 and math.abs(offset)<32 then
    x=pathX(z)+(if offset>=0 then 1 else -1)*32
   end
-  table.insert(meshTreeSites,{x=x,z=z,s=s})
+  recordTreeSite(meshTreeSites,x,z,s)
  else
   -- Todas as arvores visiveis sao reservadas para MeshParts texturizadas.
   -- Nada de arvores low-poly no horizonte nem nas clareiras.
@@ -372,7 +411,7 @@ local function plantOrReserve(x,z,s,useMesh)
   if z>-238 and z<32 and math.abs(offset)<32 then
    x=path+(if offset>=0 then 1 else -1)*(32+rng:NextNumber(0,14))
   end
-  table.insert(forestTreeSites,{x=x,z=z,s=s})
+  recordTreeSite(forestTreeSites,x,z,s)
  end
 end
 
@@ -406,6 +445,8 @@ for i=1,92 do
  end
 end
 
+world:SetAttribute("RelocatedProceduralTreeSites",treeSitesRelocated)
+world:SetAttribute("RejectedProceduralTreeSites",treeSitesRejected)
 -- Paisagem ribeirinha com modelos florestais premium, nada de galhos/placas low-poly.
 -- As margens mantem espaco de seguranca junto a agua e a ponte.
 local riverTrees={
