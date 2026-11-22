@@ -324,7 +324,8 @@ local function branchTree(x,z,s,family,species)
    -- evitando duplicar camadas e ultrapassar o orcamento Android.
    local radius=(if species==2 then 4 else 5.6)*s
    local drift=Vector3.new(random:NextNumber(-1.1,1.1)*s,1.1*s,random:NextNumber(-1.1,1.1)*s)
-   local canopyCF=CFrame.new(center+drift)*CFrame.Angles(0,angle+random:NextNumber(-0.2,0.2),0)
+   local canopyCF=CFrame.new(center+drift)*CFrame.Angles(
+    random:NextNumber(-0.13,0.13),angle+random:NextNumber(-0.2,0.2),random:NextNumber(-0.13,0.13))
    if distant then
     -- Um unico volume lanceolado por lobo distante; sem translucidez ou sombra.
     blade("Folhagem distante lanceolada",canopyCF,
