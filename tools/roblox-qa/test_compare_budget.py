@@ -170,7 +170,7 @@ class BudgetComparisonTests(unittest.TestCase):
         for mutate in cases:
             altered = copy.deepcopy(candidate)
             mutate(altered)
-            with self.subTest(mutate=repr(mutate)), self.assertRaisesRegex(ValueError, "missing"):
+            with self.subTest(mutate=repr(mutate)), self.assertRaisesRegex(ValueError, "missing|Spawn footing or clearance invalid"):
                 compare(baseline, altered)
 
     def test_rejects_navigation_coverage_mismatch(self):
