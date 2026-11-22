@@ -149,6 +149,30 @@ class BudgetComparisonTests(unittest.TestCase):
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 compare(scene(), candidate)
 
+    def test_rejects_removed_safety_evidence(self):
+        baseline, candidate = scene(), scene()
+        for item in (baseline, candidate):
+            item["navigation"]["routes"][0]["samples"][0].update(supported=True, blockers=[])
+            item["navigation"]["spawn"] = {
+                "present": True, "anchored": True, "collidable": True,
+                "footing": {"supported": True, "blockers": []},
+            }
+            item["navigation"]["invalidProxies"] = []
+        cases = [
+            lambda s: s["navigation"]["routes"][0]["samples"][0].pop("supported"),
+            lambda s: s["navigation"]["routes"][0]["samples"][0].pop("blockers"),
+            lambda s: s["navigation"].pop("spawn"),
+            lambda s: s["navigation"]["spawn"].pop("footing"),
+            lambda s: s["navigation"]["spawn"]["footing"].pop("supported"),
+            lambda s: s["navigation"].pop("invalidProxies"),
+        ]
+        import copy
+        for mutate in cases:
+            altered = copy.deepcopy(candidate)
+            mutate(altered)
+            with self.subTest(mutate=repr(mutate)), self.assertRaisesRegex(ValueError, "missing"):
+                compare(baseline, altered)
+
     def test_rejects_navigation_coverage_mismatch(self):
         candidate = scene()
         candidate["navigation"]["routes"][0]["samples"].pop()
