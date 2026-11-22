@@ -6,6 +6,8 @@ on:
       - 'src/**'
       - 'assets/**'
       - 'default.project.json'
+      - 'mobile-premium.project.json'
+      - 'mobile-premium.project.json'
       - '.github/workflows/build-rojo.yml'
   pull_request:
     branches: [main]
@@ -37,6 +39,10 @@ jobs:
         run: |
           rojo build bundled.project.json -o DreamcoreBundled.rbxlx
           python3 tools/roblox-qa/verify_bootstrap.py DreamcorePrototype.rbxlx DreamcoreBundled.rbxlx
+      - name: Gerar e auditar variante premium leve, pronta para publicacao
+        run: |
+          rojo build mobile-premium.project.json -o DreamcorePremium.rbxlx
+          python3 tools/roblox-qa/verify_mobile_premium.py DreamcorePremium.rbxlx
       - name: Provar que o Place tem iluminacao Realistic
         run: |
           grep -Fq '<token name="LightingStyle">0</token>' DreamcorePrototype.rbxlx
@@ -52,4 +58,5 @@ jobs:
           path: |
             DreamcorePrototype.rbxlx
             DreamcoreBundled.rbxlx
+            DreamcorePremium.rbxlx
           if-no-files-found: error

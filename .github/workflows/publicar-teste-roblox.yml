@@ -53,8 +53,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar Rojo
         run: cargo install rojo --version 7.6.1 --locked
-      - name: Construir arquivo do mapa
-        run: rojo build default.project.json -o DreamcorePrototype.rbxlx
+      - name: Construir mapa com biblioteca premium mobile embutida
+        run: |
+          rojo build mobile-premium.project.json -o DreamcorePrototype.rbxlx
+          python3 tools/roblox-qa/verify_mobile_premium.py DreamcorePrototype.rbxlx
+          echo "Biblioteca 3D curada validada no Place. Variante leve de recuperacao continua em default.project.json."
       - name: Enviar versao ao lugar existente
         env:
           UNIVERSE: ${{ inputs.universo_id }}
