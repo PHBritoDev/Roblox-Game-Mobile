@@ -8,7 +8,7 @@ class MoodAtmosphereTests(unittest.TestCase):
     def test_each_mood_has_bounded_haze_density_bloom(self):
         profiles=SRC.split("local moods={",1)[1].split("local atmosphere=",1)[0]
         for key,low,high in (("density",0.05,0.25),("haze",0.2,0.85),("bloom",0.08,0.22)):
-            vals=[float(v) for v in re.findall(r"\\b"+key+r"=(0\\.\\d+)",profiles)]
+            vals=[float(v) for v in re.findall(r"\b"+key+r"=(0\.\d+)",profiles)]
             self.assertEqual(len(vals),4,key)
             self.assertTrue(all(low<=v<=high for v in vals),key)
     def test_mood_apply_and_cycle_interpolate_without_extra_instances(self):
