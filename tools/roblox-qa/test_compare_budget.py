@@ -81,11 +81,12 @@ class BudgetComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "coverage"):
             compare(scene(), candidate)
 
-    def test_rejects_different_collision_proxy_coverage(self):
+    def test_reports_collision_proxy_delta_with_same_routes(self):
         candidate = scene()
         candidate["navigation"]["proxyCount"] = 1
-        with self.assertRaisesRegex(ValueError, "coverage"):
-            compare(scene(), candidate)
+        result = compare(scene(), candidate)
+        self.assertEqual(result["delta"]["collision_proxies"], -1)
+        self.assertEqual(result["percent_change"]["collision_proxies"], -50.0)
 
     def test_rejects_malformed_navigation_and_geometry(self):
         cases = [
