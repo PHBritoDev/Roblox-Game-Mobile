@@ -84,6 +84,29 @@ def compare(base, head):
                 raise ValueError("Spawn footing or clearance invalid")
         if scene["navigation"].get("invalidProxies"):
             raise ValueError("Invalid collision proxies")
+    # Prevent a candidate snapshot from passing by omitting safety evidence.
+    # Older fixtures without these optional fields remain comparable when both omit them.
+    for old_route, new_route in zip(base["navigation"]["routes"], head["navigation"]["routes"]):
+        for old_sample, new_sample in zip(old_route["samples"], new_route["samples"]):
+            for field in ("supported", "blockers"):
+                if field in old_sample and field not in new_sample:
+                    raise ValueError(f"Candidate navigation evidence missing: {field}")
+    old_nav, new_nav = base["navigation"], head["navigation"]
+    for field in ("spawn", "invalidProxies"):
+        if field in old_nav and field not in new_nav:
+            raise ValueError(f"Candidate navigation evidence missing: {field}")
+    if isinstance(old_nav.get("spawn"), dict) and isinstance(new_nav.get("spawn"), dict):
+        for field in ("present", "anchored", "collidable", "footing"):
+            if field in old_nav["spawn"] and field not in new_nav["spawn"]:
+                raise ValueError(f"Candidate spawn evidence missing: {field}")
+    if isinstance(old_nav.get("spawn", {}).get("footing"), dict):
+        old_foot = old_nav["spawn"]["footing"]
+        new_foot = new_nav["spawn"].get("footing")
+        if not isinstance(new_foot, dict):
+            raise ValueError("Candidate spawn footing missing")
+        for field in ("supported", "blockers"):
+            if field in old_foot and field not in new_foot:
+                raise ValueError(f"Candidate spawn footing evidence missing: {field}")
     base_routes = [len(route["samples"]) for route in base["navigation"]["routes"]]
     head_routes = [len(route["samples"]) for route in head["navigation"]["routes"]]
     if base_routes != head_routes:
