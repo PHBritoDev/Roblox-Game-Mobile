@@ -1,0 +1,5 @@
+AUTORIZADO PUBLICAR V32 NO PLACE DE TESTE 6947682498
+Hotfix continuacao dos testes Android solicitados pelo criador. Captura real da V31 indicou erro LoadingSynty.
+Fonte do fix: 6e2957833f45b94ecf95f2fef5c8e5d726cbc7f8 + 5827fbb992583430ff4b7c230e8498953b9573b6
+Destino: Universe 2660433574 / Place teste 6947682498
+Validações: build Rojo 43643530852, QA 43643530802, headless/fallback/proxy 43643530818.

@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+"""Generate engine geometry and navigation evidence, optionally with failed asset loads."""
+import argparse
+import hashlib
+import json
+import math
+import os
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+ENDPOINT = "https://apis.roblox.com/cloud/v2/"
+# Roblox permits Luau Execution tasks to run for five minutes. Include
+# session startup / scheduling overhead before treating PROCESSING as failure.
+TASK_POLL_TIMEOUT_SECONDS = 330
+PREAMBLE = """
+local storedGenerator=game:GetService("ServerScriptService"):FindFirstChild("DreamcoreWorld",true)
+local storedWorldVersion=nil
+if storedGenerator then
+ local readable,storedSource=pcall(function() return storedGenerator.Source end)
+ if readable then storedWorldVersion=string.match(storedSource, 'WorldVersion",(%d+)') end
+end
+local storedPlaceVersion=game.PlaceVersion
+"""
+
+
+def source_without_assets(source):
+    """Change only the two audited calls inside their existing pcall guards."""
+    for asset_id in (6933438443, 6432306802):
+        original = f"return InsertService:LoadAsset({asset_id})"
+        if source.count(original) != 1:
+            raise ValueError(f"Expected exactly one audited LoadAsset call for {asset_id}")
+        source = source.replace(original, 'error("QA forced asset failure")', 1)
+    source = source.replace('local bundled=game:GetService("ServerStorage"):FindFirstChild("ForestLibrary")', 'local bundled=nil')
+    return source
+
+
+def bundled_fixture():
+    """Engine fixture from the same official meshes; NOT a deserialized build/playtest.
+
+    Verify IDs and sizes against the committed XML before exercising bundled path.
+    Roblox headless cannot open an arbitrary local rbxlx without saving a Place.
+    """
+    manifest = json.loads((ROOT / "assets/forest-manifest.json").read_text())
+    encoded = json.dumps(manifest["packages"], ensure_ascii=False)
+    return """
+local fixtureManifest=game:GetService("HttpService"):JSONDecode([==[%s]==])
+local storage=game:GetService("ServerStorage")
+local existingLibrary=storage:FindFirstChild("ForestLibrary")
+if existingLibrary then existingLibrary:Destroy() end
+local fixture=Instance.new("Folder")
+fixture.Name="ForestLibrary"
+local allowed={Folder=true,Model=true,MeshPart=true,SurfaceAppearance=true}
+for name,entry in fixtureManifest do
+ local original=game:GetService("InsertService"):LoadAsset(entry.assetId)
+ local package=Instance.new("Folder"); package.Name=name; package.Parent=fixture
+ for _,template in entry.templates do
+  local found=original:FindFirstChild(template.name,true)
+  assert(found,"Bundled fixture template missing: "..template.name)
+  local clone=found:Clone()
+  for _,child in clone:GetDescendants() do
+   if not allowed[child.ClassName] then child:Destroy() end
+  end
+  local meshes={}
+  if clone:IsA("MeshPart") then table.insert(meshes,clone) end
+  for _,child in clone:GetDescendants() do
+   if child:IsA("MeshPart") then table.insert(meshes,child) end
+  end
+  table.sort(meshes,function(a,b) return a.MeshId<b.MeshId end)
+  assert(#meshes==#template.meshes,"Bundled fixture mesh count changed")
+  for index,mesh in meshes do
+   local expected=template.meshes[index]
+   assert(mesh.MeshId==expected.id,"Official asset changed since bake")
+   assert((mesh.Size-Vector3.new(unpack(expected.size))).Magnitude<0.01,"Baked mesh size differs")
+  end
+  clone.Parent=package
+ end
+ original:Destroy()
+end
+fixture.Parent=storage
+""" % encoded
+
+
+
+def disable_headless_mood_cycle(source):
+    """Do not keep the perpetual day/night coroutine running during geometry QA.
+
+    Runtime source remains byte-for-byte unchanged. The snapshot already captures
+    the initial light mood and validates the actual generated world.
+    """
+    marker = " local hold=145\n local transition=48\n while world.Parent do"
+    if source.count(marker) != 1:
+        raise ValueError("Expected exactly one perpetual lighting cycle")
+    return source.replace(
+        marker, " local hold=145\n local transition=48\n while false do", 1
+    )
+
+
+def source_with_integration_failure(source):
+    """Fail after a successful clone, not merely when the network is unavailable."""
+    for marker in ("   placed+=1", "   if ok then forestCount+=1; site.completed=true"):
+        if source.count(marker) != 1:
+            raise ValueError("Integration fault marker missing/duplicated")
+        source = source.replace(marker, '   error("QA forced integration failure")\n'+marker, 1)
+    return source
+
+
+def request(path, key, payload=None):
+    data = None if payload is None else json.dumps(payload).encode()
+    req = urllib.request.Request(
+        ENDPOINT + path, data=data,
+        method="POST" if data is not None else "GET",
+        headers={"x-api-key": key, "Content-Type": "application/json"},
+    )
+    # Retry POST *only* when Roblox explicitly returns HTTP 429 (rejected
+    # before creating a task). Do not retry other POST errors or timeouts:
+    # those may have executed the generator, so a repeat is unsafe.
+    attempts = 3 if data is None else 4
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=50) as reply:
+                return json.load(reply)
+        except urllib.error.HTTPError as exc:
+            message = exc.read().decode("utf-8", errors="replace").replace(key, "[REDACTED]")
+            retry = attempt + 1 < attempts and (
+                (data is None and exc.code in (429, 502, 503, 504))
+                or (data is not None and exc.code == 429)
+            )
+            if retry:
+                # Respect Retry-After; fall back to exponential cooldown.
+                raw_wait = exc.headers.get("Retry-After", "") if exc.headers else ""
+                try:
+                    requested = float(raw_wait)
+                    if not math.isfinite(requested) or requested <= 0:
+                        raise ValueError("invalid Retry-After")
+                except (ValueError, TypeError):
+                    requested = (10 * 2**attempt) if data is not None else (2**attempt)
+                wait = min(90.0, max(2.0, requested))
+                print(f"Roblox HTTP {exc.code}: aguardando {wait:g}s antes da tentativa {attempt + 2}/{attempts}.")
+                time.sleep(wait)
+                continue
+            raise SystemExit(f"Erro API Roblox HTTP {exc.code}: {message[:450]}") from None
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--without-assets", action="store_true",
+                        help="Force both licensed asset loads to fail in memory and validate fallback")
+    parser.add_argument("--integration-failure", action="store_true")
+    parser.add_argument("--live-insertservice", action="store_true",
+                        help="Execute authored generator against actual Roblox tree packages")
+    args = parser.parse_args()
+    if args.live_insertservice and (args.without_assets or args.integration_failure):
+        parser.error("live InsertService may not be combined with fault injection")
+    out = ROOT / "artifacts" / "visual-preview"
+    if args.without_assets:
+        out /= "fallback"
+    if args.live_insertservice:
+        out /= "live-insertservice"
+    if args.integration_failure:
+        out /= "integration-failure"
+    out.mkdir(parents=True, exist_ok=True)
+    key = os.environ.get("ROBLOX_API_KEY", "")
+    universe = os.environ.get("ROBLOX_UNIVERSE_ID", "2660433574")
+    place = os.environ.get("ROBLOX_PLACE_ID", "6947682498")
+    if not key:
+        raise SystemExit("Configure ROBLOX_API_KEY em GitHub Actions Secrets.")
+    base = f"universes/{universe}/places/{place}"
+    source = (ROOT / "src/server/DreamcoreWorld.server.luau").read_text(encoding="utf-8")
+    probe = (ROOT / "tools/roblox-qa/export_scene.luau").read_text(encoding="utf-8")
+    executed_source = source_without_assets(source) if args.without_assets else source
+    if args.integration_failure:
+        executed_source = source_with_integration_failure(executed_source)
+    # Skip only the perpetual background lighting cycle in headless memory.
+    # The game source and first applied mood are unchanged.
+    executed_source = disable_headless_mood_cycle(executed_source)
+    # Source and probe share one execution chunk; source file is never modified.
+    fixture = "" if args.without_assets or args.live_insertservice else bundled_fixture()
+    # A V33 publica o spawn antes de iniciar a floresta completa numa task.
+    # O probe headless precisa aguardar Ready/Failed, sem aceitar cena parcial.
+    await_generation = """
+local snapshotReplicated=game:GetService("ReplicatedStorage")
+local snapshotDeadline=os.clock()+180
+while snapshotReplicated:GetAttribute("ForestState")=="Generating"
+    and os.clock()<snapshotDeadline do
+ task.wait(0.5)
+end
+local snapshotStatus=snapshotReplicated:GetAttribute("ForestState")
+assert(snapshotStatus=="Ready",
+    "Headless V33 not ready: "..tostring(snapshotStatus)..", stage="..
+    tostring(snapshotReplicated:GetAttribute("ForestStage")))
+"""
+    code = PREAMBLE + fixture + executed_source + "\n" + await_generation + "\n" + probe
+    task = request(base + "/luau-execution-session-tasks", key, {"script": code})
+    path = task.get("path", "")
+    if not path.startswith(base + "/"):
+        raise SystemExit("API Roblox nao retornou um identificador de tarefa valido.")
+    deadline = time.monotonic() + TASK_POLL_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        task = request(path, key)
+        if task.get("state") != "PROCESSING":
+            break
+        time.sleep(min(5, max(0, deadline - time.monotonic())))
+    if task.get("state") != "COMPLETE":
+        # Preserve a redacted, actionable diagnostic even if CI fails.
+        diagnostic = {
+            "taskPath": path, "state": task.get("state"),
+            "error": str(task.get("error"))[:300],
+            "limitSeconds": TASK_POLL_TIMEOUT_SECONDS,
+            "note": "Roblox Open Cloud headless task; not an engine screenshot",
+        }
+        (out / "headless_failure.json").write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        raise SystemExit(
+            f"Auditoria headless incompleta: {diagnostic['state']}; "
+            f"{diagnostic['error']}. Consulte headless_failure.json"
+        )
+    results = task.get("output", {}).get("results", [])
+    scene = next((item for item in results if isinstance(item, dict) and item.get("kind") == "roblox_headless_geometry_snapshot"), None)
+    if not scene:
+        raise SystemExit("Tarefa executou mas nao retornou geometria; verificar output Luau.")
+    if len(scene.get("parts", [])) < 30:
+        raise SystemExit("Amostra inesperadamente pequena, previsualizacao recusada.")
+    scene["meta"]["sourceCommit"] = os.environ.get("GITHUB_SHA", "local")
+    scene["meta"]["sourceSha256"] = hashlib.sha256(source.encode()).hexdigest()
+    scene["meta"]["executedSourceSha256"] = hashlib.sha256(executed_source.encode()).hexdigest()
+    scene["meta"]["executedScriptSha256"] = hashlib.sha256(code.encode()).hexdigest()
+    scene["meta"]["forcedAssetFailure"] = args.without_assets
+    scene["meta"]["forcedIntegrationFailure"] = args.integration_failure
+    scene["meta"]["bakedEquivalentFixture"] = not (args.without_assets or args.live_insertservice)
+    scene["meta"]["testedLiveInsertService"] = args.live_insertservice
+    scene["meta"]["taskPath"] = path
+    scene["meta"]["source"] = "Luau Execution Roblox; geometria da engine, sem viewport renderizado"
+    scene["meta"]["renderWarning"] = "Blender aproxima geometria/material/sol; nao reproduz shaders nem terrain Roblox"
+    (out / "scene.json").write_text(json.dumps(scene, ensure_ascii=False) + "\n", encoding="utf-8")
+    if args.live_insertservice:
+        assets = scene.get("assets", {})
+        meta = scene.get("meta", {})
+        checks = {
+            "source_is_insertservice": assets.get("source") == "InsertService",
+            "synty_loaded": assets.get("syntyLoad") is True,
+            "forest_loaded": assets.get("forestLoad") is True,
+            "synty_integrated": assets.get("syntyIntegration") is True,
+            "forest_integrated": assets.get("forestIntegration") is True,
+            "minimum_meshes_30": isinstance(assets.get("meshes"), (int, float))
+                and not isinstance(assets.get("meshes"), bool) and assets["meshes"] >= 30,
+            "minimum_forest_models_5": isinstance(meta.get("forestModels"), (int, float))
+                and not isinstance(meta.get("forestModels"), bool) and meta["forestModels"] >= 5,
+        }
+        diagnostic = {
+            "checks": checks,
+            "failedChecks": [name for name, passed in checks.items() if not passed],
+            "assetSource": assets.get("source"),
+            "meshCount": assets.get("meshes"),
+            "forestModelCount": meta.get("forestModels"),
+            "taskPath": path,
+            "note": "Headless audit, not a Roblox client screenshot or playtest",
+        }
+        (out / "live_insertservice_checks.json").write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        if diagnostic["failedChecks"]:
+            raise SystemExit("Live InsertService audit failed: "
+                             + ", ".join(diagnostic["failedChecks"])
+                             + "; inspect live_insertservice_checks.json and scene.json")
+    print(f"Snapshot: {scene['meta']['partsExported']}/{scene['meta']['partsTotal']} partes; fallback={args.without_assets}; nao e screenshot real.")
+
+
+if __name__ == "__main__":
+    main()

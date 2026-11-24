@@ -1,0 +1,5 @@
+AUTORIZADO V33 DIAGNOSTICO NO PLACE DE TESTE 6947682498
+MIN_SOURCE_SHA=fbdcb5e66ec4c114ff08b571499f180b79abf768
+Versao V33 com gerador/iluminacao novos; biblioteca 3D permanece guardada no GitHub, mas desabilitada temporariamente na build para isolar travamento de entrada.
+Fonte aprovada: QA/ Rojo e headless/Blender em https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43671801177
+Destino de teste: Universe 2660433574, Place 6947682498. Nenhuma afirmacao de playtest real Android.

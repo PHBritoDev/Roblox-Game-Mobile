@@ -1,0 +1,2 @@
+AUTORIZADO PUBLICAR V25 NO PLACE 6947682498
+CORRECAO RUNTIME: remover propriedades Terrain NotScriptable; fonte c89b9852fbf8b88c2a266c2f1cfc1dbb04fc7577

@@ -1,0 +1,28 @@
+{
+  "kind": "static_source_audit",
+  "visual_test_performed": false,
+  "roblox_runtime_test_performed": false,
+  "file": "src/server/DreamcoreWorld.server.luau",
+  "checks": {
+    "project_data_model": true,
+    "server_script_present": true,
+    "spawn_location": true,
+    "atmosphere": true,
+    "bloom": true,
+    "color_correction": true,
+    "terrain": true,
+    "imported_asset_sanitizer": true,
+    "camera_capture_available": false,
+    "actual_roblox_screenshot": false,
+    "actual_roblox_video": false
+  },
+  "observations": {
+    "uses_terrain_clear": true,
+    "sunrays_effect": true,
+    "dynamic_time_of_day": true
+  },
+  "limitations": [
+    "Terrain:Clear() apaga o terreno preexistente quando o script roda.",
+    "Nenhuma screenshot ou vídeo real: falta sessão Studio MCP."
+  ]
+}
