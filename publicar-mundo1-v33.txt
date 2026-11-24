@@ -1,6 +1,0 @@
-AUTORIZADO PUBLICAR V33 NO PLACE DE TESTE 6947682498
-BASE_VALIDADA=2d264e2c699b909b804430139598f9572432ca37
-Solicitacao explicita do criador: publicar V33 atual, com hotfix de colisao e biblioteca integrada.
-Universe: 2660433574
-Modo: Published
-Nao considerar preview Blender aprovacao estetica da engine.

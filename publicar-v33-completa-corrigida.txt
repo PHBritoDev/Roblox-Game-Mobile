@@ -1,8 +1,0 @@
-AUTORIZADO PUBLICAR V33 INTEGRAL NO PLACE TESTE 6947682498
-BASE_CORRIGIDA=31b7adb20744c7eece6de7853d51ed7a4a72c6c0
-Solicitacao do criador: restaurar TODOS os modelos e efeitos do Codex e corrigir entrada sem desligar conteudo.
-SpawnLocation inicial antes da geracao pesada, todos os assets embarcados e fallback original preservados.
-QA: https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43672245106
-Rojo: https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43672148005
-Headless, Blender e revisor: https://github.com/PHBritoDev/Roblox-Game-Mobile/actions/runs/43672245094
-Nao afirmar entrada real Android ate teste no cliente.

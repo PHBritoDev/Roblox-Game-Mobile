@@ -1,4 +1,0 @@
-AUTORIZADO ROLLBACK DE EMERGENCIA V32 NO PLACE DE TESTE 6947682498
-SOURCE_SHA=5b72ed10a93eab2597d51d7410330344db5cd8f2
-Motivo: cliente Android fica indefinidamente buscando servidor apos publicacao V33, enquanto outros jogos entram.
-Apenas reverter artefato Roblox; preservar fonte V33 na main para diagnostico. A publicacao nao comprova entrada real.

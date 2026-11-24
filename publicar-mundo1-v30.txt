@@ -1,5 +1,0 @@
-AUTORIZADO PUBLICAR V30 NO PLACE DE TESTE 6947682498
-Hotfix da sessao iniciada pelo relato do criador: floresta demorou a carregar em todas as entradas na V29
-Fonte: a8e7b3996a85f0acd9efc46f1b5e9c110491434d (cliente + servidor)
-Destino: Universe 2660433574 / Place de teste 6947682498
-Checks: Rojo 43640093633, QA 43640093667, preview 43640093614

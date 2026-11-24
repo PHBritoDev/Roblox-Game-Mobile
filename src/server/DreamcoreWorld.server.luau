@@ -1432,6 +1432,91 @@ for cluster=1,12 do
 end
 world:SetAttribute("LakeReedBlades",lakeReedCount)
 
+-- Expansao Mundo 1 (V35): Novos Pontos de Interesse e Detalhes Cinematograficos
+-- 1. Barco de Madeira Esquecido entre os Juncos (Inspirado na referencia de por do sol)
+local boatModel=Instance.new("Model")
+boatModel.Name="Barco de Madeira nas Margens"
+boatModel.Parent=reflection
+local boatCF=CFrame.new(-69.5,-1.55,-138.5)*CFrame.Angles(math.rad(1.5),math.rad(38),math.rad(-2))
+local hullBottom=part("Casco do barco",Vector3.new(3.6,0.32,9.4),boatCF,P.bark,Enum.Material.WoodPlanks,boatModel)
+optimizeDecorativeMesh(hullBottom,false)
+for _,side in ipairs({-1,1}) do
+ local gunwale=part("Borda lateral do barco",Vector3.new(0.28,0.85,9.2),
+  boatCF*CFrame.new(side*1.75,0.42,0)*CFrame.Angles(0,0,side*math.rad(-14)),
+  P.barkLight,Enum.Material.WoodPlanks,boatModel)
+ optimizeDecorativeMesh(gunwale,false)
+ local prow=Instance.new("WedgePart")
+ prow.Name="Proa esculpida"
+ prow.Size=Vector3.new(0.32,0.82,2.4)
+ prow.CFrame=boatCF*CFrame.new(side*0.85,0.40,-5.4)*CFrame.Angles(0,side*math.rad(19),0)
+ prow.Color=P.barkLight
+ prow.Material=Enum.Material.WoodPlanks
+ optimizeDecorativeMesh(prow,false)
+ prow.Parent=boatModel
+end
+for benchIndex=-1,1 do
+ local bench=part("Banco de remo",Vector3.new(3.3,0.18,0.85),
+  boatCF*CFrame.new(0,0.48,benchIndex*2.4),P.bark,Enum.Material.Wood,boatModel)
+ optimizeDecorativeMesh(bench,false)
+end
+local oar=part("Remo repousado",Vector3.new(0.22,0.14,6.8),
+ boatCF*CFrame.new(0.65,0.64,0.4)*CFrame.Angles(math.rad(4),math.rad(14),0),
+ P.barkLight,Enum.Material.Wood,boatModel)
+optimizeDecorativeMesh(oar,false)
+world:SetAttribute("RowboatLandmarkPresent",true)
+
+-- 2. Mirante das Estrelas (Noroeste) e Clareira do Orvalho Dourado (Leste)
+local outlook=group("Mirante das Estrelas — Santuario Noroeste")
+local outlookCenter=Vector3.new(-188,0,-312)
+for idx=1,6 do
+ local ang=(idx/6)*PI*2
+ local pillarPos=outlookCenter+Vector3.new(math.cos(ang)*16,0,math.sin(ang)*16)
+ if not reservedSite(pillarPos.X,pillarPos.Z,6) then
+  local h=5.5+(idx%3)*2.2
+  local pCol=part("Coluna astral do mirante",Vector3.new(2.2,h,2.2),
+   CFrame.new(pillarPos.X,h*0.5,pillarPos.Z)*CFrame.Angles(math.rad((idx%2==0 and 1 or -1)*4),ang,0),
+   P.stone,Enum.Material.Slate,outlook)
+  optimizeDecorativeMesh(pCol,false)
+  if idx%2==0 then
+   local orbCrystal=orb("Cristal de memoria estelar",pillarPos+Vector3.new(0,h+0.7,0),0.85,P.rune,Enum.Material.Neon,outlook)
+   optimizeDecorativeMesh(orbCrystal,false)
+  end
+ end
+end
+local easternClearing=group("Clareira do Orvalho Dourado — Bosque Leste")
+local eastCenter=Vector3.new(218,0,-195)
+for logIdx=1,4 do
+ local ang=logIdx*1.57+0.3
+ local logPos=eastCenter+Vector3.new(math.cos(ang)*14,0.55,math.sin(ang)*14)
+ if not reservedSite(logPos.X,logPos.Z,6) and math.abs(logPos.X-riverX(logPos.Z))>34 then
+  local fallenLog=part("Tronco musgoso caido",Vector3.new(7.5,1.45,1.45),
+   CFrame.new(logPos)*CFrame.Angles(0,ang,math.rad(90)),P.bark,Enum.Material.Wood,easternClearing)
+  fallenLog.Shape=Enum.PartType.Cylinder
+  optimizeDecorativeMesh(fallenLog,false)
+  local mossTop=part("Cobertura de musgo antigo",Vector3.new(6.8,0.22,1.15),
+   CFrame.new(logPos+Vector3.new(0,0.72,0))*CFrame.Angles(0,ang,0),P.mossLight,Enum.Material.Grass,easternClearing)
+  optimizeDecorativeMesh(mossTop,false)
+ end
+end
+world:SetAttribute("ExpandedPOICount",3)
+
+-- 3. Lajes de Pedra Natural ao longo da trilha principal (sem obstruir colisao)
+local steppingStones=0
+for stepIdx=1,28 do
+ local sz=18-stepIdx*9.6
+ local sx=pathX(sz)+((stepIdx%2==0) and 1.1 or -1.1)
+ local hit=Workspace:Raycast(Vector3.new(sx,20,sz),Vector3.new(0,-40,0),groundParams)
+ if hit and hit.Material~=Enum.Material.Water and hit.Normal.Y>0.85 then
+  local slab=part("Laje antiga da trilha",Vector3.new(2.4+(stepIdx%3)*0.4,0.12,1.7+(stepIdx%2)*0.4),
+   CFrame.new(sx,hit.Position.Y+0.03,sz)*CFrame.Angles(0,stepIdx*0.7,0),
+   P.stone,Enum.Material.Slate,details)
+  optimizeDecorativeMesh(slab,false)
+  steppingStones+=1
+ end
+end
+world:SetAttribute("TrailSteppingStones",steppingStones)
+
+
 -- Partículas leves confinadas à clareira, evitando dezenas de luzes dinâmicas.
 local fireflies=part("Vagalumes na clareira",Vector3.new(1,1,1),
  CFrame.new(center+Vector3.new(0,7,34)),P.firefly,Enum.Material.SmoothPlastic,effects)
@@ -1726,6 +1811,20 @@ if not initialSpawn then
  initialSpawn.CanCollide=true
  initialSpawn.Duration=0
  initialSpawn.Parent=Workspace
+end
+-- Piso solido imediato sob o spawn (tick 0) para impedir queda ou carregamento infinito
+local bootstrapSafetyFloor=Workspace:FindFirstChild("PisoSegurancaBootstrap")
+if not bootstrapSafetyFloor then
+ bootstrapSafetyFloor=Instance.new("Part")
+ bootstrapSafetyFloor.Name="PisoSegurancaBootstrap"
+ bootstrapSafetyFloor.Size=Vector3.new(36,1,36)
+ bootstrapSafetyFloor.CFrame=CFrame.new(0,-0.55,8)
+ bootstrapSafetyFloor.Anchored=true
+ bootstrapSafetyFloor.Transparency=1
+ bootstrapSafetyFloor.CanCollide=true
+ bootstrapSafetyFloor.CanTouch=false
+ bootstrapSafetyFloor.CastShadow=false
+ bootstrapSafetyFloor.Parent=Workspace
 end
 -- Executar a criacao do mundo fora da inicializacao imediata do script.
 -- Mantem todos os assets Codex/efeitos; caso falhe o spawn inicial permanece.
